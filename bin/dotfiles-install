@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+# Config
+local LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
+local DOTFILES_DIR="$HOME/dotfiles"
+local VERSION_CONTROLLED_HOOKS_DIR=".githooks"
+
 # Shut Homebrew up a bit
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_ANALYTICS=1
@@ -98,9 +103,6 @@ if [ -f ~/.local-dotfiles/.config/sesh/sesh.toml ]; then
 fi
 
 # Set up git hooks
-DOTFILES_DIR="$HOME/dotfiles"
-VERSION_CONTROLLED_HOOKS_DIR=".githooks"
-
 current_hooks_path=$(git -C "$DOTFILES_DIR" config --get core.hooksPath 2>/dev/null)
 get_config_exit_code=$?
 
@@ -130,7 +132,7 @@ ln -s ~/.config/lazygit/config.yml ~/Library/Application\ Support/lazygit/config
 
 # Pet config
 # Ensure that the local dotfiles pet dir exists
-mkdir -p ~/.local-dotfiles/.config/pet
+mkdir -p $LOCAL_DOTFILES_DIR/.config/pet
 
 # Local env
 mkdir -p ~/.local/bin
@@ -145,7 +147,7 @@ fi
 
 # Fonts
 # Require aliases to be loaded
-source ~/dotfiles/.zsh/100-aliases.zsh
+source $DOTFILES_DIR/.zsh/100-aliases.zsh
 decrypt_and_install_fonts
 
 echo "\033[32m✔\033[0m  Done!"
