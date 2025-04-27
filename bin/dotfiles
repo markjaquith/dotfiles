@@ -1,0 +1,7 @@
+#!/bin/bash
+# TODO: Make sure these things are installed first
+gum style --foreground 212 "Copying dotfiles…"
+(
+  cd ~/dotfiles
+  stow .
+)

@@ -1,0 +1,56 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run the `open default settings` command
+// from the command palette or from `Zed` application menu.
+{
+  // Theme and key bindings.
+  "theme": "One Dark",
+  "base_keymap": "VSCode",
+
+  // Tabs.
+  "tab_size": 2,
+  "hard_tabs": true,
+
+  // Formatting.
+  "format_on_save": "on",
+
+  // Font.
+  "ui_font_size": 16,
+  "ui_font_family": "Fira Code",
+  "buffer_font_size": 16,
+
+  // Disabline inline git blame.
+  "git": {
+    "git_gutter": "tracked_files",
+    "inline_blame": {
+      "enabled": false
+    }
+  },
+
+  // Disable three buttons I do not use.
+  "assistant": {
+    "version": "1",
+    "button": false
+  },
+  "collaboration_panel": {
+    "button": false
+  },
+  "chat_panel": {
+    "button": false
+  },
+
+  // Move the files panel to the right side.
+  "project_panel": {
+    "dock": "right"
+  },
+
+  // Not sure how to set font weight, but at least my symbols work.
+  "terminal": {
+    "font_size": 18,
+    "font_family": "MesloLGS NF"
+  }
+}

@@ -1,0 +1,8 @@
+description = "Greets a person"
+command = "echo Hello, {name}!"
+
+[[params]]
+name = "name"
+description = "Name of the person to greet"
+required = true
+default = "World"

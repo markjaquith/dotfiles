@@ -1,0 +1,50 @@
+[[snippets]]
+  description = "Copy git commit hash to clipboard"
+  output = ""
+  tag = ["git"]
+  command = """git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n' | pbcopy"""
+
+[[snippets]]
+  description = "Get git commit hash"
+  output = ""
+  tag = ["git"]
+  command = """git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n'"""
+
+[[snippets]]
+  description = "Restart tmux server"
+  output = ""
+  tag = ["tmux"]
+  command = "tmux kill-server; t"
+
+[[snippets]]
+  description = "Git rebase origin/main, preferring upstream versions of things on conflict"
+  output = ""
+  tag = ["git"]
+  command = "git rebase -X ours origin/main"
+
+[[snippets]]
+  description = "View changed files in a git commit"
+  output = ""
+  tag = ["git"]
+  command = """git diff-tree --no-commit-id --name-only -r $(git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n')"""
+
+[[snippets]]
+  description = "Copy changed file in a git commit"
+  output = ""
+  tag = ["git"]
+  command = """
+  commit_sha=$(git log -n 20 --oneline --no-color | fzf --height 40% --layout=reverse --preview 'git show --color=always {1}' | awk '{print $1}') && \
+  if [ -n "$commit_sha" ]; then \
+    selected_file=$(git show --pretty="" --name-only "$commit_sha" | fzf --height 50% --layout=reverse --preview "git diff --color=always ${commit_sha}^..${commit_sha} -- {}"); \
+    if [ -n "$selected_file" ]; then \
+      echo "$selected_file" | pbcopy; \
+    fi; \
+  fi
+  """
+
+[[snippets]]
+  description = "Kill tmux server"
+	output = ""
+	tag = ["tmux"]
+	command = "tmux kill-server"
+

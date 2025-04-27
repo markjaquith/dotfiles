@@ -1,0 +1,17 @@
+[[session]]
+name = " Downloads"
+path = "~/Downloads"
+startup_command = "ls"
+
+[[session]]
+name = "󱗿 Dotfiles"
+path = "~/dotfiles"
+startup_command = "nvim ."
+
+[[session]]
+name = "󱗾 Local Dotfiles"
+path = "~/.local-dotfiles"
+startup_command = "nvim ."
+
+# Keep empty line below here for concatenating local config:
+

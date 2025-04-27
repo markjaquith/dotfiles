@@ -1,0 +1,37 @@
+# Basic theming
+theme = catppuccin-macchiato
+# font-family = FiraCode Nerd Font Mono
+font-family = MonoLisa Nerd Font Mono
+font-style = Retina
+font-size = 14
+adjust-cell-height = 50%
+window-padding-x = 16
+window-padding-y = 8
+adjust-cursor-height = 50%
+adjust-underline-position = 10
+adjust-underline-thickness = 2
+cursor-text = 181926
+
+# Config
+mouse-hide-while-typing = true
+
+# New windows
+window-width = 140
+window-height = 60
+
+# Keybindings
+# keybind = opt+h=goto_split:left
+# keybind = opt+j=goto_split:bottom	
+# keybind = opt+k=goto_split:top
+# keybind = opt+l=goto_split:right
+#
+# keybind = opt+shift+h=new_split:left
+# keybind = opt+shift+j=new_split:down
+# keybind = opt+shift+k=new_split:up
+# keybind = opt+shift+l=new_split:right
+#
+# keybind = opt+tab=next_tab
+# keybind = opt+shift+tab=previous_tab
+# keybind = super+t=text:\x02c
+# keybind = super+w=text:\x02x
+keybind = super+k=text:\x02s

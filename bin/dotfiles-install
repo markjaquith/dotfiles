@@ -1,0 +1,151 @@
+#!/usr/bin/env zsh
+
+# Shut Homebrew up a bit
+export HOMEBREW_NO_ENV_HINTS=1
+export HOMEBREW_NO_ANALYTICS=1
+export HOMEBREW_NO_AUTO_UPDATE=1
+
+# Install bun early if not already installed
+if ! command -v bun &>/dev/null; then
+	brew install oven-sh/bun/bun 2>/dev/null
+fi
+
+# Handle brew taps
+brew tap FelixKratz/formulae
+
+# Next steps run in parallel
+
+# Brew install (bulk)
+{
+	brew install --quiet \
+		tlrc \
+		bat \
+		btop \
+		ack \
+		go \
+		gpg \
+		zinit \
+		lua \
+		1password-cli \
+		lua-language-server \
+		pkgx \
+		yazi \
+		oven-sh/bun/bun \
+		knqyf263/pet/pet \
+		lazygit \
+		bottom \
+		borders \
+		rustup \
+		rust-analyzer \
+		gum \
+		stow \
+		jq \
+		gh \
+		hub \
+		tmux \
+		sesh \
+		zoxide \
+		httpie \
+		eza \
+		gleam \
+		erlang \
+		fx \
+		fzf \
+		fd \
+		rg \
+		neovim \
+		libyaml
+} &
+
+# Upgrade and install Bun packages (bulk)
+{
+	bun upgrade > /dev/null 2>&1
+	bun i -g --no-summary \
+		typescript@latest \
+		typescript-language-server@latest \
+		svelte-language-server@latest \
+		prettier@latest \
+		prettier-plugin-svelte@latest \
+		@tailwindcss/language-server@latest \
+		vscode-langservers-extracted@latest \
+		@astrojs/language-server \
+		bash-language-server
+} &
+
+# Wait for the above parallel installs to finish
+wait
+
+# Now handle manual installs
+
+# Configure tmux plugin directory
+mkdir -p ~/.local/bin/tmux/plugins
+
+# Install tmux tpm
+git clone https://github.com/tmux-plugins/tpm ~/.local/bin/tmux/plugins/tpm 2>/dev/null
+
+# phpactor
+if ! command -v phpactor &>/dev/null; then
+	echo "Prompting for password to install phpactor to /usr/local/bin..."
+  sudo curl -sLo /usr/local/bin/phpactor https://github.com/phpactor/phpactor/releases/latest/download/phpactor.phar
+  sudo chmod +x /usr/local/bin/phpactor
+fi
+
+# Sesh config concatenation
+cp ~/dotfiles/.config/sesh/sesh-default.toml ~/.config/sesh/sesh.toml 2>/dev/null
+
+if [ -f ~/.local-dotfiles/.config/sesh/sesh.toml ]; then
+	cat ~/.local-dotfiles/.config/sesh/sesh.toml >> ~/.config/sesh/sesh.toml
+fi
+
+# Set up git hooks
+DOTFILES_DIR="$HOME/dotfiles"
+VERSION_CONTROLLED_HOOKS_DIR=".githooks"
+
+current_hooks_path=$(git -C "$DOTFILES_DIR" config --get core.hooksPath 2>/dev/null)
+get_config_exit_code=$?
+
+if [ $get_config_exit_code -ne 0 ] || [ "$current_hooks_path" != "$VERSION_CONTROLLED_HOOKS_DIR" ]; then
+  echo "Setting core.hooksPath for $DOTFILES_DIR..."
+  if git -C "$DOTFILES_DIR" config core.hooksPath "$VERSION_CONTROLLED_HOOKS_DIR"; then
+    echo "Git hooks for $DOTFILES_DIR are now managed from the '$VERSION_CONTROLLED_HOOKS_DIR' directory."
+  else
+    echo "Error: Failed to set core.hooksPath for $DOTFILES_DIR." >&2
+    return 1 # Or exit 1 if not in a function
+  fi
+fi
+
+HOOK_FILE_PATH="$DOTFILES_DIR/$VERSION_CONTROLLED_HOOKS_DIR/pre-push"
+if [ -f "$HOOK_FILE_PATH" ]; then
+    if ! chmod +x "$HOOK_FILE_PATH"; then
+       echo "Warning: Could not make hook executable: $HOOK_FILE_PATH" >&2
+    fi
+fi
+
+# Lazygit config
+# This symlinks the default location for macOS to the XDG_CONFIG_HOME location
+# for use of Lazygit from within Neovim, which does not load my zsh configs
+mkdir -p ~/Library/Application\ Support/lazygit
+unlink ~/Library/Application\ Support/lazygit/config.yml 2>/dev/null
+ln -s ~/.config/lazygit/config.yml ~/Library/Application\ Support/lazygit/config.yml 2>/dev/null
+
+# Pet config
+# Ensure that the local dotfiles pet dir exists
+mkdir -p ~/.local-dotfiles/.config/pet
+
+# Local env
+mkdir -p ~/.local/bin
+touch ~/.local/bin/env
+
+# Rust
+if ! command -v cargo &>/dev/null; then
+	echo "1" | rustup-init
+	rustup install stable
+  rustup default stable > /dev/null 2>&1
+fi
+
+# Fonts
+# Require aliases to be loaded
+source ~/dotfiles/.zsh/100-aliases.zsh
+decrypt_and_install_fonts
+
+echo "\033[32m✔\033[0m  Done!"

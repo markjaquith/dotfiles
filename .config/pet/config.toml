@@ -1,0 +1,10 @@
+[General]
+  Cmd = []
+  Color = true
+  Column = 40
+  Editor = "nvim"
+  Format = "[$description]: $command $tags"
+  SelectCmd = "fzf --ansi --layout=reverse --border='rounded' --height=70% --prompt='Snippets: '"
+  SnippetDirs = ["~/.local-dotfiles/.config/pet"]
+	SnippetFile = "~/.config/pet/snippets.toml"
+  SortBy = ""

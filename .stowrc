@@ -1,0 +1,4 @@
+--dir=$HOME/dotfiles
+--target=$HOME/
+--ignore=.stowrc
+--ignore=.DS_Store

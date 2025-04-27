@@ -1,0 +1,36 @@
+#!/usr/bin/env zsh
+
+encrypt_fonts() {
+	local FONT_SOURCE_DIR="$HOME/dotfiles/fonts"
+
+	# Ensure the source directory exists
+	if [[ ! -d "$FONT_SOURCE_DIR" ]]; then
+		echo "Error: Font directory '$FONT_SOURCE_DIR' does not exist."
+		return 1
+	fi
+
+	# Move into the font source directory
+	cd "$FONT_SOURCE_DIR" || return 1
+
+	# Find all .otf files
+	local FONT_FILES=(*.otf(.N))  # .N prevents errors if no matches
+
+	# Exit if no .otf files are found
+	if [[ ${#FONT_FILES[@]} -eq 0 ]]; then
+		echo "No font files found in $FONT_SOURCE_DIR."
+		return 1
+	fi
+
+	# Prompt for passphrase once
+	echo "Enter passphrase for encryption:"
+	read -s passphrase
+
+	# Encrypt each font file
+	for file in "${FONT_FILES[@]}"; do
+		gpg --batch --yes --passphrase "$passphrase" --symmetric --cipher-algo AES256 -o "$file.gpg" "$file"
+	done
+
+	echo "Fonts encrypted."
+}
+
+encrypt_fonts
