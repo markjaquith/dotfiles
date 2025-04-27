@@ -130,7 +130,6 @@ mkdir -p ~/Library/Application\ Support/lazygit
 unlink ~/Library/Application\ Support/lazygit/config.yml 2>/dev/null
 ln -s ~/.config/lazygit/config.yml ~/Library/Application\ Support/lazygit/config.yml 2>/dev/null
 
-# Pet config
 # Ensure that the local dotfiles pet dir exists
 mkdir -p $LOCAL_DOTFILES_DIR/.config/pet
 
