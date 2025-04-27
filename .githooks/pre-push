@@ -11,9 +11,10 @@
 # It's recommended to use specific identifiers, project names, hostnames etc.
 # Use egrep syntax if needed (though currently using grep -F for fixed strings).
 BLOCKED_KEYWORDS=(
-	"WORK_PROJECT_CODENAME"
-	"api_key_secret"
+	"secret_key"
+	"_secret"
 	"gusto"
+	"payroll-"
 	"BEGIN RSA PRIVATE KEY"
 )
 
