@@ -154,6 +154,11 @@ if [ $exit_code -ne 0 ]; then
 	echo "error: push rejected due to presence of blocked keywords:" >&2
 	printf "%s\n" "${found_keywords[@]}" | sort -u | sed 's/^/  - /' >&2
 	echo -en "\033[0m"
+elif $DEBUG; then
+	echo "DEBUG: No blocked keywords found in the pushed content." >&2
+else
+	# Clear the processing line if no errors were found
+	printf "\033[A\033[2K"
 fi
 
 exit $exit_code
