@@ -98,8 +98,8 @@ fi
 # Sesh config concatenation
 cp ~/dotfiles/.config/sesh/sesh-default.toml ~/.config/sesh/sesh.toml 2>/dev/null
 
-if [ -f ~/.local-dotfiles/.config/sesh/sesh.toml ]; then
-	cat ~/.local-dotfiles/.config/sesh/sesh.toml >> ~/.config/sesh/sesh.toml
+if [ -f $LOCAL_DOTFILES_DIR/.config/sesh/sesh.toml ]; then
+	cat $LOCAL_DOTFILES_DIR/.config/sesh/sesh.toml >> ~/.config/sesh/sesh.toml
 fi
 
 # Set up git hooks
