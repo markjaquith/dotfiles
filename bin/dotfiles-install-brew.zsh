@@ -1,0 +1,40 @@
+#!/usr/bin/env zsh
+# Bulk Homebrew install
+brew install --quiet \
+    tlrc \
+    bat \
+    btop \
+    ack \
+    go \
+    gpg \
+    zinit \
+    lua \
+    1password-cli \
+    lua-language-server \
+    pkgx \
+    yazi \
+    oven-sh/bun/bun \
+    knqyf263/pet/pet \
+    lazygit \
+    bottom \
+    borders \
+    rustup \
+    rust-analyzer \
+    gum \
+    stow \
+    jq \
+    gh \
+    hub \
+    tmux \
+    sesh \
+    zoxide \
+    httpie \
+    eza \
+    gleam \
+    erlang \
+    fx \
+    fzf \
+    fd \
+    rg \
+    neovim \
+    libyaml
