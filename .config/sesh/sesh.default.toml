@@ -4,11 +4,6 @@ path = "~/Downloads"
 startup_command = "ls"
 
 [[session]]
-name = "󱗾 Local Dotfiles"
-path = "~/.local-dotfiles"
-startup_command = "nvim ."
-
-[[session]]
 name = "󱗿 Dotfiles"
 path = "~/dotfiles"
 startup_command = "nvim ."
