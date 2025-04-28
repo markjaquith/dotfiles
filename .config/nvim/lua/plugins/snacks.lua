@@ -84,7 +84,7 @@ return {
     })
   end,
   keys = function()
-    return {
+    local base_keys = {
       -- NOTE: Buffer
       {
         '<leader>x',
@@ -326,5 +326,27 @@ return {
         mode = { 'n', 't' },
       },
     }
+
+    local local_keys_path = vim.fn.expand('~/.local-dotfiles/.config/nvim/lua/local/keys/snacks.lua')
+    local local_keys = {}
+
+    if vim.fn.filereadable(local_keys_path) == 1 then
+      local status_ok, result = pcall(dofile, local_keys_path)
+
+      if status_ok then
+        if type(result) == 'table' then
+          local_keys = result
+        else
+          vim.notify("Local Snacks keys file did not return a table: " .. local_keys_path, vim.log.levels.WARN)
+        end
+      else
+        vim.notify("Error executing local Snacks keys file: " .. local_keys_path .. "\n" .. tostring(result),
+          vim.log.levels.ERROR)
+      end
+    end
+
+    local merged_keys = vim.list_extend(base_keys, local_keys)
+
+    return merged_keys
   end
 }
