@@ -159,8 +159,7 @@ elif $DEBUG; then
 else
 	# Clear the processing line if no errors were found
 	printf "\033[A\033[2K"
-	echo "\033[32m✔\033[0m  Content scan passed"
-
+	echo -e "\033[32m✔\033[0m  Content scan passed"
 fi
 
 exit $exit_code
