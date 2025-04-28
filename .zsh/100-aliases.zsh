@@ -253,7 +253,6 @@ done | gum filter \
 	--indicator '󰳟' \
 	--no-show-help \
 	--placeholder "Pick a session..." \
-	--height 30 \
 	--prompt='󱐋 '
 }
 
