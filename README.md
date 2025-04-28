@@ -60,3 +60,4 @@ The `dotfiles-install` command does a bunch of things:
 [nvim]: https://neovim.io/
 [pet]: https://github.com/knqyf263/pet
 [stow]: https://www.gnu.org/software/stow/
+[lazygit]: https://github.com/jesseduffield/lazygit
