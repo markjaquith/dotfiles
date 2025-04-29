@@ -50,8 +50,7 @@ fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Init work init file
-[[ ! -f ~/.work-init.sh ]] || source ~/.work-init.sh
-
+# Init local dotfiles
+[[ ! -f ~/.local-dotfiles/init.zsh ]] || source ~/.local-dotfiles/init.zsh
 
 . "$HOME/.local/bin/env"
