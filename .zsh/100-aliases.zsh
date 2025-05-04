@@ -57,22 +57,30 @@ decrypt_and_install_fonts() {
     # Move into the font source directory
     cd "$FONT_SOURCE_DIR" || return 1
 
-    local EXPECTED_FONTS=()
+    local ENCRYPTED_FONTS=()
 
     # Find all .otf.gpg files and compute expected font names
     for file in *.otf.gpg(.N); do
-        EXPECTED_FONTS+=("${file%.gpg}")  # Remove .gpg extension
+        ENCRYPTED_FONTS+=("${file%.gpg}")  # Remove .gpg extension
     done
 
-    # Exit if no encrypted font files are found
-    if [[ ${#EXPECTED_FONTS[@]} -eq 0 ]]; then
-        echo "No encrypted font files found in $FONT_SOURCE_DIR."
+		# Find all .ttf files
+		for file in *.ttf(.N); do
+			BARE_FONTS+=("${file}")
+		done
+
+		# Combine arrays
+		local ALL_FONTS=("${ENCRYPTED_FONTS[@]}" "${BARE_FONTS[@]}")
+
+    # Exit if no font files are found
+    if [[ ${#ALL_FONTS[@]} -eq 0 ]]; then
+        echo "No font files found in $FONT_SOURCE_DIR."
         return 1
     fi
 
     # Check if all expected fonts already exist
     local all_fonts_exist=true
-    for font in "${EXPECTED_FONTS[@]}"; do
+    for font in "${ALL_FONTS[@]}"; do
         if [[ ! -f "$FONT_DIR/$font" ]]; then
             all_fonts_exist=false
             break
@@ -94,6 +102,11 @@ decrypt_and_install_fonts() {
         gpg --batch --yes --passphrase "$passphrase" --output "$output_file" --decrypt "$file"
         mv "$output_file" "$FONT_DIR/"
     done
+
+		# Copy non-encrypted fonts
+		for file in *.ttf(.N); do
+			cp "$file" "$FONT_DIR/"
+		done
 }
 
 # Edit the hosts file.
