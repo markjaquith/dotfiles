@@ -1,8 +1,9 @@
+[[commands]]
 description = "Greets a person"
-command = "echo Hello, {name}!"
+command = "echo 'Hello!'"
+tags = ['greet']
 
-[[params]]
-name = "name"
-description = "Name of the person to greet"
-required = true
-default = "World"
+[[commands]]
+description = "Who am I?"
+command = "whoami"
+
