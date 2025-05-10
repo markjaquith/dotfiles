@@ -10,6 +10,7 @@ source $(dirname "$0")/000-init.zsh
   ┃  030-pet	                 #┃ Load Pet	                   ┃                ┃
   ┃  040-pkgx                  #┃ Load Pkgx                    ┃                ┃
   ┃  050-bun                   #┃ Load Bun                     ┃                ┃
+  ┃  060-mise                  #┃ Configure Mise and HK        ┃                ┃
   ┃  070-zinit                 #┃ Load Zinit                   ┃                ┃
   ┃  080-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
   ┃  090-completions           #┃ Init completions system      ┃                ┃
