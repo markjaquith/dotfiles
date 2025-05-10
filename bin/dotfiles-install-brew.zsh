@@ -11,6 +11,7 @@ brew install --quiet \
     lua \
 		hk \
 		yamlfix \
+		pkl-lsp \
     1password-cli \
     lua-language-server \
     pkgx \
