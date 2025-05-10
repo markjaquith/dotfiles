@@ -9,6 +9,7 @@ brew install --quiet \
     gpg \
     zinit \
     lua \
+		hk \
 		yamlfix \
     1password-cli \
     lua-language-server \
