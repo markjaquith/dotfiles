@@ -26,34 +26,25 @@ _fzf_compgen_dir() {
 }
 
 # Fzf theme.
-fg="#CBE0F0"
-bg="#011628"
-bg_highlight="#143652"
-purple="#B388FF"
-blue="#06BCE4"
-cyan="#2CF9ED"
-
-
+export FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS'
+  --color=fg:-1,fg+:#d0d0d0,bg:-1,bg+:#494d64
+  --color=hl:#ed8796,hl+:#5fd7ff,info:#8aadf4,marker:#a6da95
+  --color=prompt:#f4dbd6,spinner:#f5a97f,pointer:#f5a97f,header:#c6a0f6
+  --color=border:#494d64,label:#aeaeae,query:#d9d9d9
+	--color=gutter:#24273a
+  --border="rounded"
+	--border-label=""
+	--preview-window="border-rounded"
+	--prompt="> "
+  --marker="·"
+	--pointer="▶"
+	--separator="─"
+	--scrollbar="│"
+  --layout="reverse"
+'
 # DISABLED because it causes issues with Spring
-# export FZF_DEFAULT_OPTS='
-# --height 80%
 # --pointer=
 # --marker=
-# --color=fg:#cad3f5,bg:#24273a,hl:#ed8796
-# --color=fg+:#cad3f5,bg+:#5b6078,hl+:#ed8796
-# --color=info:#8aadf4,prompt:#f4dbd6,pointer:#f5a97f
-# --color=marker:#a6da95,spinner:#f5a97f,header:#c6a0f6
-# '
-
-export FZF_DEFAULT_OPTS='
---height 80%
---pointer=">"
---marker="x"
---color=fg:#cad3f5,bg:#24273a,hl:#ed8796
---color=fg+:#cad3f5,bg+:#5b6078,hl+:#ed8796
---color=info:#8aadf4,prompt:#f4dbd6,pointer:#f5a97f
---color=marker:#a6da95,spinner:#f5a97f,header:#c6a0f6
-'
 
 show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
 
