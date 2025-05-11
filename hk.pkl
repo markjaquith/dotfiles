@@ -14,6 +14,10 @@ local linters = new Mapping<String, Step> {
     ["cargo-check"] = Builtins.cargo_check
     ["cargo-clippy"] = Builtins.cargo_clippy
     ["cargo-fmt"] = Builtins.cargo_fmt
+
+    ["content-scan"] {
+        check = ".scripts/scan-for-sensitive-content {{files}}"
+    }
 }
 
 hooks {
@@ -25,11 +29,7 @@ hooks {
 
     ["pre-push"] {
         fix = false
-        steps = (linters) {
-            ["scan-for-sensitive-content"] {
-                check = ".scripts/scan-for-sensitive-content {{files}}"
-            }
-        } 
+        steps = linters
     }
 
     // "fix" and "check" are special steps for `hk fix` and `hk check` commands
