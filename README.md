@@ -48,8 +48,6 @@ The `dotfiles-install` command does a bunch of things:
 	- Looks for `.default.` files in the main repo
 	- Matches them with `.prepend.` or `.append.` files in the local dotfiles (if present)
 	- Concatenates as appropriate
-- Sets up `.githooks` dir
-	- `pre-push` command prevents me from committing work things or secrets
 
 [mj]: https://github.com/markjaquith
 [ghostty]: https://ghostty.io/

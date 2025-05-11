@@ -1,0 +1,52 @@
+amends "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+    // uses builtin prettier linter config
+    ["prettier"] = Builtins.prettier
+
+    // Custom linter for pkl files
+    ["pkl"] {
+        glob = "*.pkl"
+        check = "pkl eval {{files}} >/dev/null"
+    }
+
+    ["cargo-check"] = Builtins.cargo_check
+    ["cargo-clippy"] = Builtins.cargo_clippy
+    ["cargo-fmt"] = Builtins.cargo_fmt
+}
+
+local linters_and_security = (linters) {
+    ["scan-for-sensitive-content"] {
+        check = ".scripts/scan-for-sensitive-content"
+    }
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        stash = "patch-file" // stashes unstaged changes while running fix steps
+        steps = linters
+    }
+
+    ["commit-msg"] {
+        steps {
+            ["conventional-commits"] {
+                check = "scripts/check-commit-msg {{commit_msg_file}}"
+            }
+        }
+    }
+    ["pre-push"] {
+        fix = false
+        steps = linters_and_security
+    }
+
+    // "fix" and "check" are special steps for `hk fix` and `hk check` commands
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+    ["check"] {
+        steps = linters_and_security
+    }
+}
