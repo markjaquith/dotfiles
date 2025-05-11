@@ -3,7 +3,6 @@
 
 LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
 DOTFILES_DIR="$HOME/dotfiles"
-VERSION_CONTROLLED_HOOKS_DIR=".githooks"
 
 # Suppress Homebrew messages
 export HOMEBREW_NO_ENV_HINTS=1

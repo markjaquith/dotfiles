@@ -16,7 +16,7 @@ local linters = new Mapping<String, Step> {
     ["cargo-fmt"] = Builtins.cargo_fmt
 
     ["content-scan"] {
-        check = ".scripts/scan-for-sensitive-content {{files}}"
+        check = "bunx secretlint {{files}}"
     }
 }
 
@@ -38,10 +38,6 @@ hooks {
         steps = linters
     }
     ["check"] {
-        steps = (linters) {
-            ["scan-for-sensitive-content"] {
-                check = ".scripts/scan-for-sensitive-content {{files}}"
-            }
-        }
+        steps = linters
     }
 }

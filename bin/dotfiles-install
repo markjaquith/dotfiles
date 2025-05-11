@@ -22,5 +22,8 @@ source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh"
 if [[ -f "${HOME}/.local-dotfiles/bin/dotfiles-install" ]]; then
   source "${HOME}/.local-dotfiles/bin/dotfiles-install"
 fi
+if command -v bun >/dev/null 2>&1; then
+  (cd "${SCRIPT_DIR}/.." && bun i > /dev/null 2>&1)
+fi
 
 echo "\033[32m✔\033[0m  Done!"

@@ -2,3 +2,4 @@
 /.config/karabiner/automatic_backups
 /.config/sesh/sesh.toml
 .env
+/node_modules
