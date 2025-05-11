@@ -46,7 +46,7 @@ open_tmux_urls() {
 
 decrypt_and_install_fonts() {
     local FONT_DIR="$HOME/Library/Fonts"
-    local FONT_SOURCE_DIR="$HOME/dotfiles/fonts"
+    local FONT_SOURCE_DIR="$HOME/dotfiles/.fonts"
 
     # Ensure the source directory exists
     if [[ ! -d "$FONT_SOURCE_DIR" ]]; then
