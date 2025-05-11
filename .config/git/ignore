@@ -10,6 +10,10 @@ Icon[]
 # Thumbnails
 ._*
 
+# Repomix files
+# https://repomix.com/
+repomix-output.xml
+
 # Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd
