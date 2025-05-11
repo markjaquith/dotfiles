@@ -16,12 +16,6 @@ local linters = new Mapping<String, Step> {
     ["cargo-fmt"] = Builtins.cargo_fmt
 }
 
-local linters_and_security = (linters) {
-    ["scan-for-sensitive-content"] {
-        check = ".scripts/scan-for-sensitive-content {{files}}"
-    }
-}
-
 hooks {
     ["pre-commit"] {
         fix = true
@@ -31,7 +25,11 @@ hooks {
 
     ["pre-push"] {
         fix = false
-        steps = linters_and_security
+        steps = (linters) {
+            ["scan-for-sensitive-content"] {
+                check = ".scripts/scan-for-sensitive-content {{files}}"
+            }
+        } 
     }
 
     // "fix" and "check" are special steps for `hk fix` and `hk check` commands
@@ -40,6 +38,10 @@ hooks {
         steps = linters
     }
     ["check"] {
-        steps = linters_and_security
+        steps = (linters) {
+            ["scan-for-sensitive-content"] {
+                check = ".scripts/scan-for-sensitive-content {{files}}"
+            }
+        }
     }
 }
