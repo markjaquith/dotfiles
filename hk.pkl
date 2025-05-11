@@ -18,7 +18,7 @@ local linters = new Mapping<String, Step> {
 
 local linters_and_security = (linters) {
     ["scan-for-sensitive-content"] {
-        check = ".scripts/scan-for-sensitive-content"
+        check = ".scripts/scan-for-sensitive-content {{files}}"
     }
 }
 
@@ -29,13 +29,6 @@ hooks {
         steps = linters
     }
 
-    ["commit-msg"] {
-        steps {
-            ["conventional-commits"] {
-                check = "scripts/check-commit-msg {{commit_msg_file}}"
-            }
-        }
-    }
     ["pre-push"] {
         fix = false
         steps = linters_and_security

@@ -1,10 +1,8 @@
 #!/bin/bash
 # vim: ft=sh
 #
-# Git pre-push hook to prevent pushing sensitive keywords found in the codebase.
-# Place this script in .git/hooks/pre-push and make it executable (chmod +x).
-# Or, better, place it in a version-controlled directory (e.g., .githooks/)
-# and configure Git to use it via `git config core.hooksPath .githooks`.
+# Script to scan files for sensitive content.
+# This script expects to receive a list of files to check as arguments.
 
 # --- Configuration ---
 # Add keywords or patterns to block here. Use caution with generic words.
@@ -18,15 +16,12 @@ BLOCKED_KEYWORDS=(
 	"BEGIN RSA PRIVATE KEY"
 )
 
-HOOK_PATH=".githooks/pre-push"
+# This file's location in Bash 
+HOOK_PATH=".scripts/scan-for-sensitive-content"
 CASE_INSENSITIVE=true
 DEBUG=false
 
-# Git provides these
-remote="$1"
-url="$2"
-
-# Default exit code: 0 (i.e. the push is allowed)
+# Default exit code: 0 (i.e. no sensitive content found)
 exit_code=0
 found_keywords=()
 
@@ -49,117 +44,72 @@ grep_check_opts="$grep_opts -q" # Use -q for the initial silent check
 # This initial message is helpful even without full debug
 echo "Scanning for sensitive content..." >&2
 
-# Git provides lines on stdin like: <local_ref> <local_sha1> <remote_ref> <remote_sha1>
-while read local_ref local_sha remote_ref remote_sha; do
-	if $DEBUG; then
-		echo "DEBUG: Received input line:" >&2
-		echo "DEBUG:   local_ref=$local_ref" >&2
-		echo "DEBUG:   local_sha=$local_sha" >&2
-		echo "DEBUG:   remote_ref=$remote_ref" >&2
-		echo "DEBUG:   remote_sha=$remote_sha" >&2
-	fi
+# Files are passed as arguments
+files_to_check=("$@")
 
-	# Skip deletion
-	if [[ "$local_sha" =~ ^0+$ ]]; then
-		$DEBUG && echo "DEBUG: Detected ref deletion, skipping content scan." >&2;
-		continue
-	fi
+if $DEBUG; then
+    files_list_debug=$(printf "%s;" "${files_to_check[@]}")
+    echo "DEBUG: Files received as arguments: [$files_list_debug]" >&2
+fi
 
-	range=""
+# Exit early if no files to check
+if [ ${#files_to_check[@]} -eq 0 ]; then
+    if $DEBUG; then
+        echo "DEBUG: No files to check. Exiting." >&2
+    else
+        # Clear the processing line if no files were found
+        printf "\033[A\033[2K"
+        echo -e "\033[32m✔\033[0m  No files to scan"
+    fi
+    exit 0
+fi
 
-	# Determine the range of commits to check
-	if [[ "$remote_sha" =~ ^0+$ ]]; then
-		# New branch/tag push, or initial push to an empty repo/ref.
-		EMPTY_TREE_HASH="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-		range="$EMPTY_TREE_HASH..$local_sha"
-		if $DEBUG; then
-			echo "DEBUG: Detected new ref push (remote_sha is zero)." >&2
-			echo "DEBUG: Comparing commit state against empty tree. Using range: $range" >&2
-		fi
-	else
-		# Updating existing branch/tag (remote_sha is not zero)
-		range="$remote_sha..$local_sha"
-		$DEBUG && echo "DEBUG: Detected update to existing ref. Using range: $range" >&2;
-	fi
+$DEBUG && echo "DEBUG: Starting scan for keywords in files..." >&2;
+for file in "${files_to_check[@]}"; do
+    # Exclude the hook script itself from being scanned
+    if [[ "$file" == "$HOOK_PATH" ]]; then
+        continue
+    fi
 
-	$DEBUG && echo "DEBUG: Final calculated range for diff: [$range]" >&2;
-	if [ -z "$range" ]; then
-		$DEBUG && echo "DEBUG: ERROR - Calculated range is empty. Skipping scan for this ref." >&2;
-		continue
-	fi
+    $DEBUG && echo "DEBUG:   Checking file: [$file]" >&2;
+    
+    # Check if file exists
+    if [ -f "$file" ]; then
+        $DEBUG && echo "DEBUG:     File exists. Scanning content..." >&2;
+        
+        for keyword in "${BLOCKED_KEYWORDS[@]}"; do
+            # Use grep -q for a quick check first
+            if grep $grep_check_opts -- "$keyword" "$file"; then
+                # Found a keyword, now get details if needed and report
+                if $DEBUG; then
+                    match_details=$(grep $grep_find_opts -- "$keyword" "$file" | head -n 5) # Limit output lines
+                    echo "Found blocked keyword '$keyword' in file '$file':" >&2
+                    echo "--- Matched Lines ---" >&2
+                    echo "$match_details" >&2
+                    echo "---------------------" >&2
+                fi
+                found_keywords+=("'$keyword' in $file")
+                exit_code=1
+            fi
+        done
+    else
+        $DEBUG && echo "DEBUG: Skipping scan for '$file' (file not found)" >&2;
+    fi
+done
 
-		# Get list of files added (A) or modified (M) in the commit range
-		files_to_check=""
-		diff_command_failed=false
-		diff_cmd="git diff --name-only --diff-filter=AM $range"
-		$DEBUG && echo "DEBUG: Executing command: $diff_cmd" >&2;
-		files_to_check=$(git diff --name-only --diff-filter=AM $range)
-		diff_rc=$?
-
-		if [ $diff_rc -ne 0 ]; then
-			$DEBUG && echo "DEBUG: The 'git diff' command failed with exit code $diff_rc. Range was [$range]" >&2;
-			diff_command_failed=true
-		else
-			if $DEBUG; then
-				files_list_debug=$(echo "$files_to_check" | tr '\n' '; ')
-				echo "DEBUG: Raw files found by diff command: [$files_list_debug]" >&2
-				if [ -z "$files_to_check" ]; then
-					echo "DEBUG: Diff command succeeded but found no files in range [$range] with filter AM." >&2
-				fi
-			fi
-		fi
-
-		if $diff_command_failed || [ -z "$files_to_check" ]; then
-			$DEBUG && echo "DEBUG: Skipping file content scanning for this ref." >&2;
-			continue
-		fi
-
-		$DEBUG && echo "DEBUG: Starting scan for keywords in found files..." >&2;
-		for file in $files_to_check; do
-			# Exclude the hook script itself from being scanned
-			if [[ "$file" == "$HOOK_PATH" ]]; then
-				continue
-			fi
-
-			$DEBUG && echo "DEBUG:   Checking file: [$file]" >&2;
-			# Check if file exists in the target commit ($local_sha)
-			if git cat-file -e "$local_sha:$file" 2>/dev/null; then
-				$DEBUG && echo "DEBUG:     File exists in commit $local_sha. Scanning content..." >&2;
-				content_stream=$(git show "$local_sha:$file")
-				for keyword in "${BLOCKED_KEYWORDS[@]}"; do
-					# Use grep -q for a quick check first
-					if echo "$content_stream" | grep $grep_check_opts -- "$keyword"; then
-						# Found a keyword, now get details if needed and report
-						if $DEBUG; then
-							match_details=$(echo "$content_stream" | grep $grep_find_opts -- "$keyword" | head -n 5) # Limit output lines
-							echo "Found blocked keyword '$keyword' in file '$file' (commit $local_sha):" >&2
-							echo "--- Matched Lines ---" >&2
-							echo "$match_details" >&2
-							echo "---------------------" >&2
-						fi
-						found_keywords+=("'$keyword' in $file")
-						exit_code=1
-					fi
-				done
-			else
-				$DEBUG && echo "DEBUG: Skipping scan for '$file' (not found in commit $local_sha via git cat-file)" >&2;
-			fi
-		done
-		$DEBUG && echo "DEBUG: Finished scanning files for this ref ($local_ref)." >&2;
-
-	done < /dev/stdin
+$DEBUG && echo "DEBUG: Finished scanning files." >&2;
 
 if [ $exit_code -ne 0 ]; then
-	echo -en "\033[31m"
-	echo "error: push rejected due to presence of blocked keywords:" >&2
-	printf "%s\n" "${found_keywords[@]}" | sort -u | sed 's/^/  - /' >&2
-	echo -en "\033[0m"
+    echo -en "\033[31m"
+    echo "error: sensitive content detected:" >&2
+    printf "%s\n" "${found_keywords[@]}" | sort -u | sed 's/^/  - /' >&2
+    echo -en "\033[0m"
 elif $DEBUG; then
-	echo "DEBUG: No blocked keywords found in the pushed content." >&2
+    echo "DEBUG: No blocked keywords found in the scanned content." >&2
 else
-	# Clear the processing line if no errors were found
-	printf "\033[A\033[2K"
-	echo -e "\033[32m✔\033[0m  Content scan passed"
+    # Clear the processing line if no errors were found
+    printf "\033[A\033[2K"
+    echo -e "\033[32m✔\033[0m  Content scan passed"
 fi
 
 exit $exit_code
