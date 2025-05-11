@@ -292,7 +292,7 @@ tks() {
 # This is useful for sending context to an LLM.
 #
 # Usage: llm_files [directory] | pbcopy
-llm_files() {
+llm_files_old() {
 	# Define the directory to scan (defaults to current directory)
 	DIRECTORY=${1:-.}
 
@@ -309,4 +309,10 @@ llm_files() {
 		echo
 	done
 }
+
+# Uses repomix to scan the current directory for files and puts them in a format for LLMs
+function llm_files() {
+	bunx repomix && cat repomix-output.xml | pbcopy
+}
+
 
