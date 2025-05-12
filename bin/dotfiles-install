@@ -14,7 +14,6 @@ wait
 source "${SCRIPT_DIR}/dotfiles-install-tools.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-sync.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-sesh.zsh"
-source "${SCRIPT_DIR}/dotfiles-install-git-hooks.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-configs.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh"
  
@@ -25,5 +24,7 @@ fi
 if command -v bun >/dev/null 2>&1; then
   (cd "${SCRIPT_DIR}/.." && bun i > /dev/null 2>&1)
 fi
+
+source "${SCRIPT_DIR}/dotfiles-install-git-hooks.zsh"
 
 echo "\033[32m✔\033[0m  Done!"
