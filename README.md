@@ -24,8 +24,10 @@ They will change drastically over time, often suddenly, and without warning.
 - [Neovim][nvim] — BTW
 - [Lazygit][lazygit] — TUI for Git that I use about half of the time
 - [pet][pet] — snippets manager, for things that aren't quite worth a zsh alias/function
-	- Might be replacing this soon with a custom tool
+	- might be replacing this soon with a custom tool
 - [stow][stow] — classic GNU util for managing symlinks (more below in **Living with Dotfiles**)
+- [hk][hk] — for managing Git hooks in this repo that do things like linting, and secret exfiltration protection
+- [secretlint][secretlint] — for preventing secret exfiltration from this repo
 
 ## Living with Dotfiles
 
@@ -59,3 +61,5 @@ The `dotfiles-install` command does a bunch of things:
 [pet]: https://github.com/knqyf263/pet
 [stow]: https://www.gnu.org/software/stow/
 [lazygit]: https://github.com/jesseduffield/lazygit
+[hk]: https://hk.jdx.dev/
+[secretlint]: https://github.com/secretlint/secretlint
