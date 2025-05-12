@@ -4,3 +4,12 @@
 --ignore=.DS_Store
 --ignore=.fonts
 --ignore=mise.toml
+--ignore=hk.pkl
+--ignore=package.json
+--ignore=bun.lock
+--ignore=tsconfig.json
+--ignore=README.md
+--ignore=.secret
+--ignore=.secretlintrc.json
+--ignore=node_modules
+--ignore=index.ts
