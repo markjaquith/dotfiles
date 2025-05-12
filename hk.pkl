@@ -16,7 +16,7 @@ local linters = new Mapping<String, Step> {
     ["cargo-fmt"] = Builtins.cargo_fmt
 
     ["content-scan"] {
-        check = "bunx secretlint {{files}}"
+        check = "if [ -n \"{{files}}\" ]; then bunx secretlint {{files}}; fi"
     }
 }
 
