@@ -13,3 +13,4 @@
 --ignore=.secretlintrc.json
 --ignore=node_modules
 --ignore=index.ts
+--ignore=.ignore
