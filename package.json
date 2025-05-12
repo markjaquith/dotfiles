@@ -5,6 +5,7 @@
 	"private": true,
 	"devDependencies": {
 		"@secretlint/secretlint-rule-pattern": "^9.3.2",
+		"@secretlint/secretlint-rule-privatekey": "^9.3.2",
 		"@types/bun": "latest",
 		"secretlint": "^9.3.2"
 	},

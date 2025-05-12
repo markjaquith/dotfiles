@@ -5,6 +5,7 @@
       "name": "dotfiles",
       "devDependencies": {
         "@secretlint/secretlint-rule-pattern": "^9.3.2",
+        "@secretlint/secretlint-rule-privatekey": "^9.3.2",
         "@types/bun": "latest",
         "secretlint": "^9.3.2",
       },
@@ -43,6 +44,8 @@
     "@secretlint/resolver": ["@secretlint/resolver@9.3.2", "", {}, "sha512-yOi6md3kzpaFw6w2FJTDLoKlUxr1RltBJrb5lheIBDDXy/7C/5gP0K4uMiqamnVg8c9Ac+qlNS5KUar8FDFpdg=="],
 
     "@secretlint/secretlint-rule-pattern": ["@secretlint/secretlint-rule-pattern@9.3.2", "", { "dependencies": { "@secretlint/tester": "^9.3.2", "@secretlint/types": "^9.3.2", "@textlint/regexp-string-matcher": "^2.0.2" } }, "sha512-b+DKByXAA+/5lGVSLeviPxAOieTN0JDSaEaKmMvHWM+neAMcFqwCOj22ZqPpUVjqJZ2u6MlmdE50HGWOXjA4ZQ=="],
+
+    "@secretlint/secretlint-rule-privatekey": ["@secretlint/secretlint-rule-privatekey@9.3.2", "", { "dependencies": { "@textlint/regexp-string-matcher": "^2.0.2" } }, "sha512-P/UGItVjm1TwazXMq9TgpqGhiyvRW3w39cLPJHFKPmuaG5CFtqHT7YvoU+lZOnYsR1DDNq+nApju6jy40jDdDQ=="],
 
     "@secretlint/source-creator": ["@secretlint/source-creator@9.3.2", "", { "dependencies": { "@secretlint/types": "^9.3.2", "istextorbinary": "^6.0.0" } }, "sha512-eEP8sHnTB7rtv976Awh5+VMTD8udiHBaeSWAEKGy21Gas/slEb02Q812SWo2UMX9NcVBl+DYaOkmPQbcPHrY5A=="],
 
