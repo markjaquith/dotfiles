@@ -55,6 +55,10 @@
     "branch": "master",
     "commit": "15884cee63a8c205334ab13ab1c891cd4d27101a"
   },
+  "mdx.nvim": {
+    "branch": "main",
+    "commit": "464a74be368dce212cff02f6305845dc7f209ab3"
+  },
   "mini.nvim": {
     "branch": "main",
     "commit": "088d67751584e4168f35bca89bad70ada7ea4636"
