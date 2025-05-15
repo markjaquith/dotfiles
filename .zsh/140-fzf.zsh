@@ -35,16 +35,12 @@ export FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS'
   --border="rounded"
 	--border-label=""
 	--preview-window="border-rounded"
-	--prompt="> "
-  --marker="·"
-	--pointer="▶"
-	--separator="─"
 	--scrollbar="│"
+	--pointer=
+	--marker=
+	--separator="─"
   --layout="reverse"
 '
-# DISABLED because it causes issues with Spring
-# --pointer=
-# --marker=
 
 show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
 
