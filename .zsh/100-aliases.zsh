@@ -168,6 +168,7 @@ alias gds="git diff --staged"
 alias ga="git add"
 alias gc="git commit"
 alias gcm="git commit -m"
+alias gbb="git checkout \$(git branch | fzf)"
 
 # Lazygit.
 alias lg="lazygit"
