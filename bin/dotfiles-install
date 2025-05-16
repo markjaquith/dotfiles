@@ -11,6 +11,7 @@ source "${SCRIPT_DIR}/dotfiles-install-brew.zsh" &
 source "${SCRIPT_DIR}/dotfiles-install-bun.zsh" &
 wait
 
+source "${SCRIPT_DIR}/dotfiles-install-mise.zsh" &
 source "${SCRIPT_DIR}/dotfiles-install-tools.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-sync.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-sesh.zsh"
