@@ -120,8 +120,7 @@ alias vim="nvim"
 alias vi="nvim"
 
 # Directory listing.
-alias ls="eza"
-alias la="eza --color --long --icons --no-time --no-user --no-permissions --all --no-filesize --git --classify"
+alias la="eza --color --long --icons --no-time --no-user --no-permissions --all --no-filesize --classify"
 
 function zz() {
 	z "$@" && la
