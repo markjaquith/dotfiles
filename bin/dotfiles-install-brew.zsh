@@ -9,6 +9,7 @@ brew install --quiet \
     gpg \
     zinit \
     lua \
+		bruno \
 		hk \
 		yamlfix \
 		pkl-lsp \
