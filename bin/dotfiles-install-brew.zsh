@@ -11,6 +11,9 @@ brew install --quiet \
     lua \
 		bruno \
 		hk \
+		tokei \
+		bacon \
+		kondo \
 		yamlfix \
 		pkl-lsp \
     1password-cli \
