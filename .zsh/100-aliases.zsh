@@ -23,6 +23,9 @@ function pt() {
 	pet exec -t "$*"
 }
 
+# This is safe to do, because bat will detect when it's being piped
+alias cat="bat"
+
 open_tmux_urls() {
   local urls count selected
 
