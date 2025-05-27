@@ -1,5 +1,7 @@
 -- PLUGIN: Conform is a plugin that automatically formats your code.
 
+vim.g.format_on_save = vim.g.format_on_save == nil and true or vim.g.format_on_save
+
 local function format_ts(bufnr, opts)
   opts = opts or { imports = true }
   bufnr = bufnr or vim.api.nvim_get_current_buf()
@@ -60,6 +62,8 @@ return {
     notify_on_error = false,
     run_all_formatters_sequentially = true,
     format_after_save = function(bufnr)
+      if not vim.g.format_on_save then return end
+
       format_ts(bufnr, {
         imports = false,
       })

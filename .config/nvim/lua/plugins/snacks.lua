@@ -80,6 +80,18 @@ return {
         Snacks.toggle.option('relativenumber', { name = 'Relative Line Numbers' }):map '<leader>or'
         Snacks.toggle.line_number():map '<leader>ol'
         Snacks.toggle.dim():map '<leader>od'
+        Snacks.toggle.new({
+          id = "format_on_save",
+          name = "Format on Save",
+
+          get = function()
+            return vim.g.format_on_save == true
+          end,
+
+          set = function(new_state)
+            vim.g.format_on_save = new_state
+          end,
+        }):map '<leader>of'
       end,
     })
   end,
