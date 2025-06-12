@@ -160,6 +160,7 @@ function title {
 # Git aliases.
 alias gl="git pull"
 alias gp="git push"
+alias gpf="git push --force"
 alias gs="git status -s"
 alias gss="git status"
 alias gb="git branch"
