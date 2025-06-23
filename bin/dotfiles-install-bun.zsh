@@ -6,6 +6,7 @@ bun i -g --no-summary \
     typescript-language-server@latest \
     svelte-language-server@latest \
     prettier@latest \
+    opencode-ai \
     prettier-plugin-svelte@latest \
     @tailwindcss/language-server@latest \
     vscode-langservers-extracted@latest \
