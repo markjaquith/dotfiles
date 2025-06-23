@@ -25,7 +25,11 @@ local function format_ts(bufnr, opts)
           vim.cmd 'TSToolsAddMissingImports sync'
         end)
         if res then
-          vim.cmd 'EslintFixAll'
+          pcall(function()
+            if vim.fn.exists(':EslintFixAll') == 2 then
+              vim.cmd 'EslintFixAll'
+            end
+          end)
         else
           attempts = attempts + 1
           if attempts < max_retries then
@@ -39,7 +43,11 @@ local function format_ts(bufnr, opts)
       try_add_imports()
     end
 
-    vim.cmd 'EslintFixAll'
+    pcall(function()
+      if vim.fn.exists(':EslintFixAll') == 2 then
+        vim.cmd 'EslintFixAll'
+      end
+    end)
   end
 end
 
