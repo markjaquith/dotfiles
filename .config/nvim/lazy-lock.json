@@ -17,7 +17,7 @@
   },
   "cmp-path": {
     "branch": "main",
-    "commit": "edbab83da34fffbaf993491e84d0223540f42f0b"
+    "commit": "e52e640b7befd8113b3350f46e8cfcfe98fcf730"
   },
   "cmp_luasnip": {
     "branch": "master",
@@ -61,7 +61,7 @@
   },
   "mini.nvim": {
     "branch": "main",
-    "commit": "8ca3965e68edfee5f438d4063f5adf5afa255884"
+    "commit": "6a6a37ec54f833e2a733f5f04959f506520701ba"
   },
   "noice.nvim": {
     "branch": "main",
