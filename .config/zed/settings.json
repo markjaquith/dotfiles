@@ -33,7 +33,7 @@
 
 	// Disable three buttons I do not use.
 	"assistant": {
-		"version": "1",
+		"version": "2",
 		"button": false
 	},
 	"collaboration_panel": {
