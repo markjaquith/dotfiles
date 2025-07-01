@@ -1,6 +1,7 @@
 # Configure HK to use Mise
 # See: https://hk.jdx.dev/mise_integration.html
 export HK_MISE=1
+export MISE_NPM_BUN=1
 
 # Load Mise unless SKIP_MISE is set.
 if [[ -z "$SKIP_MISE" ]]; then

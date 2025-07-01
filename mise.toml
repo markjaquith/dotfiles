@@ -1,3 +1,4 @@
 [tools]
-hk = "latest"
+hk = "1.2.0"
+"npm:prettier" = "latest"
 pkl = "latest"
