@@ -14,6 +14,14 @@ return {
     items = function(ctx)
       local items = {
         {
+          name = 'Clear Vim Marks',
+          text = 'Delete all marks (local and global)',
+          command = function()
+            vim.cmd ':delm! | delm A-Z0-9'
+            require('snacks').notify('All marks cleared', { title = 'Marks' })
+          end,
+        },
+        {
           name = 'Restart LSP',
           text = 'Restart the langauge server protocol servers',
           command = function()
