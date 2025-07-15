@@ -92,6 +92,12 @@ return {
       }
     end,
     formatters = {
+      prettier = {
+        command = "yarn",
+        args = { "prettier", "--stdin-filepath", "$FILENAME" },
+        stdin = true,
+      },
+
       -- This one uses --server
       rubocop = {
         command = "bundle",
