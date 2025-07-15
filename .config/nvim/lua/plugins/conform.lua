@@ -77,9 +77,8 @@ return {
       })
 
       -- Disable "format_after_save lsp_fallback" for languages that don't
-      -- have a well standardized coding style. You can add additional
-      -- languages here or re-enable it for the disabled ones.
-      local disable_filetypes = { c = true, cpp = true }
+      -- have a well standardized coding style, or where I want formatting to be manual.
+      local disable_filetypes = { c = true, cpp = true, yaml = true }
 
       -- These types have slow formatters.
       local slow_filetypes = { ruby = true }
