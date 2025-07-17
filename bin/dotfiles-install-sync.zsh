@@ -29,6 +29,7 @@ for default_file in "$DOTFILES_DIR"/**/*.default.*(ND.); do
         if [[ -d "$local_check_dir" ]]; then
             local potential_local_prepend="$local_check_dir/$base_name.prepend.$extension"
             local potential_local_append="$local_check_dir/$base_name.append.$extension"
+            local potential_local_replace="$local_check_dir/$base_name.$extension"
 
             if [[ -f "$potential_local_prepend" ]]; then
                 local_file="$potential_local_prepend"
@@ -36,6 +37,9 @@ for default_file in "$DOTFILES_DIR"/**/*.default.*(ND.); do
             elif [[ -f "$potential_local_append" ]]; then
                 local_file="$potential_local_append"
                 local_type="append"
+            elif [[ -f "$potential_local_replace" ]]; then
+                local_file="$potential_local_replace"
+                local_type="replace"
             else
                 # No corresponding local file
                 :
@@ -57,6 +61,8 @@ for default_file in "$DOTFILES_DIR"/**/*.default.*(ND.); do
             cat "$local_file" "$default_file" > "$target_file"
         elif [[ "$local_type" == "append" ]]; then
             cat "$default_file" "$local_file" > "$target_file"
+        elif [[ "$local_type" == "replace" ]]; then
+            cat "$local_file" > "$target_file"
         fi
 
         if [[ $? -ne 0 ]]; then
