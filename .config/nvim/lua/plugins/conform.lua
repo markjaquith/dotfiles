@@ -93,7 +93,7 @@ return {
     end,
     formatters = {
       prettier = {
-        command = "yarn",
+        command = "bunx",
         args = { "prettier", "--stdin-filepath", "$FILENAME" },
         stdin = true,
       },
