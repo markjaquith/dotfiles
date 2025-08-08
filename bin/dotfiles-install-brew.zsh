@@ -23,7 +23,6 @@ brew install --quiet \
     knqyf263/pet/pet \
     lazygit \
     bottom \
-    borders \
     rustup \
     rust-analyzer \
     gum \
