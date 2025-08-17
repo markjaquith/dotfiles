@@ -5,5 +5,9 @@ if ! command -v nvim >/dev/null 2>&1; then
 fi
 
 # Reduce delay when pressing Esc in vim mode
-export KEYTIMEOUT=1
+if [[ -n $SSH_TTY || -n $SSH_CONNECTION || -n $MOSH_CONNECTION ]]; then
+  export KEYTIMEOUT=5    # 50 ms: protects Meta sequences over flaky SSH links
+else
+  export KEYTIMEOUT=1    # 10 ms: feels instant
+fi
 
