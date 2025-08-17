@@ -42,7 +42,7 @@ open_tmux_urls() {
   if [[ "$count" -eq 1 ]]; then
     open "$urls"
   else
-    selected=$(echo "$urls" | gum choose --no-limit)
+    selected=$(echo "$urls" | gum choose)
     [[ -n "$selected" ]] && echo "$selected" | tr '\n' ' ' | xargs open
   fi
 }
