@@ -52,6 +52,26 @@ return {
             require('snacks').notify('Buffer replaced with clipboard contents', { title = 'Clipboard' })
           end,
         },
+        {
+          name = 'Curl Quotes',
+          text = 'Convert straight quotes to curly quotes in Markdown',
+          command = function()
+            if vim.bo.filetype ~= 'markdown' then
+              return
+            end
+            local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+            local content = table.concat(lines, '\n')
+            local result = vim.fn.system(
+              'pandoc --from markdown+yaml_metadata_block --to markdown-smart --standalone --wrap=none', content)
+            if vim.v.shell_error == 0 then
+              local new_lines = vim.fn.split(result, '\n', true)
+              vim.api.nvim_buf_set_lines(0, 0, -1, false, new_lines)
+              require('snacks').notify('Quotes curled', { title = 'Pandoc' })
+            else
+              require('snacks').notify('Failed to curl quotes', { title = 'Pandoc', level = 'error' })
+            end
+          end,
+        },
       }
 
       local git_items = {
