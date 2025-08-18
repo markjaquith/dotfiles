@@ -13,6 +13,7 @@ brew install --quiet \
 		tokei \
 		bacon \
 		kondo \
+		pandoc \
 		yamlfix \
 		pkl-lsp \
     1password-cli \
