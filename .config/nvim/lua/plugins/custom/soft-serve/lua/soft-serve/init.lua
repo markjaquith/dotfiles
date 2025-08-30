@@ -203,10 +203,13 @@ function M.check_and_update()
 
   -- Only proceed if the current buffer's filetype is managed
   if not should_manage_buffer() then
-    local current_bufnr = vim.api.nvim_get_current_buf()
-    -- If buffer was previously managed but filetype changed (or not managed ft loaded), clean up
-    if M.managed_buffers[current_bufnr] then
-      remove_managed_split(current_bufnr)
+    local current_winnr = vim.api.nvim_get_current_win()
+    -- Check if any managed buffer is associated with the current window
+    for bufnr, info in pairs(M.managed_buffers) do
+      if info.content_win == current_winnr then
+        remove_managed_split(bufnr)
+        break
+      end
     end
     return
   end

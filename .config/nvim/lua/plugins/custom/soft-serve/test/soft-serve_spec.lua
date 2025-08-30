@@ -388,8 +388,79 @@ describe("SoftServe", function()
 
   -- Test split window behavior
   describe("split window behavior", function()
+    it("removes split when switching to non-managed buffer", function()
+      -- Create a markdown buffer (managed filetype)
+      local markdown_bufnr = helpers.create_test_buffer("markdown")
+
+      -- Mock total width to be larger than max_width
+      local restore_width = helpers.mock_total_width(200)
+      helpers.set_window_width(150)
+
+      -- Trigger update to create the split
+      soft_serve.check_and_update()
+
+      -- Wait for the split to be created
+      helpers.wait_for(function()
+        return helpers.count_windows() == 2
+      end, 500, "Split window was not created")
+
+      -- Verify markdown buffer is managed
+      assert.is_true(helpers.is_buffer_managed(markdown_bufnr))
+
+      -- Now switch to a non-managed buffer in the same window
+      local lua_bufnr = helpers.create_test_buffer("lua")
+
+      -- Trigger update
+      soft_serve.check_and_update()
+
+      -- Wait for the split to be removed
+      helpers.wait_for(function()
+        return helpers.count_windows() == 1
+      end, 500, "Split window was not removed when switching to non-managed buffer")
+
+      -- Verify markdown buffer is no longer managed
+      assert.is_false(helpers.is_buffer_managed(markdown_bufnr))
+
+      -- Verify lua buffer is not managed
+      assert.is_false(helpers.is_buffer_managed(lua_bufnr))
+
+      -- Clean up
+      restore_width()
+    end)
+
     it("uses the scratch buffer for the split window", function()
       -- Create a markdown buffer
       local bufnr = helpers.create_test_buffer("markdown")
 
-      -- Mock total width to be larger
+      -- Mock total width to be larger than max_width
+      local restore_width = helpers.mock_total_width(200)
+      helpers.set_window_width(150)
+
+      -- Trigger update to create the split
+      soft_serve.check_and_update()
+
+      -- Wait for the split to be created
+      helpers.wait_for(function()
+        return helpers.count_windows() == 2
+      end, 500, "Split window was not created")
+
+      -- Get all windows
+      local windows = vim.api.nvim_list_wins()
+      local split_win = nil
+      for _, win_id in ipairs(windows) do
+        if win_id ~= vim.api.nvim_get_current_win() then
+          split_win = win_id
+          break
+        end
+      end
+
+      -- Verify the split window uses the scratch buffer
+      assert.is_not_nil(split_win)
+      local split_buf = vim.api.nvim_win_get_buf(split_win)
+      assert.are.same(split_buf, soft_serve.scratch_bufnr)
+
+      -- Clean up
+      restore_width()
+    end)
+  end)
+end)
