@@ -31,6 +31,7 @@ ls.add_snippets('all', {
   s('#sq', fmt([[‘{}’]], { i(1) })),
   s('#apost', t '’'),
   s('#mdash', t '—'),
+  s('#ndash', t '–'),
 })
 
 ---------------

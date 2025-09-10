@@ -61,7 +61,7 @@ return {
             end
             local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
             local content = table.concat(lines, '\n')
-            local result = vim.fn.system('bunx github:markjaquith/markdown-format --no-cache', content)
+            local result = vim.fn.system('bunx --no-cache github:markjaquith/markdown-format', content)
             if vim.v.shell_error == 0 then
               local new_lines = vim.fn.split(result, '\n', true)
               vim.api.nvim_buf_set_lines(0, 0, -1, false, new_lines)
