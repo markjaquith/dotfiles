@@ -8,11 +8,8 @@
 // from the command palette or from `Zed` application menu.
 {
 	// Theme and key bindings.
-	"features": {
-		"edit_prediction_provider": "copilot"
-	},
 	"vim_mode": true,
-	"theme": "One Dark",
+ "theme": "One Dark",
 	"base_keymap": "VSCode",
 
 	// Tabs.
@@ -36,14 +33,15 @@
 	},
 
 	// Disable three buttons I do not use.
-	"agent": {
+	"assistant": {
+		"version": "2",
 		"button": false
 	},
 	"collaboration_panel": {
 		"button": false
 	},
 	"chat_panel": {
-		"button": "never"
+		"button": false
 	},
 
 	// Move the files panel to the right side.
