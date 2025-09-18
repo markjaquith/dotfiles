@@ -61,19 +61,28 @@ decrypt_and_install_fonts() {
     cd "$FONT_SOURCE_DIR" || return 1
 
     local ENCRYPTED_FONTS=()
+    local BARE_FONTS=()
 
-    # Find all .otf.gpg files and compute expected font names
+    # Find all encrypted font files (.otf.gpg and .ttf.gpg) and compute expected font names
     for file in *.otf.gpg(.N); do
         ENCRYPTED_FONTS+=("${file%.gpg}")  # Remove .gpg extension
     done
+    
+    for file in *.ttf.gpg(.N); do
+        ENCRYPTED_FONTS+=("${file%.gpg}")  # Remove .gpg extension
+    done
 
-		# Find all .ttf files
-		for file in *.ttf(.N); do
-			BARE_FONTS+=("${file}")
-		done
+    # Find all plain font files (.otf and .ttf)
+    for file in *.otf(.N); do
+        BARE_FONTS+=("${file}")
+    done
+    
+    for file in *.ttf(.N); do
+        BARE_FONTS+=("${file}")
+    done
 
-		# Combine arrays
-		local ALL_FONTS=("${ENCRYPTED_FONTS[@]}" "${BARE_FONTS[@]}")
+    # Combine arrays
+    local ALL_FONTS=("${ENCRYPTED_FONTS[@]}" "${BARE_FONTS[@]}")
 
     # Exit if no font files are found
     if [[ ${#ALL_FONTS[@]} -eq 0 ]]; then
@@ -95,21 +104,24 @@ decrypt_and_install_fonts() {
         return 0
     fi
 
-    # Prompt for passphrase
-    echo "Enter passphrase for decryption:"
-    read -s passphrase
+    # Prompt for passphrase if encrypted fonts exist
+    local passphrase=""
+    if [[ ${#ENCRYPTED_FONTS[@]} -gt 0 ]]; then
+        echo "Enter passphrase for decryption:"
+        read -s passphrase
+    fi
 
-    # Decrypt and move fonts
-    for file in *.otf.gpg(.N); do
+    # Decrypt and move encrypted fonts
+    for file in *.otf.gpg(.N) *.ttf.gpg(.N); do
         local output_file="${file%.gpg}"
         gpg --batch --yes --passphrase "$passphrase" --output "$output_file" --decrypt "$file"
         mv "$output_file" "$FONT_DIR/"
     done
 
-		# Copy non-encrypted fonts
-		for file in *.ttf(.N); do
-			cp "$file" "$FONT_DIR/"
-		done
+    # Copy non-encrypted fonts
+    for file in *.otf(.N) *.ttf(.N); do
+        cp "$file" "$FONT_DIR/"
+    done
 }
 
 # Edit the hosts file.
