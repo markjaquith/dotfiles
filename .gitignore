@@ -3,3 +3,4 @@
 /.config/sesh/sesh.toml
 .env
 /node_modules
+.config/zed/prompts
