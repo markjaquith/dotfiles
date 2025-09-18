@@ -10,9 +10,9 @@ for default_file in "$DOTFILES_DIR"/**/*.default.*(ND.); do
         local base_name=$match[1]
         local extension=$match[2]
         local target_filename="${base_name}.${extension}"
-        local target_dir
-        local target_file
-        local local_check_dir
+        local target_dir=
+        local target_file=
+        local local_check_dir=
 
         if [[ "$dir_part" == "." ]]; then
             target_dir="$HOME"
