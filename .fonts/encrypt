@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 encrypt_fonts() {
-	local FONT_SOURCE_DIR="$HOME/dotfiles/fonts"
+	local FONT_SOURCE_DIR="$HOME/dotfiles/.fonts"
 
 	# Ensure the source directory exists
 	if [[ ! -d "$FONT_SOURCE_DIR" ]]; then
@@ -12,10 +12,10 @@ encrypt_fonts() {
 	# Move into the font source directory
 	cd "$FONT_SOURCE_DIR" || return 1
 
-	# Find all .otf files
-	local FONT_FILES=(*.otf(.N))  # .N prevents errors if no matches
+	# Find all .otf and .ttf files
+	local FONT_FILES=(*.otf(.N) *.ttf(.N))  # .N prevents errors if no matches
 
-	# Exit if no .otf files are found
+	# Exit if no font files are found
 	if [[ ${#FONT_FILES[@]} -eq 0 ]]; then
 		echo "No font files found in $FONT_SOURCE_DIR."
 		return 1
