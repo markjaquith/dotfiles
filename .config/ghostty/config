@@ -1,16 +1,33 @@
 # Basic theming
-theme = catppuccin-macchiato
-font-family = MonoLisa Nerd Font Mono
-font-style = Retina
+theme = Catppuccin Macchiato
+
+
+# Monaspace
+#
+# Not used, but available if I want
+#
+# font-family = Monaspace Neon
+# font-family-italic = Monaspace Krypton
+# font-style = Medium
+# font-size = 14
+# adjust-cell-height = 58%
+# adjust-cursor-height = 80%
+
+# MonoLisa
+font-family = MonoLisa
+font-style = Medium
 font-size = 14
-adjust-cell-height = 50%
-window-padding-x = 16
-window-padding-y = 8
-adjust-cursor-height = 50%
+adjust-cell-height = 40%
+adjust-cursor-height = 80%
+
+# Other settings
+window-padding-x = 8
+window-padding-y = 0
 adjust-underline-position = 10
 adjust-underline-thickness = 2
 cursor-text = 181926
-font-codepoint-map = U+E000-U+E00A,U+E0A0-U+E0A3,U+E0CA,U+E0CC-U+E0D7,U+E200-U+E2A9,U+E300-U+E3E3,U+E5FA-U+E6B7,U+E700-U+E8EF,U+EA60-U+EC1E,U+ED00-U+F2FF,U+EE00-U+EE0B,U+F300-U+F381,U+F400-U+F533,U+F0001-U+F1AF0=Symbols Nerd Font Mono
+# This used to be required, but I'm trying to do without it now that Ghostty 1.2 is out
+# font-codepoint-map = U+E000-U+E00A,U+E0A0-U+E0A3,U+E0CA,U+E0CC-U+E0D7,U+E200-U+E2A9,U+E300-U+E3E3,U+E5FA-U+E6B7,U+E700-U+E8EF,U+EA60-U+EC1E,U+ED00-U+F2FF,U+EE00-U+EE0B,U+F300-U+F381,U+F400-U+F533,U+F0001-U+F1AF0=Symbols Nerd Font Mono
 
 # Config
 mouse-hide-while-typing = true

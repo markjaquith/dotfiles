@@ -187,7 +187,19 @@ t() {
     return
   fi
 
-  sesh connect $(mysesh)
+  sesh connect $(mysesh_simple)
+}
+
+mysesh_simple() {
+	sesh list -Hd | gum filter \
+		--no-sort \
+		--limit 1 \
+		--fuzzy \
+		--no-strip-ansi \
+		--indicator '󰳟' \
+		--no-show-help \
+		--placeholder "Pick a session..." \
+		--prompt='󱐋 '
 }
 
 mysesh() {
