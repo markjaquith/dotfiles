@@ -104,14 +104,14 @@ return {
       sorbet = {
         cmd = { 'bundle', 'exec', 'srb', 'tc', '--lsp' },
         filetypes = { 'ruby' },
-        -- root_dir = lspconfig.util.root_pattern("Gemfile", ".git"),
+        -- root_dir = vim.lsp.config.util.root_pattern("Gemfile", ".git"),
         capabilities = capabilities,
       },
 
       rubocop = {
         cmd = { 'bundle', 'exec', 'rubocop', '--lsp', '--no-server' },
         filetypes = { 'ruby' },
-        -- root_dir = lspconfig.util.root_pattern("Gemfile", ".git"),
+        -- root_dir = vim.lsp.config.util.root_pattern("Gemfile", ".git"),
         capabilities = capabilities,
       },
 
@@ -157,7 +157,9 @@ return {
       -- by the server configuration above. Useful when disabling
       -- certain features of an LSP (for example, turning off formatting for tsserver)
       server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-      require('lspconfig')[server_name].setup(server)
+
+      vim.lsp.config(server_name, server)
+      vim.lsp.enable(server_name)
     end
   end,
 }
