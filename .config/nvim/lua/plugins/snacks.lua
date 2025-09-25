@@ -108,11 +108,11 @@ return {
     -- NOTE: Picker
     -- Explorer
     {
-      '<leader>T',
+      '<leader>E',
       function()
         Snacks.explorer.reveal()
       end,
-      { desc = 'Toggle File [T]ree' },
+      { desc = 'Toggle File [E]xplorer' },
     },
 
     -- NOTE: Find
