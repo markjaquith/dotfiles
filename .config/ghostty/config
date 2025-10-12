@@ -21,8 +21,9 @@ adjust-cell-height = 40%
 adjust-cursor-height = 80%
 
 # Other settings
+macos-titlebar-style = hidden
 window-padding-x = 8
-window-padding-y = 0
+window-padding-y = 8
 adjust-underline-position = 10
 adjust-underline-thickness = 2
 cursor-text = 181926
