@@ -1,13 +1,4 @@
 [[commands]]
-description = "Greets a person"
-command = "echo 'Hello!'"
-tags = ['greet']
-
-[[commands]]
-description = "Who am I?"
-command = "whoami"
-
-[[commands]]
 description = "Curls quotes in Svelte files"
 command = '''
 fd -e svelte | xargs sed -Ei '' "s/([a-z]|I)\'(s|re|t|d|ve)/\1’\2/g"
