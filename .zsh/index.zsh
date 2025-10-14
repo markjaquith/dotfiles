@@ -7,7 +7,6 @@ source $(dirname "$0")/000-init.zsh
   ┃  005-profile-start         #┃ Start profiling              ┃ ZSH_PROFILE    ┃
   ┃  010-paths                 #┃ Set paths                    ┃                ┃
   ┃  020-history               #┃ Configure zsh history        ┃                ┃
-  ┃  030-pet	                 #┃ Load Pet	                   ┃                ┃
   ┃  040-pkgx                  #┃ Load Pkgx                    ┃                ┃
   ┃  050-bun                   #┃ Load Bun                     ┃                ┃
   ┃  060-mise                  #┃ Configure Mise and HK        ┃                ┃

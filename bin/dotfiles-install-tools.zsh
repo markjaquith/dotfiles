@@ -23,9 +23,6 @@ if ! command -v cargo &>/dev/null; then
   rustup default stable > /dev/null 2>&1
 fi
 
-# Ensure that the local dotfiles pet dir exists
-mkdir -p "$LOCAL_DOTFILES_DIR/.config/pet"
-
 # Local env
 mkdir -p ~/.local/bin
 touch ~/.local/bin/env
