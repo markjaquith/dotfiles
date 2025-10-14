@@ -1,0 +1,42 @@
+[[commands]]
+description = "Copy git commit hash to clipboard"
+command = """git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n' | pbcopy"""
+tags = ["git"]
+
+[[commands]]
+description = "Get git commit hash"
+command = """git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n'"""
+tags = ["git"]
+
+[[commands]]
+description = "Restart tmux server"
+command = "tmux kill-server; t"
+tags = ["tmux"]
+
+[[commands]]
+description = "Git rebase origin/main, preferring upstream versions of things on conflict"
+command = "git rebase -X ours origin/main"
+tags = ["git"]
+
+[[commands]]
+description = "View changed files in a git commit"
+command = """git diff-tree --no-commit-id --name-only -r $(git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}' | tr -d '\\n')"""
+tags = ["git"]
+
+[[commands]]
+description = "Copy changed file in a git commit"
+command = """
+commit_sha=$(git log -n 20 --oneline --no-color | fzf --height 40% --layout=reverse --preview 'git show --color=always {1}' | awk '{print $1}') && \
+if [ -n "$commit_sha" ]; then \
+  selected_file=$(git show --pretty="" --name-only "$commit_sha" | fzf --height 50% --layout=reverse --preview "git diff --color=always ${commit_sha}^..${commit_sha} -- {}"); \
+  if [ -n "$selected_file" ]; then \
+    echo "$selected_file" | pbcopy; \
+  fi; \
+fi
+"""
+tags = ["git"]
+
+[[commands]]
+description = "Kill tmux server"
+command = "tmux kill-server"
+tags = ["tmux"]
