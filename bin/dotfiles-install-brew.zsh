@@ -21,7 +21,6 @@ brew install --quiet \
     pkgx \
     yazi \
     oven-sh/bun/bun \
-    knqyf263/pet/pet \
     lazygit \
     bottom \
     rustup \
