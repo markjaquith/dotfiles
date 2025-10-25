@@ -23,6 +23,11 @@ if ! command -v cargo &>/dev/null; then
   rustup default stable > /dev/null 2>&1
 fi
 
+# cmdy
+if ! command -v cmdy &>/dev/null; then
+  cargo install cmdy
+fi
+
 # Local env
 mkdir -p ~/.local/bin
 touch ~/.local/bin/env
