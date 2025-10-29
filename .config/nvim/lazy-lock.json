@@ -119,10 +119,6 @@
 		"branch": "master",
 		"commit": "6e51ca170563330e063720449c21f43e27ca0bc1"
 	},
-	"obsidian.nvim": {
-		"branch": "main",
-		"commit": "705cc9b4f66eca1e54040ac819102e80a32896d3"
-	},
 	"oil.nvim": {
 		"branch": "master",
 		"commit": "07f80ad645895af849a597d1cac897059d89b686"
