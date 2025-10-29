@@ -1,3 +1,23 @@
 {
-	"$schema": "https://opencode.ai/config.json"
+	"$schema": "https://opencode.ai/config.json",
+	"agent": {
+		"fast": {
+			"description": "Fast development mode using Claude Haiku 4.5",
+			"mode": "primary",
+			"model": "anthropic/claude-haiku-4-5",
+			"tools": {
+				"write": true,
+				"edit": true,
+				"bash": true,
+				"read": true,
+				"list": true,
+				"glob": true,
+				"grep": true,
+				"task": true,
+				"todowrite": true,
+				"todoread": true,
+				"webfetch": true
+			}
+		}
+	}
 }
