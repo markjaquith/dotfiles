@@ -5,6 +5,7 @@ brew install --quiet \
     bat \
     btop \
     ack \
+    asciinema \
     go \
     gpg \
     python \
