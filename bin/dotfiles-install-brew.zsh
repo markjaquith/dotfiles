@@ -8,7 +8,6 @@ brew install --quiet \
     asciinema \
     go \
     gpg \
-    pipx \
     python \
     zinit \
     lua \
