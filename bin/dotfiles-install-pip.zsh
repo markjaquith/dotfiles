@@ -5,4 +5,4 @@ pip install --quiet \
     faker
 
 # pipx installs
-pipx install --quiet jrnl
+pipx install jrnl
