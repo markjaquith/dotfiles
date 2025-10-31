@@ -7,6 +7,7 @@ brew install --quiet \
     ack \
     go \
     gpg \
+    python \
     zinit \
     lua \
 		bruno \
