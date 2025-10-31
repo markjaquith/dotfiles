@@ -2,7 +2,7 @@
 # Bulk pip and pipx install
 
 pip install --quiet \
-    faker
+    faker 2>&1 | grep -v "DEPRECATION"
 
 # pipx installs
 pipx install --force jrnl > /dev/null 2>&1
