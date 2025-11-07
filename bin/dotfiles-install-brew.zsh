@@ -31,6 +31,7 @@ brew install --quiet \
     stow \
     jq \
     gh \
+    git-filter-repo \
     hub \
     tmux \
     sesh \
