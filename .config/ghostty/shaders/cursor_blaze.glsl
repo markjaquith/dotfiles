@@ -92,11 +92,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float vertexFactor = determineStartVertexFactor(currentCursor.xy, previousCursor.xy);
     float invertedVertexFactor = 1.0 - vertexFactor;
 
-    //Set every vertex of my parellogram
-    vec2 v0 = vec2(currentCursor.x + currentCursor.z * vertexFactor, currentCursor.y - currentCursor.w);
-    vec2 v1 = vec2(currentCursor.x + currentCursor.z * invertedVertexFactor, currentCursor.y);
-    vec2 v2 = vec2(previousCursor.x + currentCursor.z * invertedVertexFactor, previousCursor.y);
-    vec2 v3 = vec2(previousCursor.x + currentCursor.z * vertexFactor, previousCursor.y - previousCursor.w);
+     //Set every vertex of my parellogram
+     float czVF = currentCursor.z * vertexFactor;
+     float czIVF = currentCursor.z * invertedVertexFactor;
+     vec2 v0 = vec2(currentCursor.x + czVF, currentCursor.y - currentCursor.w);
+     vec2 v1 = vec2(currentCursor.x + czIVF, currentCursor.y);
+     vec2 v2 = vec2(previousCursor.x + czIVF, previousCursor.y);
+     vec2 v3 = vec2(previousCursor.x + czVF, previousCursor.y - previousCursor.w);
 
     vec4 newColor = vec4(fragColor);
 
