@@ -118,7 +118,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
           float distanceToEnd = distance(vu.xy, centerCC);
           float alphaModifier = min(distanceToEnd / (lineLength * (easedProgress)), 1.0);
 
-         float sdfCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
+         vec2 cursorOffset = currentCursor.xy - (currentCursor.zw * offsetFactor);
+         vec2 cursorSize = currentCursor.zw * 0.5;
+         float sdfCursor = getSdfRectangle(vu, cursorOffset, cursorSize);
          float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
 
           newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
