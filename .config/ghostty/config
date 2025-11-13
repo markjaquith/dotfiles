@@ -39,3 +39,6 @@ window-height = 60
 # Keybindings
 keybind = super+k=text:\x02s
 keybind = shift+enter=text:\x1b[13;2u
+
+# Shaders
+custom-shader = ~/.config/ghostty/shaders/cursor_blaze.glsl
