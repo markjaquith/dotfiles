@@ -3,12 +3,6 @@ float ease(float x) {
     return pow(1.0 - x, 10.0);
 }
 
-float sdBox(in vec2 p, in vec2 xy, in vec2 b)
-{
-    vec2 d = abs(p - xy) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
-}
-
 float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b)
 {
     vec2 d = abs(p - xy) - b;
@@ -55,8 +49,8 @@ float blend(float t)
     return sqr / (2.0 * (sqr - t) + 1.0);
 }
 
-float antialising(float distance) {
-    return 1. - smoothstep(0., normalize(vec2(2., 2.), 0.).x, distance);
+float antialiasing(float distance, float aaThreshold) {
+    return 1. - smoothstep(0., aaThreshold, distance);
 }
 
 float determineStartVertexFactor(vec2 a, vec2 b) {
@@ -106,30 +100,27 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     vec4 newColor = vec4(fragColor);
 
-    float progress = blend(clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1));
+     float progress = blend(clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1));
     float easedProgress = ease(progress);
 
-    //Distance between cursors determine the total length of the parallelogram;
-    vec2 centerCC = getRectangleCenter(currentCursor);
-    vec2 centerCP = getRectangleCenter(previousCursor);
-    float cursorSize = max(currentCursor.z, currentCursor.w);
-    float trailThreshold = DRAW_THRESHOLD * cursorSize;
-    float lineLength = distance(centerCC, centerCP);
-    //
-    bool isFarEnough = lineLength > trailThreshold;
-    if (isFarEnough) {
-        float distanceToEnd = distance(vu.xy, centerCC);
-        float alphaModifier = distanceToEnd / (lineLength * (easedProgress));
+     //Distance between cursors determine the total length of the parallelogram;
+     vec2 centerCC = getRectangleCenter(currentCursor);
+     vec2 centerCP = getRectangleCenter(previousCursor);
+     float cursorSize = max(currentCursor.z, currentCursor.w);
+     float trailThreshold = DRAW_THRESHOLD * cursorSize;
+     float lineLength = distance(centerCC, centerCP);
+     float aaThreshold = normalize(vec2(2., 2.), 0.).x;
+     //
+     bool isFarEnough = lineLength > trailThreshold;
+      if (isFarEnough) {
+          float distanceToEnd = distance(vu.xy, centerCC);
+          float alphaModifier = min(distanceToEnd / (lineLength * (easedProgress)), 1.0);
 
-        if (alphaModifier > 1.0) { // this change fixed it for me.
-            alphaModifier = 1.0;
-        }
+         float sdfCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
+         float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
 
-        float sdfCursor = getSdfRectangle(vu, currentCursor.xy - (currentCursor.zw * offsetFactor), currentCursor.zw * 0.5);
-        float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
-
-         newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
-         newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail));
+          newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
+          newColor = mix(newColor, TRAIL_COLOR, antialiasing(sdfTrail, aaThreshold));
          newColor = mix(fragColor, newColor, (1.0 - alphaModifier) * OPACITY);
         fragColor = mix(newColor, fragColor, step(sdfCursor, 0));
     }
