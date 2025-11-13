@@ -3,13 +3,12 @@ float ease(float x) {
     return pow(1.0 - x, 10.0);
 }
 
-float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b)
-{
+float getSdfRectangle(in vec2 p, in vec2 xy, in vec2 b) {
     vec2 d = abs(p - xy) - b;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
+
 // Based on Inigo Quilez's 2D distance functions article: https://iquilezles.org/articles/distfunctions2d/
-// Potentially optimized by eliminating conditionals and loops to enhance performance and reduce branching
 float seg(in vec2 p, in vec2 a, in vec2 b, inout float s, float d) {
     vec2 e = b - a;
     vec2 w = p - a;
@@ -43,89 +42,85 @@ vec2 normalize(vec2 value, float isPosition) {
     return (value * 2.0 - (iResolution.xy * isPosition)) / iResolution.y;
 }
 
-float blend(float t)
-{
+float blend(float t) {
     float sqr = t * t;
     return sqr / (2.0 * (sqr - t) + 1.0);
 }
 
 float antialiasing(float distance, float aaThreshold) {
-    return 1. - smoothstep(0., aaThreshold, distance);
+    return 1.0 - smoothstep(0.0, aaThreshold, distance);
 }
 
 float determineStartVertexFactor(vec2 a, vec2 b) {
-    float condition1 = step(b.x, a.x) * step(a.y, b.y); // a.x < b.x && a.y > b.y
-    float condition2 = step(a.x, b.x) * step(b.y, a.y); // a.x > b.x && a.y < b.y
-
+    float condition1 = step(b.x, a.x) * step(a.y, b.y);
+    float condition2 = step(a.x, b.x) * step(b.y, a.y);
     return 1.0 - max(condition1, condition2);
 }
+
 vec2 getRectangleCenter(vec4 rectangle) {
-    return vec2(rectangle.x + (rectangle.z / 2.), rectangle.y - (rectangle.w / 2.));
+    return vec2(rectangle.x + (rectangle.z / 2.0), rectangle.y - (rectangle.w / 2.0));
 }
 
-const vec4 TRAIL_COLOR = vec4(0.776, 0.627, 0.961, 1.0); // Catpuccin Machiato Mauve
+const vec4 TRAIL_COLOR = vec4(0.776, 0.627, 0.961, 1.0);
 const vec4 CURRENT_CURSOR_COLOR = TRAIL_COLOR;
 const vec4 PREVIOUS_CURSOR_COLOR = TRAIL_COLOR;
-const vec4 TRAIL_COLOR_ACCENT = vec4(0.718, 0.745, 0.973, 1.0); // Catpuccin Machiato Lavender
+const vec4 TRAIL_COLOR_ACCENT = vec4(0.718, 0.745, 0.973, 1.0);
 const float DURATION = 0.4;
 const float OPACITY = 0.8;
-
-// Prevent trails from appearing while typing.
 const float DRAW_THRESHOLD = 1.5;
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord)
-{
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     #if !defined(WEB)
     fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
     #endif
-    //Normalization for fragCoord to a space of -1 to 1;
-    vec2 vu = normalize(fragCoord, 1.);
-    vec2 offsetFactor = vec2(-.5, 0.5);
 
-    //Normalization for cursor position and size;
-    //cursor xy has the postion in a space of -1 to 1;
-    //zw has the width and height
-    vec4 currentCursor = vec4(normalize(iCurrentCursor.xy, 1.), normalize(iCurrentCursor.zw, 0.));
-    vec4 previousCursor = vec4(normalize(iPreviousCursor.xy, 1.), normalize(iPreviousCursor.zw, 0.));
+    // Normalize fragCoord to a space of -1 to 1
+    vec2 vu = normalize(fragCoord, 1.0);
+    vec2 offsetFactor = vec2(-0.5, 0.5);
 
-    //When drawing a parellelogram between cursors for the trail i need to determine where to start at the top-left or top-right vertex of the cursor
+    // Normalize cursor position and size
+    // cursor xy has the position in a space of -1 to 1; zw has the width and height
+    vec4 currentCursor = vec4(normalize(iCurrentCursor.xy, 1.0), normalize(iCurrentCursor.zw, 0.0));
+    vec4 previousCursor = vec4(normalize(iPreviousCursor.xy, 1.0), normalize(iPreviousCursor.zw, 0.0));
+
+    // Determine where to start at the top-left or top-right vertex of the cursor
     float vertexFactor = determineStartVertexFactor(currentCursor.xy, previousCursor.xy);
     float invertedVertexFactor = 1.0 - vertexFactor;
 
-     //Set every vertex of my parellogram
-     float czVF = currentCursor.z * vertexFactor;
-     float czIVF = currentCursor.z * invertedVertexFactor;
-     vec2 v0 = vec2(currentCursor.x + czVF, currentCursor.y - currentCursor.w);
-     vec2 v1 = vec2(currentCursor.x + czIVF, currentCursor.y);
-     vec2 v2 = vec2(previousCursor.x + czIVF, previousCursor.y);
-     vec2 v3 = vec2(previousCursor.x + czVF, previousCursor.y - previousCursor.w);
+    // Set every vertex of my parallelogram
+    float czVF = currentCursor.z * vertexFactor;
+    float czIVF = currentCursor.z * invertedVertexFactor;
+    vec2 v0 = vec2(currentCursor.x + czVF, currentCursor.y - currentCursor.w);
+    vec2 v1 = vec2(currentCursor.x + czIVF, currentCursor.y);
+    vec2 v2 = vec2(previousCursor.x + czIVF, previousCursor.y);
+    vec2 v3 = vec2(previousCursor.x + czVF, previousCursor.y - previousCursor.w);
 
     vec4 newColor = vec4(fragColor);
 
-     float progress = blend(clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1));
+    float progress = blend(clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0));
     float easedProgress = ease(progress);
 
-     //Distance between cursors determine the total length of the parallelogram;
-     vec2 centerCC = getRectangleCenter(currentCursor);
-     vec2 centerCP = getRectangleCenter(previousCursor);
-     float cursorSize = max(currentCursor.z, currentCursor.w);
-     float trailThreshold = DRAW_THRESHOLD * cursorSize;
-     float lineLength = distance(centerCC, centerCP);
-     float aaThreshold = normalize(vec2(2., 2.), 0.).x;
-     //
-     bool isFarEnough = lineLength > trailThreshold;
-      if (isFarEnough) {
-          float distanceToEnd = distance(vu.xy, centerCC);
-          float alphaModifier = min(distanceToEnd / (lineLength * (easedProgress)), 1.0);
+    // Distance between cursors determine the total length of the parallelogram
+    vec2 centerCC = getRectangleCenter(currentCursor);
+    vec2 centerCP = getRectangleCenter(previousCursor);
+    float cursorSize = max(currentCursor.z, currentCursor.w);
+    float trailThreshold = DRAW_THRESHOLD * cursorSize;
+    float lineLength = distance(centerCC, centerCP);
+    float aaThreshold = normalize(vec2(2.0, 2.0), 0.0).x;
 
-         vec2 cursorOffset = currentCursor.xy - (currentCursor.zw * offsetFactor);
-         vec2 cursorSize = currentCursor.zw * 0.5;
-         float sdfCursor = getSdfRectangle(vu, cursorOffset, cursorSize);
-         float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
+    bool isFarEnough = lineLength > trailThreshold;
+    if (isFarEnough) {
+        float distanceToEnd = distance(vu.xy, centerCC);
+        float alphaModifier = min(distanceToEnd / (lineLength * easedProgress), 1.0);
 
-          newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
-          newColor = mix(newColor, TRAIL_COLOR, antialiasing(sdfTrail, aaThreshold));
-         newColor = mix(fragColor, newColor, (1.0 - alphaModifier) * OPACITY);
-        fragColor = mix(newColor, fragColor, step(sdfCursor, 0));
+        vec2 cursorOffset = currentCursor.xy - (currentCursor.zw * offsetFactor);
+        vec2 sdfCursorSize = currentCursor.zw * 0.5;
+        float sdfCursor = getSdfRectangle(vu, cursorOffset, sdfCursorSize);
+        float sdfTrail = getSdfParallelogram(vu, v0, v1, v2, v3);
+
+        newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
+        newColor = mix(newColor, TRAIL_COLOR, antialiasing(sdfTrail, aaThreshold));
+        newColor = mix(fragColor, newColor, (1.0 - alphaModifier) * OPACITY);
+        fragColor = mix(newColor, fragColor, step(sdfCursor, 0.0));
     }
 }
