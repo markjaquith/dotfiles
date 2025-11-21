@@ -14,9 +14,10 @@ command = "tmux kill-server; t"
 tags = ["tmux"]
 
 [[commands]]
-description = "Git rebase origin/main, preferring upstream versions of things on conflict"
-command = "git rebase -X ours origin/main"
-tags = ["git"]
+description = "Git rebase origin/main since divergence"
+command = """
+git fetch origin && git rebase --onto origin/main "$(git merge-base --fork-point origin/main HEAD || git merge-base origin/main HEAD)"
+"""
 
 [[commands]]
 description = "View changed files in a git commit"
