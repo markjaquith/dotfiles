@@ -18,6 +18,24 @@
 				"todoread": true,
 				"webfetch": true
 			}
+		},
+		"deep": {
+			"description": "Deep reasoning mode using Claude Opus 4.1",
+			"mode": "primary",
+			"model": "anthropic/claude-opus-4-1",
+			"tools": {
+				"write": true,
+				"edit": true,
+				"bash": true,
+				"read": true,
+				"list": true,
+				"glob": true,
+				"grep": true,
+				"task": true,
+				"todowrite": true,
+				"todoread": true,
+				"webfetch": true
+			}
 		}
 	}
 }
