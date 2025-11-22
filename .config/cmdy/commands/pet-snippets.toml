@@ -41,3 +41,9 @@ tags = ["git"]
 description = "Kill tmux server"
 command = "tmux kill-server"
 tags = ["tmux"]
+
+[[commands]]
+description = "Restart autofs"
+command = "sudo automount -vc"
+tags = ["synology"]
+
