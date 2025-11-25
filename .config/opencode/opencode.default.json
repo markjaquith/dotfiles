@@ -20,9 +20,9 @@
 			}
 		},
 		"deep": {
-			"description": "Deep reasoning mode using Claude Opus 4.1",
+			"description": "Deep reasoning mode using Claude Opus 4.5",
 			"mode": "primary",
-			"model": "anthropic/claude-opus-4-1",
+			"model": "anthropic/claude-opus-4-5",
 			"tools": {
 				"write": true,
 				"edit": true,
