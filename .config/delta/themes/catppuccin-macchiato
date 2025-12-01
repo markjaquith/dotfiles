@@ -1,0 +1,33 @@
+[delta]
+	features = catppuccin-macchiato
+	syntax-theme = Catppuccin Macchiato
+
+[delta "catppuccin-macchiato"]
+	blame-palette = "#24273a #1e2030 #181926 #363a4f #494d64"
+	commit-decoration-style = "#6e738d" bold box ul
+	dark = true
+	file-decoration-style = "#6e738d"
+	file-style = "#cad3f5"
+	hunk-header-decoration-style = "#6e738d" box ul
+	hunk-header-file-style = bold
+	hunk-header-line-number-style = bold "#a5adcb"
+	hunk-header-style = file line-number syntax
+	line-numbers = true
+	line-numbers-left-style = "#6e738d"
+	line-numbers-minus-style = bold "#ed8796"
+	line-numbers-plus-style = bold "#a6da95"
+	line-numbers-right-style = "#6e738d"
+	line-numbers-zero-style = "#6e738d"
+	# 35% red 65% base
+	minus-emph-style = bold syntax "#6a485a"
+	# 20% red 80% base
+	minus-style = syntax "#4c3a4c"
+	# 35% green 65% base
+	plus-emph-style = bold syntax "#51655a"
+	# 20% green 80% base
+	plus-style = syntax "#3e4b4c"
+	map-styles = \
+		bold purple => syntax "#5c517c", \
+		bold blue => syntax "#47557b", \
+		bold cyan => syntax "#4a6475", \
+		bold yellow => syntax "#6a635d"
