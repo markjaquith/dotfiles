@@ -1,6 +1,6 @@
 [delta]
 	features = catppuccin-macchiato
-	syntax-theme = Catppuccin Macchiato
+	line-numbers = true
 
 [delta "catppuccin-macchiato"]
 	blame-palette = "#24273a #1e2030 #181926 #363a4f #494d64"
@@ -12,7 +12,6 @@
 	hunk-header-file-style = bold
 	hunk-header-line-number-style = bold "#a5adcb"
 	hunk-header-style = file line-number syntax
-	line-numbers = true
 	line-numbers-left-style = "#6e738d"
 	line-numbers-minus-style = bold "#ed8796"
 	line-numbers-plus-style = bold "#a6da95"
