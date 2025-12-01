@@ -335,8 +335,4 @@ function llm_files() {
 	bunx repomix && cat repomix-output.xml | pbcopy
 }
 
-# Delta with Catppuccin Macchiato theme
-function delta() {
-	command delta --config ~/.config/delta/themes/catppuccin-macchiato --no-gitconfig "$@"
-}
 
