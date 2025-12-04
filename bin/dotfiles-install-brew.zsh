@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 # Bulk Homebrew install
+
 brew install --quiet \
     tlrc \
     bat \
@@ -46,4 +47,5 @@ brew install --quiet \
     fd \
     rg \
     neovim \
+    acli \
     libyaml

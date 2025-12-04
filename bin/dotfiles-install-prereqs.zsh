@@ -16,3 +16,4 @@ fi
 
 # Handle Homebrew taps
 brew tap FelixKratz/formulae
+brew tap atlassian/homebrew-acli
