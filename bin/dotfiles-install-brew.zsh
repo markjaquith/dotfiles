@@ -46,6 +46,7 @@ brew install --quiet \
     fzf \
     fd \
     rg \
+    ghostscript \
     neovim \
     acli \
     libyaml
