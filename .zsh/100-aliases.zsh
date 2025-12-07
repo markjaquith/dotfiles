@@ -4,6 +4,32 @@ DIR=$(dirname "$0")
 # Squashes png files.
 alias pngfix="pkgx pngcrush -rem gAMA -rem cHRM -rem iCCP -rem sRGB $1 $2"
 
+# Fixes PDF files by optimizing and compressing them.
+function fixpdf() {
+	if [[ $# -lt 1 ]]; then
+		echo "Usage: fixpdf input.pdf [output.pdf]"
+		echo "If output file is not specified, will use 'output.pdf'"
+		return 1
+	fi
+	
+	local input="$1"
+	local output="${2:-output.pdf}"
+	
+	command gs \
+		-sDEVICE=pdfwrite \
+		-dCompatibilityLevel=1.7 \
+		-dPDFSETTINGS=/default \
+		-dCompressFonts=true \
+		-dSubsetFonts=true \
+		-dDetectDuplicateImages=true \
+		-dColorImageDownsample=false \
+		-dGrayImageDownsample=false \
+		-dMonoImageDownsample=false \
+		-dNOPAUSE -dQUIET -dBATCH \
+		-sOutputFile="$output" \
+		"$input"
+}
+
 # Opens a file in Sublime Text.
 alias o="subl"
 alias s="subl"
