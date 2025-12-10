@@ -1,6 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
-export const Talk: Plugin = async ({ $ }) => {
+export const Ding: Plugin = async ({ $ }) => {
 	return {
 		async event(input) {
 			if (input.event.type === "session.idle") {
