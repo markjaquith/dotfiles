@@ -26,6 +26,7 @@ brew install --quiet \
     oven-sh/bun/bun \
     lazygit \
     bottom \
+    buildkite/buildkite/bk@3 \
     rustup \
     rust-analyzer \
     gum \
