@@ -49,5 +49,6 @@ brew install --quiet \
     rg \
     ghostscript \
     neovim \
+    openscad \
     acli \
     libyaml

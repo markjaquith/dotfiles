@@ -147,6 +147,8 @@ return {
       bashls = {
         filetypes = { 'sh', 'zsh' },
       },
+
+      openscad_lsp = {},
     }
 
     local servers_to_setup = vim.tbl_keys(servers or {})
