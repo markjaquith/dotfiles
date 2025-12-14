@@ -1,4 +1,5 @@
 [tools]
 hk = "latest"
+node = "latest"
 "npm:prettier" = "latest"
 pkl = "latest"
