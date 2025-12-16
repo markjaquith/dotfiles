@@ -208,7 +208,11 @@ alias lg="lazygit"
 
 # OpenCode commit.
 function commit() {
-	opencode run "/commit${1:+ $1}"
+	if opencode run "/commit${1:+ $1}" &>/dev/null; then
+		git log -1 --no-patch
+	else
+		opencode run "/commit${1:+ $1}"
+	fi
 }
 
 # ------------------------------------------------------------------------------
