@@ -206,6 +206,11 @@ alias gbb="git checkout \$(git branch | fzf)"
 # Lazygit.
 alias lg="lazygit"
 
+# OpenCode commit.
+function commit() {
+	opencode run "/commit${1:+ $1}"
+}
+
 # ------------------------------------------------------------------------------
 # Aliases and functions for tmux from Jesse Leite
 # ------------------------------------------------------------------------------
