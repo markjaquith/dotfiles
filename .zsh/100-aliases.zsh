@@ -206,6 +206,9 @@ alias gbb="git checkout \$(git branch | fzf)"
 # Lazygit.
 alias lg="lazygit"
 
+# OpenCode aliases.
+alias ocfast="opencode run --agent fast"
+
 # OpenCode commit.
 function commit() {
 	if opencode run "/commit${1:+ $1}" &>/dev/null; then
