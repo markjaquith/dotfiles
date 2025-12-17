@@ -45,3 +45,5 @@ DO NOT use the `changeset` CLI tool because it is interactive-only and cannot be
 - Ensure the bump type aligns with semantic versioning principles
 - If there are multiple packages affected, list them all in the frontmatter
 - Output the created changeset file path and its contents for user confirmation
+- After successfully creating the changeset, you MUST NOT perform any further actions without user confirmation
+- Wait for the user to provide the next instruction after the changeset is created
