@@ -9,9 +9,9 @@ source $(dirname "$0")/000-init.zsh
   ┃  020-history               #┃ Configure zsh history        ┃                ┃
   ┃  040-pkgx                  #┃ Load Pkgx                    ┃                ┃
   ┃  050-bun                   #┃ Load Bun                     ┃                ┃
-  ┃  060-mise                  #┃ Configure Mise and HK        ┃                ┃
+  ┃  060-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
   ┃  070-zinit                 #┃ Load Zinit                   ┃                ┃
-  ┃  080-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
+  ┃  080-mise                  #┃ Configure Mise and HK        ┃                ┃
   ┃  090-completions           #┃ Init completions system      ┃                ┃
   ┃  100-aliases               #┃ Aliases                      ┃                ┃
   ┃  105-misc                  #┃ Misc                         ┃                ┃
