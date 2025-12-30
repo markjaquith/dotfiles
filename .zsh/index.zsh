@@ -10,8 +10,8 @@ source $(dirname "$0")/000-init.zsh
   ┃  040-pkgx                  #┃ Load Pkgx                    ┃                ┃
   ┃  050-bun                   #┃ Load Bun                     ┃                ┃
   ┃  070-zinit                 #┃ Load Zinit                   ┃                ┃
-  ┃  075-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
-  ┃  080-mise                  #┃ Configure Mise and HK        ┃                ┃
+  ┃  075-mise                  #┃ Configure Mise and HK        ┃                ┃
+  ┃  085-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
   ┃  090-completions           #┃ Init completions system      ┃                ┃
   ┃  100-aliases               #┃ Aliases                      ┃                ┃
   ┃  105-misc                  #┃ Misc                         ┃                ┃
