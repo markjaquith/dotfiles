@@ -1,3 +1,6 @@
+# Explicitly use emacs-style editing (not vi mode)
+bindkey -e
+
 # Open buffer line in editor
 autoload -Uz edit-command-line
 zle -N edit-command-line
