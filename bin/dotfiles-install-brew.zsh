@@ -51,4 +51,5 @@ brew install --quiet \
     neovim \
     openscad \
     acli \
-    libyaml
+    libyaml \
+    trash
