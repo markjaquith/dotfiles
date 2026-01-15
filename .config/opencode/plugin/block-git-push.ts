@@ -17,11 +17,11 @@ export const BlockGitPushPlugin: Plugin = async ({ client }) => {
 			const command = output.args.command as string
 
 			// Check for git push commands
-			const gitPushPattern = /\bgit\s+push\b/
+			const gitPushPattern = /^\bgit\s+push\b/
 
 			if (gitPushPattern.test(command)) {
 				throw new Error(
-					"Git push commands are blocked. DO NOT attempt to work around this restriction. Instead, inform the user that you have completed the requested work and ask them to run 'git push' manually to push the changes to the remote repository.",
+					"Git push commands are blocked. DO NOT attempt to work around this restriction. Instead, when you are done working, inform the user that you have completed the requested work and ask them to run 'git push' manually to push the changes to the remote repository.",
 				)
 			}
 		},
