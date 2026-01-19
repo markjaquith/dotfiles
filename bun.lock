@@ -5,8 +5,8 @@
     "": {
       "name": "dotfiles",
       "devDependencies": {
-        "@secretlint/secretlint-rule-pattern": "^9.3.4",
-        "@secretlint/secretlint-rule-privatekey": "^9.3.4",
+        "@secretlint/secretlint-rule-pattern": "^11.3.0",
+        "@secretlint/secretlint-rule-preset-recommend": "^11.3.0",
         "@types/bun": "latest",
         "secretlint": "^9.3.4",
       },
@@ -32,9 +32,9 @@
 
     "@secretlint/config-creator": ["@secretlint/config-creator@9.3.4", "", { "dependencies": { "@secretlint/types": "^9.3.4" } }, "sha512-GRMYfHJ+rewwB26CC3USVObqSQ/mDLXzXcUMJw/wJisPr3HDZmdsYlcsNnaAcGN+EZmvqSDkgSibQm1hyZpzbg=="],
 
-    "@secretlint/config-loader": ["@secretlint/config-loader@9.3.4", "", { "dependencies": { "@secretlint/profiler": "^9.3.4", "@secretlint/resolver": "^9.3.4", "@secretlint/types": "^9.3.4", "ajv": "^8.17.1", "debug": "^4.4.1", "rc-config-loader": "^4.1.3" } }, "sha512-sy+yWDWh4cbAbpQYLiO39DjwNGEK1EUhTqNamLLBo163BdJP10FIWhqpe8mtGQBSBXRtxr8Hg/gc3Xe4meIoww=="],
+    "@secretlint/config-loader": ["@secretlint/config-loader@11.3.0", "", { "dependencies": { "@secretlint/profiler": "11.3.0", "@secretlint/resolver": "11.3.0", "@secretlint/types": "11.3.0", "ajv": "^8.17.1", "debug": "^4.4.3", "rc-config-loader": "^4.1.3" } }, "sha512-yBh+6E/W76Hcwd9/c1JW8EXtgcc+9jZUbUuYXunzDgKCmPT2DizeaDOzfNxy7F/zmE5FTcOvJA37+LLbW6IojQ=="],
 
-    "@secretlint/core": ["@secretlint/core@9.3.4", "", { "dependencies": { "@secretlint/profiler": "^9.3.4", "@secretlint/types": "^9.3.4", "debug": "^4.4.1", "structured-source": "^4.0.0" } }, "sha512-ErIVHI6CJd191qdNKuMkH3bZQo9mWJsrSg++bQx64o0WFuG5nPvkYrDK0p/lebf+iQuOnzvl5HrZU6GU9a6o+Q=="],
+    "@secretlint/core": ["@secretlint/core@11.3.0", "", { "dependencies": { "@secretlint/profiler": "11.3.0", "@secretlint/types": "11.3.0", "debug": "^4.4.3", "structured-source": "^4.0.0" } }, "sha512-/xvwTPW2RDLIsRLfdEPF6jNmRrHOVJqy761lA7zrzqOyQigZn6wZPGph5vLUzXqcaDNDR0NIuq2EAevkwEJbaA=="],
 
     "@secretlint/formatter": ["@secretlint/formatter@9.3.4", "", { "dependencies": { "@secretlint/resolver": "^9.3.4", "@secretlint/types": "^9.3.4", "@textlint/linter-formatter": "^14.7.2", "@textlint/module-interop": "^14.7.2", "@textlint/types": "^14.7.2", "chalk": "^4.1.2", "debug": "^4.4.1", "pluralize": "^8.0.0", "strip-ansi": "^6.0.1", "table": "^6.9.0", "terminal-link": "^2.1.1" } }, "sha512-ARpoBOKz6WP3ocLITCFkR1/Lj636ugpBknylhlpc45r5aLdvmyvWAJqodlw5zmUCfgD6JXeAMf3Hi60aAiuqWQ=="],
 
@@ -44,15 +44,15 @@
 
     "@secretlint/resolver": ["@secretlint/resolver@9.3.4", "", {}, "sha512-L1lIrcjzqcspPzZttmOvMmOFDpJTYFyRBONg94TZBWrpv4x0w5G2SYR+K7EE1SbYQAiPxw1amoXT1YRP8cZF2A=="],
 
-    "@secretlint/secretlint-rule-pattern": ["@secretlint/secretlint-rule-pattern@9.3.4", "", { "dependencies": { "@secretlint/tester": "^9.3.4", "@secretlint/types": "^9.3.4", "@textlint/regexp-string-matcher": "^2.0.2" } }, "sha512-HzbREm0zz8N6aGbE3SeRUERvSmvs+jZ8MP8eBQj7ewogp4JaxyHYx8xyIKVSKDeu9IU2ptmGss8zapcGN3cZoA=="],
+    "@secretlint/secretlint-rule-pattern": ["@secretlint/secretlint-rule-pattern@11.3.0", "", { "dependencies": { "@secretlint/tester": "11.3.0", "@secretlint/types": "11.3.0", "@textlint/regexp-string-matcher": "^2.0.2" } }, "sha512-uFmRK+DIhM5fgM9RWdC5kBspD09jOxlU51L/1/MjTQlG83AIuZ53DpPefRNT96LJBt+tmD4jsu7yDwHglxt76g=="],
 
-    "@secretlint/secretlint-rule-privatekey": ["@secretlint/secretlint-rule-privatekey@9.3.4", "", { "dependencies": { "@textlint/regexp-string-matcher": "^2.0.2" } }, "sha512-IsV+yntQakakRdCJDad39LEJsuimSkS4hkkeXOnZUnqjZtTJe7G1rySgz7KWlT4Wj/a6jk0eo5gP9uQRRjiTlg=="],
+    "@secretlint/secretlint-rule-preset-recommend": ["@secretlint/secretlint-rule-preset-recommend@11.3.0", "", {}, "sha512-s+FHhtx5dSXSthpgVRQFLiK/nNkeKYh0Bxk6gFcKeWPbE9tCg8zDGGMfQqsUnxvfs6X+LRtEFt5vLnv4PPlnjg=="],
 
-    "@secretlint/source-creator": ["@secretlint/source-creator@9.3.4", "", { "dependencies": { "@secretlint/types": "^9.3.4", "istextorbinary": "^9.5.0" } }, "sha512-I9ZA1gm9HJNaAhZiQdInY9VM04VTAGDV4bappVbEJzMUDnK/LTbYqfQ88RPqgCGCqa6ee8c0/j5Bn7ypweouIw=="],
+    "@secretlint/source-creator": ["@secretlint/source-creator@11.3.0", "", { "dependencies": { "@secretlint/types": "11.3.0", "istextorbinary": "^9.5.0" } }, "sha512-VNPm/oCj93pwZmhXIHLrQHWCCOz/1rYDOSpaY6XRHH+7k/0JcQJaN9q+OIlFXFQfHoStDsJ6ZUWPG637i7oNlQ=="],
 
-    "@secretlint/tester": ["@secretlint/tester@9.3.4", "", { "dependencies": { "@secretlint/config-loader": "^9.3.4", "@secretlint/core": "^9.3.4", "@secretlint/source-creator": "^9.3.4", "@secretlint/types": "^9.3.4" } }, "sha512-Kuj2vXz7E65LJ5xZLjLFLAV+MajS1KHWnzazwY2AUuuz5/Y2Coizte8EGdoSqFMyps7EvgDgGgNB/SsH2j/9IQ=="],
+    "@secretlint/tester": ["@secretlint/tester@11.3.0", "", { "dependencies": { "@secretlint/config-loader": "11.3.0", "@secretlint/core": "11.3.0", "@secretlint/source-creator": "11.3.0", "@secretlint/types": "11.3.0" } }, "sha512-2XkWBvJKEZEQhwyCOc6qzK26XPbFLeJApZxLyUKJ4JRYhb5utNCkcvHADk5Dj2Dt1pBLRfQ9ld+YofNeR9NGfQ=="],
 
-    "@secretlint/types": ["@secretlint/types@9.3.4", "", {}, "sha512-z9rdKHNeL4xa48+367RQJVw1d7/Js9HIQ+gTs/angzteM9osfgs59ad3iwVRhCGYbeUoUUDe2yxJG2ylYLaH3Q=="],
+    "@secretlint/types": ["@secretlint/types@11.3.0", "", {}, "sha512-1zv6pILw1LzyJshX8pK3rCvXeW9x/dRJeanVouMhvZUDJtF8friHk1cBtf9FcemK7ZTGly20JxqzUR148b9edg=="],
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@2.3.0", "", {}, "sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg=="],
 
@@ -259,6 +259,24 @@
     "validate-npm-package-license": ["validate-npm-package-license@3.0.4", "", { "dependencies": { "spdx-correct": "^3.0.0", "spdx-expression-parse": "^3.0.0" } }, "sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew=="],
 
     "version-range": ["version-range@4.15.0", "", {}, "sha512-Ck0EJbAGxHwprkzFO966t4/5QkRuzh+/I1RxhLgUKKwEn+Cd8NwM60mE3AqBZg5gYODoXW0EFsQvbZjRlvdqbg=="],
+
+    "@secretlint/config-creator/@secretlint/types": ["@secretlint/types@9.3.4", "", {}, "sha512-z9rdKHNeL4xa48+367RQJVw1d7/Js9HIQ+gTs/angzteM9osfgs59ad3iwVRhCGYbeUoUUDe2yxJG2ylYLaH3Q=="],
+
+    "@secretlint/config-loader/@secretlint/profiler": ["@secretlint/profiler@11.3.0", "", {}, "sha512-gIic+1HNKFO2XgJVIy7U9++x8vyGTlBcXEYar+4+ZE0U5z6H7ioIQY8c6N1nC0QIhawGv2XRa6WbUViXKpOPXQ=="],
+
+    "@secretlint/config-loader/@secretlint/resolver": ["@secretlint/resolver@11.3.0", "", {}, "sha512-94uyNK6Nq3lu0Q+PIaR8EzzhYrmOTBJn5SVM/V5hafbbQbU0+XLYodTf3aefG2cIDdPy3yNYB66JskHIUZI9Ug=="],
+
+    "@secretlint/core/@secretlint/profiler": ["@secretlint/profiler@11.3.0", "", {}, "sha512-gIic+1HNKFO2XgJVIy7U9++x8vyGTlBcXEYar+4+ZE0U5z6H7ioIQY8c6N1nC0QIhawGv2XRa6WbUViXKpOPXQ=="],
+
+    "@secretlint/formatter/@secretlint/types": ["@secretlint/types@9.3.4", "", {}, "sha512-z9rdKHNeL4xa48+367RQJVw1d7/Js9HIQ+gTs/angzteM9osfgs59ad3iwVRhCGYbeUoUUDe2yxJG2ylYLaH3Q=="],
+
+    "@secretlint/node/@secretlint/config-loader": ["@secretlint/config-loader@9.3.4", "", { "dependencies": { "@secretlint/profiler": "^9.3.4", "@secretlint/resolver": "^9.3.4", "@secretlint/types": "^9.3.4", "ajv": "^8.17.1", "debug": "^4.4.1", "rc-config-loader": "^4.1.3" } }, "sha512-sy+yWDWh4cbAbpQYLiO39DjwNGEK1EUhTqNamLLBo163BdJP10FIWhqpe8mtGQBSBXRtxr8Hg/gc3Xe4meIoww=="],
+
+    "@secretlint/node/@secretlint/core": ["@secretlint/core@9.3.4", "", { "dependencies": { "@secretlint/profiler": "^9.3.4", "@secretlint/types": "^9.3.4", "debug": "^4.4.1", "structured-source": "^4.0.0" } }, "sha512-ErIVHI6CJd191qdNKuMkH3bZQo9mWJsrSg++bQx64o0WFuG5nPvkYrDK0p/lebf+iQuOnzvl5HrZU6GU9a6o+Q=="],
+
+    "@secretlint/node/@secretlint/source-creator": ["@secretlint/source-creator@9.3.4", "", { "dependencies": { "@secretlint/types": "^9.3.4", "istextorbinary": "^9.5.0" } }, "sha512-I9ZA1gm9HJNaAhZiQdInY9VM04VTAGDV4bappVbEJzMUDnK/LTbYqfQ88RPqgCGCqa6ee8c0/j5Bn7ypweouIw=="],
+
+    "@secretlint/node/@secretlint/types": ["@secretlint/types@9.3.4", "", {}, "sha512-z9rdKHNeL4xa48+367RQJVw1d7/Js9HIQ+gTs/angzteM9osfgs59ad3iwVRhCGYbeUoUUDe2yxJG2ylYLaH3Q=="],
 
     "@textlint/linter-formatter/pluralize": ["pluralize@2.0.0", "", {}, "sha512-TqNZzQCD4S42De9IfnnBvILN7HAW7riLqsCyp8lgjXeysyPlX5HhqKAcJHHHb9XskE4/a+7VGC9zzx8Ls0jOAw=="],
 
