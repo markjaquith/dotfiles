@@ -21,4 +21,6 @@ If the argument is "staged" ($1 = "staged"), only commit the staged files withou
 
 NEVER use `--no-verify` or otherwise bypass precommit hooks. If precommit hooks fail, report the parent to the parent task.
 
+NEVER use `--amend` or modify previous commits.
+
 After successfully committing, ALWAYS output the commit hash, and the commit message, and then prompt the user for the next action. You MUST NOT perform any further actions without user confirmation, after confirming the commit has been made.
