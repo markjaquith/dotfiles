@@ -92,8 +92,20 @@ return {
       }
     end,
     formatters = {
-      prettier = {
+      bun_oxfmt = {
+        command = "bun",
+        args = { "oxfmt", "--stdin-filepath", "$FILENAME" },
+        stdin = true,
+      },
+
+      bunx_oxfmt = {
         command = "bunx",
+        args = { "oxfmt", "--stdin-filepath", "$FILENAME" },
+        stdin = true,
+      },
+
+      prettier = {
+        command = "yarn",
         args = { "prettier", "--stdin-filepath", "$FILENAME" },
         stdin = true,
       },
@@ -113,9 +125,10 @@ return {
     },
     formatters_by_ft = {
       lua = { 'stylua' },
-      typescript = { 'prettierd', 'prettier', stop_after_first = true },
-      typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
-      tsx = { 'prettierd', 'prettier', stop_after_first = true },
+      typescript = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
+      typescriptreact = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
+      tsx = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
+      json = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
       ruby = { 'rubocop', 'rubocop_cli' },
       yaml = { 'yamlfix' },
       -- You can use 'stop_after_first' to run the first available formatter from the list
