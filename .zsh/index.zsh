@@ -11,7 +11,6 @@ source $(dirname "$0")/000-init.zsh
   ┃  050-bun                   #┃ Load Bun                     ┃                ┃
   ┃  070-zinit                 #┃ Load Zinit                   ┃                ┃
   ┃  075-mise                  #┃ Configure Mise and HK        ┃                ┃
-  ┃  085-nvm                   #┃ Load NVM                     ┃ DOTFILES_NVM   ┃
   ┃  090-completions           #┃ Init completions system      ┃                ┃
   ┃  100-aliases               #┃ Aliases                      ┃                ┃
   ┃  105-misc                  #┃ Misc                         ┃                ┃
