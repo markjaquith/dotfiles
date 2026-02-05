@@ -9,3 +9,6 @@ ln -s "$HOME/.config/lazygit/config.yml" "$HOME/Library/Application Support/lazy
 if ! git config --global --get-regexp 'include\.path.*delta' >/dev/null 2>&1; then
 	git config --global --add include.path "~/.config/delta/themes/catppuccin-macchiato" >/dev/null 2>&1
 fi
+
+# Git aliases
+git config --global alias.fixup 'commit --all --amend --no-edit --no-verify'
