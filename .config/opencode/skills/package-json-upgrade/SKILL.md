@@ -40,6 +40,7 @@ Run the appropriate outdated command:
 - `bun outdated` (bun)
 
 Collect all outdated packages from:
+
 - `dependencies`
 - `devDependencies`
 - `peerDependencies`
@@ -52,21 +53,27 @@ Note the current version, wanted version, and latest version for each package.
 Categorize packages into groups:
 
 ### Standalone Packages (upgrade first)
+
 Packages that are independent utilities with no tight coupling to other packages:
+
 - Utility libraries (lodash, date-fns, uuid, etc.)
 - Standalone tools (prettier, eslint plugins, etc.)
-- Type definitions (@types/*)
+- Type definitions (@types/\*)
 
 ### Coupled Package Groups (upgrade together)
+
 Packages that must be upgraded in tandem:
+
 - Framework ecosystems (react + react-dom + @types/react)
-- Testing frameworks (jest + @jest/* + ts-jest)
+- Testing frameworks (jest + @jest/\* + ts-jest)
 - Build toolchains (webpack + webpack-cli + loaders)
-- Linting ecosystems (eslint + @typescript-eslint/* + eslint plugins)
-- Related scoped packages (@scope/*)
+- Linting ecosystems (eslint + @typescript-eslint/\* + eslint plugins)
+- Related scoped packages (@scope/\*)
 
 ### Major Version Upgrades of Critical Packages (upgrade last)
+
 Hold these for the end as they often have breaking changes:
+
 - Core frameworks (react, vue, angular, svelte)
 - Build tools (vite, webpack, esbuild)
 - Language tooling (typescript)
@@ -80,6 +87,7 @@ For each package or package group, in order of risk (safest first):
 ### 5a. Upgrade the package(s)
 
 Use the appropriate command:
+
 - `npm install <package>@latest` (npm)
 - `yarn add <package>@latest` (yarn)
 - `pnpm add <package>@latest` (pnpm)
@@ -90,6 +98,7 @@ For devDependencies, add the appropriate flag (`-D`, `--save-dev`, etc.).
 ### 5b. Run validation checks
 
 Run all available validation scripts discovered in Step 2:
+
 1. Type checking (if available)
 2. Linting (if available)
 3. Formatting check (if available)
@@ -99,6 +108,7 @@ Run all available validation scripts discovered in Step 2:
 ### 5c. Handle failures
 
 If any check fails:
+
 - For minor issues (lint/format): attempt to auto-fix with `--fix` or equivalent
 - For type errors: assess if they're trivial to fix or indicate deeper issues
 - For test failures: determine if they're related to the upgrade
@@ -114,6 +124,7 @@ chore(deps): upgrade <package-name> to <version>
 ```
 
 For grouped packages:
+
 ```
 chore(deps): upgrade <group-description>
 
@@ -126,19 +137,24 @@ chore(deps): upgrade <group-description>
 After processing all packages, provide a comprehensive report:
 
 ### Successfully Upgraded
+
 List all packages that were upgraded, organized by grouping:
+
 - Package name
 - Previous version → new version
 - Commit hash (if available)
 
 ### Skipped/Held Back
+
 List packages that were NOT upgraded:
+
 - Package name
 - Current version → attempted version
 - Reason for skipping (test failures, type errors, breaking changes, etc.)
 - Brief description of what went wrong
 
 ### Summary
+
 - Total packages upgraded
 - Total packages skipped
 - Overall health assessment

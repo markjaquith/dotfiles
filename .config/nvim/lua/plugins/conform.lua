@@ -104,12 +104,6 @@ return {
         stdin = true,
       },
 
-      prettier = {
-        command = "yarn",
-        args = { "prettier", "--stdin-filepath", "$FILENAME" },
-        stdin = true,
-      },
-
       -- This one uses --server
       rubocop = {
         command = "bundle",
@@ -125,14 +119,14 @@ return {
     },
     formatters_by_ft = {
       lua = { 'stylua' },
-      typescript = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
-      typescriptreact = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
-      tsx = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
-      json = { 'bun_oxfmt', 'prettierd', 'prettier', 'bunx_oxfmt', stop_after_first = true },
+      typescript = { 'bun_oxfmt', 'bunx_oxfmt', stop_after_first = true },
+      typescriptreact = { 'bun_oxfmt', 'bunx_oxfmt', stop_after_first = true },
+      tsx = { 'bun_oxfmt', 'bunx_oxfmt', stop_after_first = true },
+      json = { 'bun_oxfmt', 'bunx_oxfmt', stop_after_first = true },
       ruby = { 'rubocop', 'rubocop_cli' },
       yaml = { 'yamlfix' },
       -- You can use 'stop_after_first' to run the first available formatter from the list
-      -- javascript = { "prettierd", "prettier", stop_after_first = true },
+      -- javascript = { "bun_oxfmt", "bunx_oxfmt", stop_after_first = true },
     },
   },
 }

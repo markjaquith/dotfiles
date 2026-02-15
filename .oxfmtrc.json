@@ -2,9 +2,10 @@
 	"useTabs": true,
 	"tabWidth": 2,
 	"semi": false,
+	"printWidth": 80,
 	"overrides": [
 		{
-			"files": "package.json",
+			"files": ["package.json"],
 			"options": {
 				"useTabs": false,
 				"tabWidth": 2
