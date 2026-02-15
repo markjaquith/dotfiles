@@ -1,5 +1,5 @@
 [tools]
 hk = "latest"
 node = "latest"
-"npm:prettier" = "latest"
+"npm:oxfmt" = "latest"
 pkl = "latest"

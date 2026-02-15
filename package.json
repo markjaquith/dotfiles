@@ -1,8 +1,8 @@
 {
   "name": "dotfiles",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "index.ts",
   "devDependencies": {
     "@secretlint/secretlint-rule-pattern": "^11.3.0",
     "@secretlint/secretlint-rule-preset-recommend": "^11.3.0",

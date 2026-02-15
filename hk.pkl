@@ -2,7 +2,11 @@ amends "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Config.pk
 import "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Builtins.pkl"
 
 local linters = new Mapping<String, Step> {
-    ["prettier"] = Builtins.prettier
+    ["oxfmt"] {
+        glob = List("*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts", "*.css", "*.scss", "*.less", "*.html", "*.json", "*.json5", "*.jsonc", "*.yaml", "*.yml", "*.md", "*.graphql", "*.svelte", "*.astro", "*.vue")
+        check = "oxfmt --check {{ files }}"
+        fix = "oxfmt --write {{ files }}"
+    }
 
     // Custom linter for pkl files
     ["pkl"] {
