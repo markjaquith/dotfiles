@@ -1,5 +1,6 @@
 {
 	"$schema": "https://opencode.ai/config.json",
+	"snapshot": false,
 	"agent": {
 		"fast": {
 			"description": "Fast development mode using Claude Haiku 4.5",
