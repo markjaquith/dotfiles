@@ -31,9 +31,9 @@
 		"branch": "master",
 		"commit": "b4aab989db276993ea5dcb78872be494ce546521"
 	},
-	"copilot.vim": {
-		"branch": "release",
-		"commit": "dfe0a3a1c256167d181488a73ec6ccab8d8931a9"
+	"copilot.lua": {
+		"branch": "master",
+		"commit": "dd3e345d59051464573d821b042f0a0c82410b5d"
 	},
 	"fidget.nvim": {
 		"branch": "main",
