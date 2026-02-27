@@ -8,7 +8,7 @@ They will change drastically over time, often suddenly, and without warning.
 
 - Dotfiles should be stored in `~/dotfiles`
 - Dotfiles should mirror the home directory ([GNU stow][stow] handles symlinks)
-- Dotfiles should be extensible with a `~/.local-dotfiles` directory that can append/prepend/replace
+- Dotfiles should be extensible with one or more local overlay repos (e.g. `~/.local-dotfiles`) that can override specific files
 - Embrace Git and do not keep things that are no longer being used
 - Operations should be idempotent
 - Dotfiles should install with minimum fussiness (i.e. don't rewrite into Rust because that would introduce dependencies for spinning them up on a new machine)
@@ -46,12 +46,7 @@ The `dotfiles-install` command does a bunch of things:
 - Installs software
 - Handles various manual symlinks
 - Creates empty directories where needed
-- Merges files from `~/.local-dotfiles`
-  - Looks for `.default.` files in the main repo
-  - Matches them with corresponding files in the local dotfiles (if present):
-    - `.prepend.` files are prepended to the default file
-    - `.append.` files are appended to the default file
-    - Files with the exact target name completely replace the default file
+- Reconciles file-level local overlays from `~/.local-dotfiles` into `~/dotfiles` (for overlapping paths)
 
 [mj]: https://github.com/markjaquith
 [ghostty]: https://ghostty.io/
