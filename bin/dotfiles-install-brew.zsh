@@ -50,6 +50,6 @@ brew install --quiet \
     ghostscript \
     neovim \
     openscad \
-    acli \
+    atlassian/homebrew-acli/acli \
     libyaml \
     trash
