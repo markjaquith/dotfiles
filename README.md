@@ -46,7 +46,8 @@ The `dotfiles-install` command does a bunch of things:
 - Installs software
 - Handles various manual symlinks
 - Creates empty directories where needed
-- Reconciles file-level local overlays from `~/.local-dotfiles` into `~/dotfiles` (for overlapping paths)
+
+The `dotfiles` command handles Stow syncing and local overlay reconciliation for overlapping files.
 
 [mj]: https://github.com/markjaquith
 [ghostty]: https://ghostty.io/
