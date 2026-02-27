@@ -1,7 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 # TODO: Make sure these things are installed first
 gum style --foreground 212 "Copying dotfiles…"
 (
   cd ~/dotfiles
   stow .
 )
+
+DOTFILES_DIR="$HOME/dotfiles"
+LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
+
+if [[ -f "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" ]]; then
+  source "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh"
+fi

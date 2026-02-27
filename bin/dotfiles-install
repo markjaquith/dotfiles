@@ -14,8 +14,7 @@ wait
 source "${SCRIPT_DIR}/dotfiles-install-pip.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-mise.zsh" &
 source "${SCRIPT_DIR}/dotfiles-install-tools.zsh"
-source "${SCRIPT_DIR}/dotfiles-install-sync.zsh"
-source "${SCRIPT_DIR}/dotfiles-install-sesh.zsh"
+source "${SCRIPT_DIR}/dotfiles-install-overlay.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-configs.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh"
  

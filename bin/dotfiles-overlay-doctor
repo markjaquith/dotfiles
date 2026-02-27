@@ -1,0 +1,178 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt typeset_silent
+
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+LOCAL_DOTFILES_DIR="${LOCAL_DOTFILES_DIR:-$HOME/.local-dotfiles}"
+
+typeset -a overlay_dirs
+typeset -a overlay_roots
+
+if [[ -n "${DOTFILES_OVERLAY_DIRS:-}" ]]; then
+  overlay_dirs=("${(@s/:/)DOTFILES_OVERLAY_DIRS}")
+else
+  overlay_dirs=("$LOCAL_DOTFILES_DIR")
+fi
+
+if [[ ! -d "$DOTFILES_DIR" ]]; then
+  print -u2 "Error: DOTFILES_DIR does not exist: $DOTFILES_DIR"
+  exit 1
+fi
+
+if ! command -v fd >/dev/null 2>&1; then
+  print -u2 "Error: fd is required for overlay doctor"
+  exit 1
+fi
+
+typeset tmp_dir
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-overlay-doctor.XXXXXX") || exit 1
+trap 'rm -rf "$tmp_dir"' EXIT
+
+typeset desired_raw="$tmp_dir/desired.raw.tsv"
+typeset desired_map="$tmp_dir/desired.map.tsv"
+typeset desired_rel="$tmp_dir/desired.rel"
+typeset actual_raw="$tmp_dir/actual.raw.tsv"
+typeset actual_map="$tmp_dir/actual.map.tsv"
+typeset actual_rel="$tmp_dir/actual.rel"
+typeset broken_raw="$tmp_dir/broken.raw.tsv"
+typeset broken_rel="$tmp_dir/broken.rel"
+typeset skip_rel="$tmp_dir/skip.rel"
+typeset tracked_rel="$tmp_dir/tracked.rel"
+typeset desired_tracked_rel="$tmp_dir/desired.tracked.rel"
+typeset undesired_skip_rel="$tmp_dir/undesired_skip.rel"
+typeset missing_skip_rel="$tmp_dir/missing_skip.rel"
+typeset stale_override_rel="$tmp_dir/stale_override.rel"
+
+: > "$desired_raw"
+: > "$actual_raw"
+: > "$broken_raw"
+
+typeset overlay_dir
+for overlay_dir in "${overlay_dirs[@]}"; do
+  [[ ! -d "$overlay_dir" ]] && continue
+
+  overlay_root="${overlay_dir:A}"
+  overlay_roots+=("$overlay_root")
+
+  typeset overlay_abs
+  while IFS= read -r overlay_abs; do
+    [[ -z "$overlay_abs" ]] && continue
+    [[ "$overlay_abs" != "$overlay_dir"/* ]] && continue
+
+    rel="${overlay_abs#$overlay_dir/}"
+    [[ "$rel" == .git/* ]] && continue
+
+    main_path="$DOTFILES_DIR/$rel"
+    [[ ! -e "$main_path" && ! -L "$main_path" ]] && continue
+    [[ -d "$main_path" && ! -L "$main_path" ]] && continue
+
+    print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
+  done < <(fd -HI -t f -t l -E .git . "$overlay_dir")
+done
+
+awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
+awk -F '\t' 'NF > 0 { print $1 }' "$desired_map" | sort > "$desired_rel"
+
+typeset main_link
+while IFS= read -r main_link; do
+  [[ -z "$main_link" ]] && continue
+  [[ "$main_link" != "$DOTFILES_DIR"/* ]] && continue
+
+  rel="${main_link#$DOTFILES_DIR/}"
+  [[ "$rel" == .git/* ]] && continue
+
+  link_target=$(readlink "$main_link" 2>/dev/null)
+  [[ -z "$link_target" ]] && continue
+
+  if [[ "$link_target" == /* ]]; then
+    resolved_target="$link_target"
+  else
+    resolved_target="${main_link:h}/$link_target"
+    resolved_target="${resolved_target:A}"
+  fi
+
+  root=""
+  for root in "${overlay_roots[@]}"; do
+    if [[ "$resolved_target" == "$root"/* ]]; then
+      print -r -- "$rel	$resolved_target" >> "$actual_raw"
+      if [[ ! -e "$resolved_target" ]]; then
+        print -r -- "$rel	$resolved_target" >> "$broken_raw"
+      fi
+      break
+    fi
+  done
+done < <(fd -HI -t l -E .git . "$DOTFILES_DIR")
+
+awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$actual_raw" > "$actual_map"
+awk -F '\t' 'NF > 0 { print $1 }' "$actual_map" | sort > "$actual_rel"
+awk -F '\t' 'NF > 0 { print $1 }' "$broken_raw" | sort -u > "$broken_rel"
+
+git -C "$DOTFILES_DIR" ls-files -v | awk '$1 ~ /^S$/ { print $2 }' | sort -u > "$skip_rel"
+git -C "$DOTFILES_DIR" ls-files | sort -u > "$tracked_rel"
+comm -12 "$desired_rel" "$tracked_rel" > "$desired_tracked_rel"
+
+comm -23 "$skip_rel" "$desired_tracked_rel" > "$undesired_skip_rel"
+comm -13 "$skip_rel" "$desired_tracked_rel" > "$missing_skip_rel"
+comm -23 "$actual_rel" "$desired_rel" > "$stale_override_rel"
+
+typeset desired_count actual_count broken_count stale_count skip_count undesired_skip_count missing_skip_count
+desired_count=$(wc -l < "$desired_rel" | tr -d ' ')
+actual_count=$(wc -l < "$actual_rel" | tr -d ' ')
+broken_count=$(wc -l < "$broken_rel" | tr -d ' ')
+stale_count=$(wc -l < "$stale_override_rel" | tr -d ' ')
+skip_count=$(wc -l < "$skip_rel" | tr -d ' ')
+undesired_skip_count=$(wc -l < "$undesired_skip_rel" | tr -d ' ')
+missing_skip_count=$(wc -l < "$missing_skip_rel" | tr -d ' ')
+
+print "Dotfiles Overlay Doctor"
+print "  dotfiles: $DOTFILES_DIR"
+print "  overlays: ${overlay_dirs[*]}"
+print ""
+print "Counts"
+print "  desired overrides: $desired_count"
+print "  active overrides:  $actual_count"
+print "  broken overrides:  $broken_count"
+print "  stale overrides:   $stale_count"
+print "  skip-worktree:     $skip_count"
+print "  skip drift extra:  $undesired_skip_count"
+print "  skip drift miss:   $missing_skip_count"
+
+print ""
+print "Active Overrides"
+if [[ "$actual_count" -eq 0 ]]; then
+  print "  (none)"
+else
+  awk -F '\t' '{ print "  " $1 " -> " $2 }' "$actual_map"
+fi
+
+print ""
+print "Broken Overlay Symlinks"
+if [[ "$broken_count" -eq 0 ]]; then
+  print "  (none)"
+else
+  awk -F '\t' '{ print "  " $1 " -> " $2 }' "$broken_raw"
+fi
+
+print ""
+print "Skip-Worktree Drift"
+if [[ "$undesired_skip_count" -eq 0 && "$missing_skip_count" -eq 0 ]]; then
+  print "  (none)"
+else
+  if [[ "$undesired_skip_count" -gt 0 ]]; then
+    print "  extra skip-worktree (not desired):"
+    awk '{ print "    " $0 }' "$undesired_skip_rel"
+  fi
+  if [[ "$missing_skip_count" -gt 0 ]]; then
+    print "  missing skip-worktree (should be set):"
+    awk '{ print "    " $0 }' "$missing_skip_rel"
+  fi
+fi
+
+print ""
+print "Stale Active Overrides"
+if [[ "$stale_count" -eq 0 ]]; then
+  print "  (none)"
+else
+  awk '{ print "  " $0 }' "$stale_override_rel"
+fi
