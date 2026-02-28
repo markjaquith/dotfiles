@@ -211,10 +211,44 @@ alias ocfast="opencode run --agent fast"
 
 # OpenCode commit.
 function commit() {
-	if opencode run "/commit${1:+ $1}" &>/dev/null; then
-		git log -1 --no-patch
+	local verbose=false
+	local args=()
+
+	for arg in "$@"; do
+		case "$arg" in
+			--help|-h)
+				echo "Usage: commit [options] [args]"
+				echo ""
+				echo "Generates a commit message using opencode and commits."
+				echo ""
+				echo "Arguments:"
+				echo "  staged          Only commit already-staged files"
+				echo ""
+				echo "Options:"
+				echo "  --verbose, -v   Show opencode output while running"
+				echo "  --help, -h      Show this help message"
+				return 0
+				;;
+			--verbose|-v)
+				verbose=true
+				;;
+			*)
+				args+=("$arg")
+				;;
+		esac
+	done
+
+	local commit_arg="${args[*]}"
+	local cmd="opencode run \"/commit${commit_arg:+ $commit_arg}\""
+
+	if $verbose; then
+		eval "$cmd"
 	else
-		opencode run "/commit${1:+ $1}"
+		if eval "$cmd" &>/dev/null; then
+			git log -1 --no-patch
+		else
+			eval "$cmd"
+		fi
 	fi
 }
 
