@@ -218,6 +218,11 @@ function commit() {
 	fi
 }
 
+# OpenCode rebase.
+function rebase() {
+	opencode run "Do \`git rebase $*\` and resolve any conflicts. Respond with a one-sentence summary of what was done"
+}
+
 # ------------------------------------------------------------------------------
 # Aliases and functions for tmux from Jesse Leite
 # ------------------------------------------------------------------------------
