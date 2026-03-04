@@ -50,6 +50,8 @@ for overlay_dir in "${overlay_dirs[@]}"; do
 
     rel="${overlay_abs#$overlay_dir/}"
     [[ "$rel" == .git/* ]] && continue
+    [[ "$rel" == .ignore ]] && continue
+    [[ "$rel" == .gitignore ]] && continue
 
     typeset main_path="$DOTFILES_DIR/$rel"
     [[ ! -e "$main_path" && ! -L "$main_path" ]] && continue
