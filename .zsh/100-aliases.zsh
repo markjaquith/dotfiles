@@ -239,15 +239,15 @@ function commit() {
 	done
 
 	local commit_arg="${args[*]}"
-	local cmd="opencode run \"/commit${commit_arg:+ $commit_arg}\""
+	local cmd=(opencode run "/commit${commit_arg:+ $commit_arg}")
 
 	if $verbose; then
-		eval "$cmd"
+		"${cmd[@]}"
 	else
-		if eval "$cmd" &>/dev/null; then
+		if gum spin --title "Committing..." -- "${cmd[@]}"; then
 			git log -1 --no-patch
 		else
-			eval "$cmd"
+			"${cmd[@]}"
 		fi
 	fi
 }
@@ -411,5 +411,4 @@ llm_files_old() {
 function llm_files() {
 	bunx repomix && cat repomix-output.xml | pbcopy
 }
-
 
