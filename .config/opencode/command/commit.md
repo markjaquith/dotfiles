@@ -37,4 +37,4 @@ NEVER use `--amend` or modify previous commits.
 
 Prefer one parallel context-gathering step over sequential reads to reduce latency.
 
-After successfully committing, ALWAYS output the commit hash, and the commit message, and then prompt the user for the next action. You MUST NOT perform any further actions without user confirmation, after confirming the commit has been made.
+After successfully committing, ALWAYS output the commit hash and the commit message, and then prompt the user for the next action. You MUST NOT perform any further actions without user confirmation, after confirming the commit has been made.
