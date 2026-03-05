@@ -240,8 +240,13 @@ function commit() {
 
 	local commit_arg="${args[*]}"
 	local cmd=(opencode run "/commit${commit_arg:+ $commit_arg}")
+	local can_spin=false
 
-	if $verbose; then
+	if [[ -o interactive && -t 0 && -t 1 ]] && command -v gum >/dev/null 2>&1; then
+		can_spin=true
+	fi
+
+	if $verbose || ! $can_spin; then
 		"${cmd[@]}"
 	else
 		if gum spin --title "Committing..." -- "${cmd[@]}"; then
@@ -411,4 +416,3 @@ llm_files_old() {
 function llm_files() {
 	bunx repomix && cat repomix-output.xml | pbcopy
 }
-
