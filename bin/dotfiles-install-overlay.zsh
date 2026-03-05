@@ -53,10 +53,6 @@ for overlay_dir in "${overlay_dirs[@]}"; do
     [[ "$rel" == .ignore ]] && continue
     [[ "$rel" == .gitignore ]] && continue
 
-    typeset main_path="$DOTFILES_DIR/$rel"
-    [[ ! -e "$main_path" && ! -L "$main_path" ]] && continue
-    [[ -d "$main_path" && ! -L "$main_path" ]] && continue
-
     print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
   done < <(fd -HI -t f -t l -E .git . "$overlay_dir")
 done
@@ -125,9 +121,12 @@ apply_override() {
     return 0
   fi
 
+  mkdir -p "${main_path:h}"
   rm -f "$main_path"
   ln -s "$target" "$main_path"
-  git -C "$DOTFILES_DIR" update-index --skip-worktree -- "$rel" >/dev/null 2>&1 || true
+  if git -C "$DOTFILES_DIR" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
+    git -C "$DOTFILES_DIR" update-index --skip-worktree -- "$rel" >/dev/null 2>&1 || true
+  fi
 }
 
 while IFS= read -r rel; do

@@ -62,10 +62,8 @@ for overlay_dir in "${overlay_dirs[@]}"; do
 
     rel="${overlay_abs#$overlay_dir/}"
     [[ "$rel" == .git/* ]] && continue
-
-    main_path="$DOTFILES_DIR/$rel"
-    [[ ! -e "$main_path" && ! -L "$main_path" ]] && continue
-    [[ -d "$main_path" && ! -L "$main_path" ]] && continue
+    [[ "$rel" == .ignore ]] && continue
+    [[ "$rel" == .gitignore ]] && continue
 
     print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
   done < <(fd -HI -t f -t l -E .git . "$overlay_dir")
