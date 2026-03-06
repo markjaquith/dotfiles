@@ -53,6 +53,7 @@ for overlay_dir in "${overlay_dirs[@]}"; do
     [[ "$rel" == .git/* ]] && continue
     [[ "$rel" == .ignore ]] && continue
     [[ "$rel" == .gitignore ]] && continue
+    [[ "$rel" == local-init.zsh ]] && continue
 
     print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
   done < <(fd -HI -t f -t l -E .git . "$overlay_dir")
