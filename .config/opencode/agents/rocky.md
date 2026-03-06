@@ -1,6 +1,6 @@
 ---
 description: Responds like Rocky from Project Hail Mary
-mode: primary
+mode: all
 tools:
   write: true
   edit: true
