@@ -27,6 +27,7 @@ trap 'rm -rf "$tmp_dir"' EXIT
 typeset desired_raw="$tmp_dir/desired.raw.tsv"
 typeset desired_map="$tmp_dir/desired.map.tsv"
 typeset desired_rel="$tmp_dir/desired.rel"
+typeset desired_untracked_rel="$tmp_dir/desired.untracked.rel"
 typeset actual_map="$tmp_dir/actual.map.tsv"
 typeset actual_rel="$tmp_dir/actual.rel"
 typeset stale_rel="$tmp_dir/stale.rel"
@@ -59,6 +60,43 @@ done
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
 awk -F '\t' 'NF > 0 { print $1 }' "$desired_map" | sort > "$desired_rel"
+
+: > "$desired_untracked_rel"
+rel=""
+while IFS= read -r rel; do
+  [[ -z "$rel" ]] && continue
+  if ! git -C "$DOTFILES_DIR" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
+    print -r -- "$rel" >> "$desired_untracked_rel"
+  fi
+done < "$desired_rel"
+
+typeset exclude_file="$DOTFILES_DIR/.git/info/exclude"
+typeset exclude_tmp="$tmp_dir/exclude.tmp"
+typeset overlay_exclude_start="# BEGIN DOTFILES OVERLAY"
+typeset overlay_exclude_end="# END DOTFILES OVERLAY"
+
+if [[ -f "$exclude_file" ]]; then
+  awk -v start="$overlay_exclude_start" -v end="$overlay_exclude_end" '
+    $0 == start { skipping = 1; next }
+    $0 == end { skipping = 0; next }
+    !skipping { print }
+  ' "$exclude_file" > "$exclude_tmp"
+else
+  : > "$exclude_tmp"
+fi
+
+if [[ -s "$desired_untracked_rel" ]]; then
+  {
+    print -r -- "$overlay_exclude_start"
+    while IFS= read -r rel; do
+      [[ -z "$rel" ]] && continue
+      print -r -- "/$rel"
+    done < "$desired_untracked_rel"
+    print -r -- "$overlay_exclude_end"
+  } >> "$exclude_tmp"
+fi
+
+mv "$exclude_tmp" "$exclude_file"
 
 main_link=""
 while IFS= read -r main_link; do
