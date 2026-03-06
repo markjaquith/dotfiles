@@ -54,6 +54,6 @@ fi
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # Init local dotfiles
-[[ ! -f ~/.local-dotfiles/init.zsh ]] || source ~/.local-dotfiles/init.zsh
+[[ ! -f ~/.local-dotfiles/local-init.zsh ]] || source ~/.local-dotfiles/local-init.zsh
 
 . "$HOME/.local/bin/env"

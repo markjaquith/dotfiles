@@ -39,6 +39,8 @@ The `dotfiles` command uses [GNU stow][stow] to symlink things from `~/` to thei
 
 This allows me to not have `~/` be a Git checkout.
 
+Local zsh bootstrap lives in `~/.local-dotfiles/local-init.zsh` and is sourced from `~/.zshrc`, rather than being overlaid into the main dotfiles repo.
+
 ### Installing
 
 The `dotfiles-install` command does a bunch of things:
