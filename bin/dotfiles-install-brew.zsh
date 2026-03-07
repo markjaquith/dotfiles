@@ -19,6 +19,7 @@ brew install --quiet \
 		pandoc \
 		yamlfix \
 		pkl-lsp \
+		fswatch \
     1password-cli \
     lua-language-server \
     pkgx \
