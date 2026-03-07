@@ -160,7 +160,7 @@ function zz() {
 }
 
 function tailf() {
-	emulate -L zsh
+	emulate -L zsh -o extended_glob -o localtraps
 
 	if [[ $# -ne 1 ]]; then
 		echo "Usage: tailf <dir|glob>"
@@ -194,25 +194,40 @@ function tailf() {
 		fi
 	fi
 
-	local -a files
-	local tail_pid
+	local -a files active_files
+	local tail_pid=''
+
+	cleanup_tailf() {
+		if [[ -n "$tail_pid" ]]; then
+			kill "$tail_pid" >/dev/null 2>&1
+			wait "$tail_pid" 2>/dev/null
+			tail_pid=''
+		fi
+	}
+
+	trap 'cleanup_tailf; return 130' INT TERM
 
 	while :; do
 		files=(${~watch_dir}/${~pattern}(N-.))
 
-		if (( ${#files[@]} )); then
-			tail -n 0 -F -- "${files[@]}" &
-			tail_pid=$!
-		else
-			print -r -- "Waiting for matches in $watch_dir/$pattern..." >&2
-			tail_pid=''
+		if [[ "${(j:\n:)files}" != "${(j:\n:)active_files}" ]]; then
+			cleanup_tailf
+			active_files=("${files[@]}")
+
+			if (( ${#active_files[@]} )); then
+				tail -n 0 -F -- "${active_files[@]}" &
+				tail_pid=$!
+			else
+				print -r -- "Waiting for matches in $watch_dir/$pattern..." >&2
+			fi
 		fi
 
 		fswatch -1 --event Created --event Removed --event Renamed --event MovedFrom --event MovedTo "$watch_dir" >/dev/null 2>&1
+		local fswatch_status=$?
 
-		if [[ -n "$tail_pid" ]]; then
-			kill "$tail_pid" >/dev/null 2>&1
-			wait "$tail_pid" 2>/dev/null
+		if (( fswatch_status != 0 )); then
+			cleanup_tailf
+			return "$fswatch_status"
 		fi
 	done
 }
