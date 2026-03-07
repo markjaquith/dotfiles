@@ -159,6 +159,64 @@ function zz() {
 	z "$@" && la
 }
 
+function tailf() {
+	emulate -L zsh
+
+	if [[ $# -ne 1 ]]; then
+		echo "Usage: tailf <dir|glob>"
+		echo "Examples: tailf ~/logs | tailf './*.log'"
+		return 1
+	fi
+
+	if ! command -v fswatch >/dev/null 2>&1; then
+		echo "tailf requires fswatch (brew install fswatch)"
+		return 1
+	fi
+
+	local target="$1"
+	local watch_dir pattern
+
+	if [[ -d "$target" ]]; then
+		watch_dir="${target:A}"
+		pattern='*'
+	else
+		watch_dir="${target:h}"
+		pattern="${target:t}"
+
+		if [[ "$watch_dir" == "$target" ]]; then
+			watch_dir='.'
+		fi
+
+		watch_dir="${watch_dir:A}"
+		if [[ ! -d "$watch_dir" ]]; then
+			echo "No such directory: $watch_dir"
+			return 1
+		fi
+	fi
+
+	local -a files
+	local tail_pid
+
+	while :; do
+		files=(${~watch_dir}/${~pattern}(N-.))
+
+		if (( ${#files[@]} )); then
+			tail -n 0 -F -- "${files[@]}" &
+			tail_pid=$!
+		else
+			print -r -- "Waiting for matches in $watch_dir/$pattern..." >&2
+			tail_pid=''
+		fi
+
+		fswatch -1 --event Created --event Removed --event Renamed --event MovedFrom --event MovedTo "$watch_dir" >/dev/null 2>&1
+
+		if [[ -n "$tail_pid" ]]; then
+			kill "$tail_pid" >/dev/null 2>&1
+			wait "$tail_pid" 2>/dev/null
+		fi
+	done
+}
+
 # Get the IP address for a domain.
 function ipfor(){ dig +short $1 | grep -E '^[0-9.]+$' | head -1; }
 
