@@ -10,4 +10,5 @@ bun i -g --no-summary \
     @tailwindcss/language-server@latest \
     vscode-langservers-extracted@latest \
     @astrojs/language-server@latest \
-    bash-language-server@latest
+    bash-language-server@latest \
+    btca@latest
