@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 const COMMAND_NAME = "keep-going"
 const KEEP_GOING_PROMPT =
-	"Keep going. If you are well and truly done, respond with the text 'I AM DONE' and ONLY that text."
+	"Keep going with remaining tasks. If you are well and truly done with this task, and have conclusively done all that you can, respond with the text 'I AM DONE' and ONLY that text."
 const DONE_TEXT = "I AM DONE"
 
 const activeSessions = new Set<string>()
@@ -49,6 +49,39 @@ function assistantIsDone(parts: MessagePart[]) {
 			"snapshot",
 		].includes(part.type)
 	})
+}
+
+function hasImmediateDoneReply(
+	messages: Array<{
+		info: { role: "user" | "assistant"; error?: unknown }
+		parts: MessagePart[]
+	}>,
+) {
+	const lastAssistantIndex = messages.findLastIndex(
+		(message) => message.info.role === "assistant",
+	)
+
+	if (lastAssistantIndex === -1) {
+		return false
+	}
+
+	const lastAssistantMessage = messages[lastAssistantIndex]
+	if (!lastAssistantMessage || lastAssistantMessage.info.error) {
+		return false
+	}
+
+	const precedingUserMessage = [...messages.slice(0, lastAssistantIndex)]
+		.reverse()
+		.find((message) => message.info.role === "user")
+
+	if (!precedingUserMessage) {
+		return false
+	}
+
+	return (
+		isKeepGoingPrompt(precedingUserMessage.parts) &&
+		assistantIsDone(lastAssistantMessage.parts)
+	)
 }
 
 async function sendKeepGoing(
@@ -110,19 +143,7 @@ export const KeepGoingPlugin: Plugin = async ({ client }) => {
 					path: { id: sessionID },
 				})
 
-				const lastAssistantMessage = [...messages].reverse().find(
-					(
-						message,
-					): message is (typeof messages)[number] & {
-						info: { role: "assistant"; error?: unknown }
-					} => message.info.role === "assistant",
-				)
-
-				if (!lastAssistantMessage || lastAssistantMessage.info.error) {
-					return
-				}
-
-				if (assistantIsDone(lastAssistantMessage.parts)) {
+				if (hasImmediateDoneReply(messages)) {
 					activeSessions.delete(sessionID)
 					return
 				}
