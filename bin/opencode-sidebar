@@ -1,0 +1,24 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail no_unset
+
+dir=${1:-$PWD}
+
+if ! command -v opencode >/dev/null 2>&1; then
+	print -u2 "opencode not found in PATH"
+	exec zsh -i
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+	print -u2 "jq not found in PATH"
+	exec zsh -i
+fi
+
+session_id=$(opencode session list --format json | jq -r --arg dir "$dir" 'map(select(.directory == $dir)) | sort_by(.updated) | last | .id // empty')
+
+if [[ -n "$session_id" ]]; then
+	exec opencode --session "$session_id" --fork
+fi
+
+exec opencode --continue --fork
