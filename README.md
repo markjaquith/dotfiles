@@ -51,6 +51,8 @@ The `dotfiles-install` command does a bunch of things:
 
 The `dotfiles` command handles Stow syncing and local overlay reconciliation for overlapping files.
 
+`dotfiles --pure` temporarily removes all overlay overrides, restoring the base dotfiles checkout so you can edit files that are normally shadowed by overlay symlinks. Running `dotfiles` again (without `--pure`) re-applies overlays.
+
 [mj]: https://github.com/markjaquith
 [ghostty]: https://ghostty.io/
 [zsh]: https://www.zsh.org/

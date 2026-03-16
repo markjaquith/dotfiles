@@ -20,6 +20,10 @@ else
   return 0
 fi
 
+# In pure mode, we still need overlay_roots to identify existing overlay
+# symlinks, but we produce an empty desired set so everything gets cleaned up.
+typeset dotfiles_pure="${DOTFILES_PURE:-0}"
+
 typeset tmp_dir
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-overlay.XXXXXX") || return 1
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -43,6 +47,9 @@ for overlay_dir in "${overlay_dirs[@]}"; do
 
   typeset overlay_root="${overlay_dir:A}"
   overlay_roots+=("$overlay_root")
+
+  # In pure mode, skip file discovery so the desired set stays empty.
+  [[ "$dotfiles_pure" == "1" ]] && continue
 
   typeset overlay_abs
   while IFS= read -r overlay_abs; do
