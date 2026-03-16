@@ -1,5 +1,14 @@
 #!/usr/bin/env zsh
 # TODO: Make sure these things are installed first
+
+typeset DOTFILES_PURE=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --pure) DOTFILES_PURE=1; shift ;;
+    *) shift ;;
+  esac
+done
+
 gum style --foreground 212 "Copying dotfiles…"
 (
   cd ~/dotfiles
@@ -11,4 +20,8 @@ LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
 
 if [[ -f "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" ]]; then
   source "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh"
+fi
+
+if [[ "$DOTFILES_PURE" == "1" ]]; then
+  gum style --foreground 214 "Pure mode: overlay overrides removed"
 fi
