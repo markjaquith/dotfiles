@@ -102,6 +102,13 @@ If a change spans multiple file types, run the smallest set of relevant checks r
 - Overlay scripts in `bin/` can mutate symlinks, `.git/info/exclude`, and Git `skip-worktree` bits.
 - Secret scanning is intentional and stricter than usual; do not bypass it.
 
+## Repo-Specific Debugging Guidance
+
+- When a task involves overlays, aliases, shell config, or missing local behavior, identify the source of truth early: `~/dotfiles`, `~/.local-dotfiles`, or another overlay directory.
+- For overlay changes, treat symlink targets, `skip-worktree`, and `.git/info/exclude` as one system. Fixing only one of them is usually incomplete in this repo.
+- Prefer the repo's own diagnostics before improvising: use `bin/dotfiles-overlay-doctor` for overlay issues and favor real runtime checks for Neovim, tmux, and OpenCode integrations.
+- Before changing an OpenCode safety plugin, consider whether the currently loaded plugin can block the validating commit or command. Avoid workflows that create self-blocking verification loops.
+
 ## How To Verify Changes
 
 - For formatting-only edits: `oxfmt --check <changed-files>`
