@@ -284,6 +284,8 @@ alias ocfast="opencode run --agent fast"
 
 # OpenCode commit.
 function commit() {
+	emulate -L zsh
+
 	local verbose=false
 	local args=()
 
@@ -324,9 +326,10 @@ function commit() {
 	else
 		if gum spin --title "Committing..." -- "${cmd[@]}"; then
 			git log -1 --no-patch
-		else
-			"${cmd[@]}"
+			return 0
 		fi
+
+		return $?
 	fi
 }
 
