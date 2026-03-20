@@ -280,6 +280,7 @@ alias branch="git branch --show-current"
 alias lg="lazygit"
 
 # OpenCode aliases.
+alias oc="opencode"
 alias ocfast="opencode run --agent fast"
 
 # OpenCode commit.
