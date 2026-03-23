@@ -5,6 +5,7 @@ export XDG_CONFIG_HOME="$HOME/.config"
 # LATER ones have HIGHER priority beause for some dumb reason I'm prepending.
 export PATH=/Library/Developer/CommandLineTools/usr/bin:$PATH
 export PATH="/Applications/Sublime Text.app/Contents/SharedSupport/bin:$PATH"
+export PATH="/Applications/Obsidian.app/Contents/MacOS:$PATH"
 export PATH=/sbin:$PATH
 export PATH=/usr/bin:$PATH
 export PATH=/usr/sbin:$PATH
@@ -32,4 +33,3 @@ fi
 export PATH=/opt/homebrew/sbin:$PATH
 export PATH=/opt/homebrew/bin:$PATH
 export PATH=$HOME/dotfiles/bin:$PATH
-
