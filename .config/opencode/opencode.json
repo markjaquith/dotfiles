@@ -27,7 +27,7 @@
 			"tools": {
 				"write": true,
 				"edit": true,
-				"bash": true,
+				"bas": true,
 				"read": true,
 				"list": true,
 				"glob": true,
@@ -35,8 +35,9 @@
 				"task": true,
 				"todowrite": true,
 				"todoread": true,
-				"webfetch": true
+				"webfetc": true
 			}
 		}
-	}
+	},
+	"plugin": ["op-anthropic-auth"]
 }

@@ -11,4 +11,5 @@ bun i -g --no-summary \
     vscode-langservers-extracted@latest \
     @astrojs/language-server@latest \
     bash-language-server@latest \
+    op-anthropic-auth@latest \
     btca@latest
