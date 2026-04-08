@@ -9,7 +9,6 @@ bun i -g --no-summary \
     opencode-ai@latest \
     @tailwindcss/language-server@latest \
     vscode-langservers-extracted@latest \
-    @astrojs/language-server@latest \
-    bash-language-server@latest \
-    op-anthropic-auth@latest \
-    btca@latest
+		@astrojs/language-server@latest \
+		bash-language-server@latest \
+		btca@latest
