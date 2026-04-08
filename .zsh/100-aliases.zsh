@@ -159,6 +159,29 @@ function zz() {
 	z "$@" && la
 }
 
+function cdarb() {
+	if [[ $# -ne 1 ]]; then
+		echo "Usage: cdarb <name>"
+		return 1
+	fi
+
+	local arb_name="$1"
+	local arb_dir
+
+	arb_dir="$(arb dir "$arb_name")"
+	if [[ ! -d "$arb_dir" ]]; then
+		arb new "$arb_name" || return 1
+		arb_dir="$(arb dir "$arb_name")"
+	fi
+
+	if [[ ! -d "$arb_dir" ]]; then
+		echo "arb directory does not exist: $arb_dir"
+		return 1
+	fi
+
+	cd "$arb_dir" || return 1
+}
+
 function tailf() {
 	emulate -L zsh -o extended_glob -o localtraps
 
