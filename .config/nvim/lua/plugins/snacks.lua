@@ -17,6 +17,12 @@ return {
     bigfile = { enabled = true },
     explorer = { enabled = true, replace_netrw = false },
     notifier = { enabled = true },
+    styles = {
+      -- Keep Treesitter out of notifier popup buffers. This avoids a
+      -- markdown-highlighting crash without affecting normal markdown files.
+      notification = { ft = 'snacks_notif' },
+      notification_history = { ft = 'snacks_notif_history' },
+    },
     dim = { enabled = true },
     scroll = { enabled = true },
     indent = {
@@ -76,6 +82,18 @@ return {
     vim.api.nvim_create_autocmd('User', {
       pattern = 'VeryLazy',
       callback = function()
+        local markdown_preview = require('snacks.picker.util.markdown')
+        local original_render = markdown_preview.render
+
+        markdown_preview.render = function(buf, opts)
+          if vim.bo[buf].filetype:find('snacks_picker_preview', 1, true) then
+            vim.bo[buf].syntax = 'markdown'
+            return markdown_preview.render_fallback(buf)
+          end
+
+          return original_render(buf, opts)
+        end
+
         Snacks.toggle.option('wrap', { name = 'Wrap' }):map '<leader>ow'
         Snacks.toggle.option('relativenumber', { name = 'Relative Line Numbers' }):map '<leader>or'
         Snacks.toggle.line_number():map '<leader>ol'
