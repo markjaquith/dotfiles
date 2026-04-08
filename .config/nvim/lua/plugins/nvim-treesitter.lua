@@ -1,23 +1,47 @@
 -- PLUGIN: Treesitter is a plugin that highlights, edits, and navigates code.
 return {
   'nvim-treesitter/nvim-treesitter',
-  build = ':TSUpdate',
-  opts = {
-    ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
-    -- Autoinstall languages that are not installed
-    auto_install = true,
-    highlight = {
-      enable = true,
-      -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-      --  If you are experiencing weird indenting issues, add the language to
-      --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-      additional_vim_regex_highlighting = { 'ruby' },
-    },
-    indent = { enable = true, disable = { 'ruby' } },
-    fold = { enable = true },
-  },
+  branch = 'main',
+  build = function()
+    require('nvim-treesitter').update({ 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }):wait(300000)
+  end,
+  opts = {},
+  init = function()
+    vim.api.nvim_create_autocmd('FileType', {
+      callback = function(args)
+        local filetype = vim.bo[args.buf].filetype
+        local lang = vim.treesitter.language.get_lang(filetype) or filetype
+
+        if lang == '' then
+          return
+        end
+
+        pcall(vim.treesitter.start, args.buf, lang)
+
+        if lang ~= 'markdown' and lang ~= 'markdown_inline' then
+          vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        end
+
+        local win = vim.api.nvim_get_current_win()
+        vim.wo[win].foldmethod = 'expr'
+        vim.wo[win].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+      end,
+    })
+  end,
   config = function(_, opts)
-    require('nvim-treesitter.configs').setup(opts)
+    local languages = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+    local treesitter = require('nvim-treesitter')
+
+    treesitter.setup(opts)
+
+    local installed = treesitter.get_installed()
+    local missing = vim.tbl_filter(function(lang)
+      return not vim.tbl_contains(installed, lang)
+    end, languages)
+
+    if #missing > 0 then
+      treesitter.install(missing):wait(300000)
+    end
 
     local version = vim.version()
     local nvim_version = string.format('%d.%d.%d', version.major, version.minor, version.patch)
@@ -26,14 +50,11 @@ return {
 
     -- Rebuild parser binaries once after a Neovim upgrade to avoid ABI mismatches.
     if previous ~= nvim_version then
-      vim.cmd 'TSUpdateSync'
+      treesitter.update(languages):wait(300000)
       vim.fn.mkdir(vim.fn.fnamemodify(marker, ':h'), 'p')
       vim.fn.writefile({ nvim_version }, marker)
     end
 
-    -- Use treesitter for folding
-    vim.wo.foldmethod = 'expr'
-    vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
     vim.opt.foldtext = ''
   end,
 }
