@@ -20,6 +20,7 @@ brew install --quiet \
 		yamlfix \
 		pkl-lsp \
 		fswatch \
+		worktrunk \
     1password-cli \
     lua-language-server \
     pkgx \
