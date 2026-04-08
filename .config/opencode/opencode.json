@@ -3,9 +3,9 @@
 	"snapshot": false,
 	"agent": {
 		"fast": {
-			"description": "Fast development mode using Claude Haiku 4.5",
+			"description": "Fast development mode using GPT-5.4 mini",
 			"mode": "primary",
-			"model": "anthropic/claude-haiku-4-5",
+			"model": "openai/gpt-5.4-mini",
 			"tools": {
 				"write": true,
 				"edit": true,
@@ -21,9 +21,9 @@
 			}
 		},
 		"deep": {
-			"description": "Deep reasoning mode using Claude Opus 4.6",
+			"description": "Deep reasoning mode using GPT-5.4",
 			"mode": "primary",
-			"model": "anthropic/claude-opus-4-6",
+			"model": "openai/gpt-5.4",
 			"tools": {
 				"write": true,
 				"edit": true,
@@ -38,6 +38,5 @@
 				"webfetc": true
 			}
 		}
-	},
-	"plugin": ["op-anthropic-auth"]
+	}
 }
