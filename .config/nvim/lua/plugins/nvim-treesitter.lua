@@ -19,6 +19,18 @@ return {
   config = function(_, opts)
     require('nvim-treesitter.configs').setup(opts)
 
+    local version = vim.version()
+    local nvim_version = string.format('%d.%d.%d', version.major, version.minor, version.patch)
+    local marker = vim.fn.stdpath('state') .. '/nvim-treesitter-version'
+    local previous = vim.fn.filereadable(marker) == 1 and vim.fn.readfile(marker)[1] or nil
+
+    -- Rebuild parser binaries once after a Neovim upgrade to avoid ABI mismatches.
+    if previous ~= nvim_version then
+      vim.cmd 'TSUpdateSync'
+      vim.fn.mkdir(vim.fn.fnamemodify(marker, ':h'), 'p')
+      vim.fn.writefile({ nvim_version }, marker)
+    end
+
     -- Use treesitter for folding
     vim.wo.foldmethod = 'expr'
     vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
