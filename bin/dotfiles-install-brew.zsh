@@ -21,6 +21,7 @@ brew install --quiet \
 		pkl-lsp \
 		fswatch \
 		worktrunk \
+		tree-sitter-cli \
     1password-cli \
     lua-language-server \
     pkgx \
