@@ -1,0 +1,43 @@
+{
+	"$schema": "https://btca.dev/btca.schema.json",
+	"resources": [
+		{
+			"type": "git",
+			"name": "svelte",
+			"url": "https://github.com/sveltejs/svelte.dev",
+			"branch": "main",
+			"specialNotes": "This is the svelte docs website repo, not the actual svelte repo. Use the docs to answer questions about svelte.",
+		},
+		{
+			"type": "git",
+			"name": "tailwindcss",
+			"url": "https://github.com/tailwindlabs/tailwindcss.com",
+			"branch": "main",
+			"specialNotes": "This is the tailwindcss docs website repo, not the actual tailwindcss repo. Use the docs to answer questions about tailwindcss.",
+		},
+		{
+			"type": "git",
+			"name": "semantic-release",
+			"url": "https://github.com/semantic-release/semantic-release",
+			"branch": "master",
+			"specialNotes": "This is the main repo for semantic-release, a tool for automating software releases.",
+		},
+		{
+			"type": "git",
+			"name": "nextjs",
+			"url": "https://github.com/vercel/next.js",
+			"branch": "canary",
+			"searchPath": "docs",
+			"specialNotes": "These are the docs for the next.js framework, not the actual next.js repo. Use the docs to answer questions about next.js.",
+		},
+		{
+			"type": "git",
+			"name": "worktrunk",
+			"url": "https://github.com/max-sixty/worktrunk",
+			"branch": "main",
+			"specialNotes": "This is the main repo for Worktrunk, a CLI for managing git worktrees, hooks, and commit workflows.",
+		},
+	],
+	"model": "gpt-5.4-mini",
+	"provider": "openai",
+}
