@@ -25,6 +25,15 @@
 #
 worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}"
 
+post-switch = [
+	{ mise_trust = "mise trust --yes --all" },
+	{
+		mise_install = "mise install",
+		bundle_install = "if [ -f Gemfile ] || [ -f gems.rb ]; then bundle install; fi",
+		yarn_install = "if [ -f yarn.lock ]; then yarn install; fi",
+	},
+]
+
 # worktree-path = "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}"
 #
 # Inside the repository (`~/code/myproject/.worktrees/feature-auth`):
