@@ -1,0 +1,3 @@
+[aliases]
+ls = ["list"]
+rm = ["remove"]
