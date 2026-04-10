@@ -13,6 +13,7 @@ source $(dirname "$0")/000-init.zsh
   ┃  070-zinit                 #┃ Load Zinit                   ┃                ┃
   ┃  075-mise                  #┃ Configure Mise and HK        ┃                ┃
   ┃  090-completions           #┃ Init completions system      ┃                ┃
+  ┃  095-wrappy                #┃ Init wrappy wrappers         ┃                ┃
   ┃  100-aliases               #┃ Aliases                      ┃                ┃
   ┃  105-misc                  #┃ Misc                         ┃                ┃
   ┃  110-shortcuts             #┃ Keyboard shortcuts           ┃                ┃

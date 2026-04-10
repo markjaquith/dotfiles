@@ -1,0 +1,20 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+
+typeset -a candidates
+candidates=(
+	"$HOME/.cargo/bin/wrappy"
+	"$HOME/Dev/wrappy/target/release/wrappy"
+	"$HOME/Dev/wrappy/target/debug/wrappy"
+)
+
+for candidate in $candidates; do
+	if [[ -x "$candidate" ]]; then
+		exec "$candidate" "$@"
+	fi
+done
+
+print -u2 "wrappy: no installed binary found"
+print -u2 "wrappy: tried ~/.cargo/bin and ~/Dev/wrappy/target/{release,debug}"
+exit 1
