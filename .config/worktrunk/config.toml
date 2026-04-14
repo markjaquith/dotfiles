@@ -27,18 +27,16 @@ worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}"
 
 post-start = [
 	{ mise_trust = "mise trust --yes --all" },
-	{
-		mise_install = "mise install",
-		bundle_install = "if [ -f Gemfile ] || [ -f gems.rb ]; then bundle install; fi",
-	},
+	{ mise_install = "mise install", bundle_install = "if [ -f Gemfile ] || [ -f gems.rb ]; then bundle install; fi" },
 ]
 
 [post-switch]
-	yarn_install = "if [ -f yarn.lock ]; then yarn install; fi"
-	zoxide_add = "zoxide add ."
+bun_install = "if [ -f bun.lock ] || [ -f bun.lockb ]; then bun install; fi"
+yarn_install = "if [ -f yarn.lock ]; then yarn install; fi"
+zoxide_add = "zoxide add ."
 
 [post-remove]
-	zoxide_remove = "zoxide remove {{ worktree_path }}"
+zoxide_remove = "zoxide remove {{ worktree_path }}"
 
 # worktree-path = "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}"
 #
@@ -74,6 +72,9 @@ post-start = [
 #
 # [commit.generation]
 # command = "opencode run -m anthropic/claude-haiku-4.5 --variant fast"
+
+[commit.generation]
+command = "opencode run -m openai/gpt-5.4-mini-fast --variant fast"
 #
 # ### llm
 #
@@ -104,8 +105,8 @@ post-start = [
 # timeout-ms = 0        # Wall-clock budget for the entire collect phase; 0 disables
 
 [list]
-task-timeout-ms = 500   # kill individual git commands after 500ms
-timeout-ms = 1000       # total wall-clock budget for all data collection
+task-timeout-ms = 500 # kill individual git commands after 500ms
+timeout-ms = 1000 # total wall-clock budget for all data collection
 
 #
 # ### Commit
@@ -133,8 +134,12 @@ timeout-ms = 1000       # total wall-clock budget for all data collection
 # cd = true          # Change directory after switching (--no-cd to skip)
 #
 # [switch.picker]
-# pager = "delta --paging=never"   # Example: override git's core.pager for diff preview
 # timeout-ms = 500   # Wall-clock budget (ms) for picker data collection; 0 disables
+
+[switch.picker]
+timeout-ms = 250
+
+# pager = "delta --paging=never"   # Example: override git's core.pager for diff preview
 #
 # ### Step
 #
