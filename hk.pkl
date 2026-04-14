@@ -4,6 +4,7 @@ import "package://github.com/jdx/hk/releases/download/v1.0.0/hk@1.0.0#/Builtins.
 local linters = new Mapping<String, Step> {
     ["oxfmt"] {
         glob = List("*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts", "*.css", "*.scss", "*.less", "*.html", "*.json", "*.json5", "*.jsonc", "*.yaml", "*.yml", "*.md", "*.graphql", "*.svelte", "*.astro", "*.vue")
+        exclude = ".config/opencode/package.json"
         check = "oxfmt --check {{ files }}"
         fix = "oxfmt --write {{ files }}"
     }
