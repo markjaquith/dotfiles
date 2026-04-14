@@ -37,6 +37,9 @@ post-start = [
 	yarn_install = "if [ -f yarn.lock ]; then yarn install; fi"
 	zoxide_add = "zoxide add ."
 
+[post-remove]
+	zoxide_remove = "zoxide remove {{ worktree_path }}"
+
 # worktree-path = "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}"
 #
 # Inside the repository (`~/code/myproject/.worktrees/feature-auth`):
