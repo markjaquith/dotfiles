@@ -35,6 +35,7 @@ post-start = [
 
 [post-switch]
 	yarn_install = "if [ -f yarn.lock ]; then yarn install; fi"
+	zoxide_add = "zoxide add ."
 
 # worktree-path = "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}"
 #
