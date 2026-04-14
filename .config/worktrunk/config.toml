@@ -99,6 +99,11 @@ post-start = [
 #
 # task-timeout-ms = 0   # Kill individual git commands after N ms; 0 disables
 # timeout-ms = 0        # Wall-clock budget for the entire collect phase; 0 disables
+
+[list]
+task-timeout-ms = 500   # kill individual git commands after 500ms
+timeout-ms = 1000       # total wall-clock budget for all data collection
+
 #
 # ### Commit
 #
