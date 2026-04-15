@@ -308,7 +308,25 @@ alias lg="lazygit"
 
 # OpenCode aliases.
 alias oc="opencode"
-alias ocfast="opencode run --agent fast"
+function ocfast() {
+	emulate -L zsh
+
+	local prompt
+
+	if [[ $# -eq 0 ]]; then
+		if [[ -o interactive && -t 0 && -t 1 ]] && command -v gum >/dev/null 2>&1; then
+			prompt=$(gum input --placeholder "Enter prompt") || return 1
+			[[ -n "$prompt" ]] || return 1
+			opencode run --agent fast "$prompt"
+			return $?
+		fi
+
+		echo "Usage: ocfast <prompt>"
+		return 1
+	fi
+
+	opencode run --agent fast "$@"
+}
 
 # OpenCode commit.
 function commit() {
