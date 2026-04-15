@@ -1,0 +1,31 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+
+typeset mode="$1"
+typeset session_name="$2"
+typeset icon=' '
+
+if [[ -z "$session_name" ]]; then
+	session_name=$(tmux display-message -p '#{session_name}' 2>/dev/null) || exit 1
+fi
+
+typeset text=" ${session_name}"
+
+if [[ "$session_name" =~ '^([^A-Za-z0-9]) (.*)$' ]]; then
+	icon="${match[1]} "
+	text=" ${match[2]}"
+fi
+
+case "$mode" in
+	icon)
+		printf '%s' "$icon"
+		;;
+	text)
+		printf '%s' "$text"
+		;;
+	*)
+		print -u2 "Usage: tmux-session-segment <icon|text> <session-name>"
+		exit 1
+		;;
+esac
