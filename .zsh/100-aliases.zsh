@@ -152,6 +152,10 @@ alias finder="open -a finder ."
 alias vim="nvim"
 alias vi="nvim"
 
+function claude() {
+	CLAUDE_CODE_NO_FLICKER=1 command claude "$@"
+}
+
 # Directory listing.
 alias la="eza --color --long --icons --no-time --no-user --no-permissions --all --no-filesize --classify"
 
