@@ -28,6 +28,11 @@ if ! command -v cmdy &>/dev/null; then
   cargo install cmdy
 fi
 
+# wrappy
+if ! command -v wrappy &>/dev/null; then
+  cargo install wrappy
+fi
+
 # Local env
 mkdir -p ~/.local/bin
 touch ~/.local/bin/env
