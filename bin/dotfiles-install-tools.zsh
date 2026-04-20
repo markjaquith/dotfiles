@@ -33,6 +33,9 @@ if ! command -v wrappy &>/dev/null; then
   cargo install wrappy
 fi
 
+# worktrunk
+cargo install --locked worktrunk
+
 # Local env
 mkdir -p ~/.local/bin
 touch ~/.local/bin/env
