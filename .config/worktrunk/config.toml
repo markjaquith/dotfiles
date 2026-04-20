@@ -133,12 +133,6 @@ timeout-ms = 1000 # total wall-clock budget for all data collection
 # [switch]
 # cd = true          # Change directory after switching (--no-cd to skip)
 #
-# [switch.picker]
-# timeout-ms = 500   # Wall-clock budget (ms) for picker data collection; 0 disables
-
-[switch.picker]
-timeout-ms = 250
-
 # pager = "delta --paging=never"   # Example: override git's core.pager for diff preview
 #
 # ### Step
