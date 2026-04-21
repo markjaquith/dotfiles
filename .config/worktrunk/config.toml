@@ -32,8 +32,7 @@ post-start = [
 ]
 
 [post-switch]
-bun_install = "if [ -f bun.lock ] || [ -f bun.lockb ]; then bun install; fi"
-yarn_install = "if [ -f yarn.lock ]; then yarn install; fi"
+js_install = "if [ -f bun.lock ] || [ -f bun.lockb ]; then bun install; elif [ -f yarn.lock ]; then yarn install; elif [ -f package-lock.json ]; then npm install; fi"
 zoxide_add = "zoxide add ."
 
 [post-remove]
