@@ -28,6 +28,7 @@ worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}"
 post-start = [
 	{ mise_trust = "mise trust --yes --all" },
 	{ mise_install = "mise install", bundle_install = "if [ -f Gemfile ] || [ -f gems.rb ]; then bundle install; fi" },
+	{ copy = "wt step copy-ignored" },
 ]
 
 [post-switch]
