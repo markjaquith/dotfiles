@@ -22,8 +22,10 @@ if ! command -v cargo &>/dev/null; then
   [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 fi
 
-rustup update stable > /dev/null
-rustup default stable > /dev/null 2>&1
+if command -v rustup &>/dev/null; then
+  rustup update stable
+  rustup default stable > /dev/null 2>&1
+fi
 
 # cmdy
 if ! command -v cmdy &>/dev/null; then
