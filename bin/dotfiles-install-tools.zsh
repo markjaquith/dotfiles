@@ -19,9 +19,11 @@ fi
 # Rust
 if ! command -v cargo &>/dev/null; then
   echo "1" | rustup-init
-  rustup install stable
-  rustup default stable > /dev/null 2>&1
+  [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 fi
+
+rustup update stable > /dev/null
+rustup default stable > /dev/null 2>&1
 
 # cmdy
 if ! command -v cmdy &>/dev/null; then
