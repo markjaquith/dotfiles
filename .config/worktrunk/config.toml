@@ -153,6 +153,7 @@ timeout-ms = 1000 # total wall-clock budget for all data collection
 # Aliases defined here apply to all projects. For project-specific aliases, use the project config (https://worktrunk.dev/config/#project-configuration) `[aliases]` section instead.
 #
 [aliases]
+hello = "echo 'hello'"
 ls = "wt list {{ args }}"
 rm = "wt remove {{ args }}"
 sw = "wt switch {{ args }}"
