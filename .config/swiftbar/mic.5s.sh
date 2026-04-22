@@ -1,25 +1,38 @@
 #!/bin/zsh
 
-# Get current input device
-currentMic=$(system_profiler SPAudioDataType 2>/dev/null | awk '
-/^[[:space:]]{8}[^:][^:]*:$/ {
-	device = $0
-	sub(/^[[:space:]]+/, "", device)
-	sub(/:$/, "", device)
-	next
-}
+switchAudioSource=${commands[SwitchAudioSource]}
 
-/^[[:space:]]+Default Input Device: Yes$/ {
-	print device
-	exit
-}
-')
-
-# Fallback if empty
-if [[ -z "$currentMic" ]]; then
-	currentMic="Mic: Unknown"
-else
-	currentMic="󰍬 $currentMic"
+if [[ -z "$switchAudioSource" ]]; then
+	echo "Mic: Unknown"
+	echo "---"
+	echo "SwitchAudioSource not installed"
+	exit 0
 fi
 
-echo "$currentMic"
+currentMic=$($switchAudioSource -c -t input 2>/dev/null)
+
+if [[ -z "$currentMic" ]]; then
+	echo "Mic: Unknown"
+else
+	echo "󰍬 $currentMic"
+fi
+
+echo "---"
+
+$switchAudioSource -a -t input -f json 2>/dev/null | while IFS= read -r deviceJson; do
+	[[ -z "$deviceJson" ]] && continue
+
+	deviceName=$(printf '%s\n' "$deviceJson" | sed -E 's/.*"name": "([^"]+)".*/\1/')
+	deviceId=$(printf '%s\n' "$deviceJson" | sed -E 's/.*"id": "([^"]+)".*/\1/')
+	prefix=""
+
+	if [[ "$deviceName" == "$currentMic" ]]; then
+		prefix="✓ "
+	fi
+
+	printf "%s%s | bash='%s' param1='-t' param2='input' param3='-i' param4='%s' terminal=false refresh=true\n" \
+		"$prefix" "$deviceName" "$switchAudioSource" "$deviceId"
+done
+
+echo "---"
+echo "Open Sound Settings | bash='open' param1='x-apple.systempreferences:com.apple.preference.sound?input' terminal=false"
