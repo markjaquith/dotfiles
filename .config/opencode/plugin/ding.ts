@@ -1,52 +1,41 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
-const isTUI = process.argv[2] !== "run"
+const lastDingBySession = new Map<string, string>()
 
 export const Ding: Plugin = async ({ $, client }) => {
-	// Track sessions that the TUI user has interacted with.
-	// When we see a tui prompt.submit, we flag that the next UserMessage
-	// belongs to the TUI. We then record that session ID so we only ding
-	// for sessions the TUI user actually prompted.
-	const tuiSessions = new Set<string>()
-	let expectingTuiMessage = false
-
 	return {
 		async event({ event }) {
-			if (event.type === "tui.command.execute") {
-				if (event.properties.command === "prompt.submit") {
-					expectingTuiMessage = true
-				}
+			if (event.type !== "session.idle") {
 				return
 			}
 
-			if (event.type === "message.updated") {
-				const msg = event.properties.info
-				if (msg.role === "user" && expectingTuiMessage) {
-					tuiSessions.add(msg.sessionID)
-					expectingTuiMessage = false
-				}
+			const { sessionID } = event.properties
+
+			const [{ data: session }, { data: messages = [] }] = await Promise.all([
+				client.session.get({ path: { id: sessionID } }),
+				client.session.messages({ path: { id: sessionID } }),
+			])
+
+			if (!session || session.parentID) {
 				return
 			}
 
-			if (event.type === "session.idle") {
-				if (!isTUI) return
-
-				const { sessionID } = event.properties
-
-				if (!tuiSessions.has(sessionID)) return
-
-				const { data: session } = await client.session.get({
-					path: { id: sessionID },
-				})
-
-				if (!session) return
-
-				const isSubagent = !!session.parentID
-
-				if (isSubagent) return
-
-				await $`afplay /System/Library/Sounds/Glass.aiff`
+			const lastMessage = messages.at(-1)
+			if (!lastMessage || lastMessage.info.role !== "assistant") {
+				return
 			}
+
+			if (lastMessage.info.error) {
+				return
+			}
+
+			if (lastDingBySession.get(sessionID) === lastMessage.info.id) {
+				return
+			}
+
+			lastDingBySession.set(sessionID, lastMessage.info.id)
+
+			await $`afplay /System/Library/Sounds/Glass.aiff`
 		},
 	}
 }
