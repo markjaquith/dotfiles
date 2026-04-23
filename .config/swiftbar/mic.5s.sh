@@ -12,10 +12,16 @@ fi
 
 currentMic=$($switchAudioSource -c -t input 2>/dev/null)
 
+displayMic=$currentMic
+
+if [[ "$displayMic" == "MacBook Pro Microphone" ]]; then
+	displayMic="MBP"
+fi
+
 if [[ -z "$currentMic" ]]; then
 	echo "󰍬 Unknown"
 else
-	echo "󰍬 $currentMic"
+	echo "󰍬 $displayMic"
 fi
 
 echo "---"
