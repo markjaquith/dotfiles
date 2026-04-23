@@ -52,6 +52,7 @@ brew install --quiet \
     ghostscript \
     neovim \
     openscad \
+    swiftbar \
     atlassian/homebrew-acli/acli \
     libyaml \
 		terminal-notifier \
