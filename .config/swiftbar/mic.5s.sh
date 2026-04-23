@@ -3,16 +3,17 @@
 switchAudioSource=${commands[SwitchAudioSource]}
 
 if [[ -z "$switchAudioSource" ]]; then
-	echo "Mic: Unknown"
+	echo "󰍬 Unknown"
 	echo "---"
 	echo "SwitchAudioSource not installed"
+	echo "run: brew install switchaudio-osx"
 	exit 0
 fi
 
 currentMic=$($switchAudioSource -c -t input 2>/dev/null)
 
 if [[ -z "$currentMic" ]]; then
-	echo "Mic: Unknown"
+	echo "󰍬 Unknown"
 else
 	echo "󰍬 $currentMic"
 fi
