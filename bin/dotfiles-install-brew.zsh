@@ -54,5 +54,6 @@ brew install --quiet \
     openscad \
     atlassian/homebrew-acli/acli \
     libyaml \
-    terminal-notifier \
-    trash
+		terminal-notifier \
+		switchaudio-osx \
+		trash
