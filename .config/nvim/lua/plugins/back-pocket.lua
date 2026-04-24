@@ -10,7 +10,7 @@ return {
       desc = 'Open Back Pocket command palette',
     },
   },
-  config = {
+  opts = {
     items = function(ctx)
       local items = {
         {
