@@ -3,6 +3,15 @@
 switchAudioSource=${commands[SwitchAudioSource]}
 
 if [[ -z "$switchAudioSource" ]]; then
+	for candidate in /opt/homebrew/bin/SwitchAudioSource /usr/local/bin/SwitchAudioSource; do
+		if [[ -x "$candidate" ]]; then
+			switchAudioSource=$candidate
+			break
+		fi
+	done
+fi
+
+if [[ -z "$switchAudioSource" ]]; then
 	echo "󰍬 Unknown"
 	echo "---"
 	echo "SwitchAudioSource not installed"
