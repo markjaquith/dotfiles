@@ -1,7 +1,7 @@
 import { execFileSync, spawn } from "node:child_process"
 import type { Plugin } from "@opencode-ai/plugin"
 
-const isTUI = process.argv[2] !== "run"
+const isTUI = !process.argv[2] || process.argv[2].startsWith("-")
 let releaseTitleOnExit = false
 let didReleaseTitle = false
 let targetWindow: string | undefined
