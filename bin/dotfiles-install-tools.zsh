@@ -38,6 +38,11 @@ fi
 # worktrunk
 cargo install --locked worktrunk
 
+# framecap
+if ! command -v framecap &>/dev/null; then
+	"${SCRIPT_DIR}/dotfiles-install-framecap.zsh"
+fi
+
 # Local env
 mkdir -p ~/.local/bin
 touch ~/.local/bin/env
