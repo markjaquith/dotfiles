@@ -1,1 +1,1 @@
-export { default } from "../../../../Dev/ocmonitor/plugin/opencode-monitor.ts"
+../../../../Dev/ocmonitor/plugin/opencode-monitor.ts
