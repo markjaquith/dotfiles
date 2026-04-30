@@ -1,3 +1,1 @@
-import monitor from "ocmonitor/plugin/opencode-monitor.ts"
-
-export default monitor
+export { default } from "../../../../Dev/ocmonitor/plugin/opencode-monitor.ts"
