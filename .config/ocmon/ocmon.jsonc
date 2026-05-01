@@ -1,0 +1,11 @@
+{
+	"ui": {
+		"branchTrimPrefixes": [
+			"agency--mark.jaquith__task__",
+			"agency--mark.jaquith__spike__",
+			"agency--mark.jaquith__",
+			"agency--",
+			"mark.jaquith__",
+		],
+	},
+}
