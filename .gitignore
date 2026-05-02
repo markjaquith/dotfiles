@@ -1,6 +1,5 @@
 .DS_Store
 /.config/karabiner/automatic_backups
-/.config/sesh/sesh.toml
 .env
 /node_modules
 .config/zed/prompts
