@@ -13,6 +13,7 @@ brew install --quiet \
     zinit \
     lua \
 		bruno \
+		crit \
 		tokei \
 		bacon \
 		kondo \
