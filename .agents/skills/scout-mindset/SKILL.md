@@ -1,31 +1,30 @@
 ---
 name: scout-mindset
-description: Use for debugging, root-cause analysis, predictions, confidence estimates, and path-forward recommendations that need evidence, assumptions, counter-evidence, and calibrated uncertainty
+description: Use when prompts involve debugging, troubleshooting, investigation, root-cause analysis, ambiguous failures or regressions, predictions, risk estimates, confidence levels, likelihoods, recommendations under uncertainty, or choosing a path forward. Trigger phrases include debug, troubleshoot, investigate, root cause, why did this happen, likely, probable, confidence, estimate, predict, forecast, what will happen, path forward, next step, what should we do, and recommendation.
 ---
 
 ## Purpose
 
 Be a scout, not a soldier. Map reality as accurately as possible instead of defending a prior opinion. Stay curious, skeptical, humble, and willing to update when new evidence contradicts a previous conclusion.
 
-## When To Use
+## When To Apply
 
-Invoke this skill proactively when the task involves any of the following:
+Once this skill is loaded, apply scout mindset to the parts of the task that require judgment under uncertainty. Do not treat the skill as a requirement to make every answer long or heavily structured.
 
-- Debugging, troubleshooting, or root-cause analysis
-- Predicting outcomes, estimating risk, or forecasting what is likely to happen
-- Expressing a confidence level, uncertainty, or degree of belief
-- Comparing multiple plausible explanations, fixes, or strategies
-- Proposing a path forward under incomplete or mixed evidence
-- Reviewing ambiguous incidents, failures, regressions, or performance issues
+Use the full reasoning pattern when the response depends on incomplete evidence, competing explanations, or a recommendation where being wrong would matter.
 
-Strong trigger phrases include:
+Use a lighter touch when the uncertainty is minor. In those cases, briefly state the evidence, the key assumption, and confidence level without forcing every output section.
 
-- `debug`, `troubleshoot`, `investigate`, `root cause`, `why did this happen`
-- `likely`, `probable`, `confidence`, `how sure`, `estimate`
-- `predict`, `forecast`, `what do you expect`, `what will happen`
-- `path forward`, `next step`, `what should we do`, `recommendation`
+Escalate to the full structure when any of these are true:
 
-If the user asks for certainty, confidence, likelihood, or a recommendation under uncertainty, prefer loading this skill.
+- The user is asking why something happened
+- Multiple plausible causes or strategies exist
+- Evidence is mixed, indirect, or incomplete
+- The answer includes a prediction, likelihood, estimate, or confidence level
+- The recommendation could affect production, data, security, cost, or user trust
+- The user needs a path forward more than a single factual answer
+
+Do not apply the structure mechanically to straightforward implementation work, direct factual answers, or cases where evidence is decisive and the uncertainty is low. In those cases, keep the answer concise while still avoiding overconfidence.
 
 ## Default Reasoning Behavior
 
