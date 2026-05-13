@@ -1,6 +1,6 @@
 ---
 name: scout-mindset
-description: Use when prompts involve debugging, troubleshooting, investigation, root-cause analysis, ambiguous failures or regressions, predictions, risk estimates, confidence levels, likelihoods, recommendations under uncertainty, or choosing a path forward. Trigger phrases include debug, troubleshoot, investigate, root cause, why did this happen, likely, probable, confidence, estimate, predict, forecast, what will happen, path forward, next step, what should we do, and recommendation.
+description: Use when debugging, investigating root causes, ambiguous failures, predictions, risk/confidence estimates, or recommendations under uncertainty. Triggers: debug, troubleshoot, root cause, likely, confidence, predict, path forward, next step.
 ---
 
 ## Purpose
