@@ -153,6 +153,36 @@ timeout-ms = 1000 # total wall-clock budget for all data collection
 # Aliases defined here apply to all projects. For project-specific aliases, use the project config (https://worktrunk.dev/config/#project-configuration) `[aliases]` section instead.
 #
 [aliases]
+cleanup = '''
+if ! command -v jq >/dev/null 2>&1; then
+	echo "jq is required for wt cleanup" >&2
+	exit 1
+fi
+
+if ! command -v gum >/dev/null 2>&1; then
+	echo "gum is required for wt cleanup" >&2
+	exit 1
+fi
+
+branches=$(wt list --format=json | jq -r '.[] | select(.kind == "worktree" and (.branch != null) and (.is_main | not)) | .branch')
+
+if [ -z "$branches" ]; then
+	echo "No removable worktrees"
+	exit 0
+fi
+
+selected=$(printf '%s\n' "$branches" | gum choose --no-limit --ordered --header "Remove worktrees") || exit $?
+
+if [ -z "$selected" ]; then
+	exit 0
+fi
+
+printf '%s\n' "$selected" | while IFS= read -r branch; do
+	[ -n "$branch" ] || continue
+	printf 'Removing %s...\n' "$branch"
+	wt remove --foreground -fD "$branch" || exit $?
+done
+'''
 hello = "echo 'hello'"
 ls = "wt list {{ args }}"
 rm = "wt remove {{ args }}"
