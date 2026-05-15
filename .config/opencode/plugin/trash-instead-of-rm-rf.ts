@@ -1,5 +1,24 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
+const trashCommandPattern = /^\s*trash\s+(.+)$/s
+
+function safeTrashCommand(args: string) {
+	return `safe_trash() {
+	if [ "$#" -eq 0 ]; then
+		echo "Blocked trash with no targets" >&2
+		exit 1
+	fi
+	for target do
+		if [ -z "$target" ] || { [ -d "$target" ] && [ "$(cd "$target" && pwd -P)" = "$(pwd -P)" ]; }; then
+			echo "Blocked trash target that resolves to the current directory" >&2
+			exit 1
+		fi
+	done
+	command trash -- "$@"
+}
+safe_trash ${args}`
+}
+
 /**
  * Plugin to rewrite dangerous rm -rf commands to use trash CLI instead.
  *
@@ -15,6 +34,12 @@ export const TrashInsteadOfRmRfPlugin: Plugin = async ({ client }) => {
 			}
 
 			const command = output.args.command as string
+
+			const trashMatch = command.match(trashCommandPattern)
+			if (trashMatch && trashMatch[1]) {
+				output.args.command = safeTrashCommand(trashMatch[1].trim())
+				return
+			}
 
 			// Check for various forms of rm -rf and capture the path
 			const dangerousPatterns = [
@@ -36,7 +61,7 @@ export const TrashInsteadOfRmRfPlugin: Plugin = async ({ client }) => {
 					const path = match[1].trim()
 
 					// Rewrite the command to use trash instead
-					output.args.command = `trash ${path}`
+					output.args.command = safeTrashCommand(path)
 					return
 				}
 			}
