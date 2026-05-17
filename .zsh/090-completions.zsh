@@ -9,6 +9,8 @@ done
 # Load cached completion if it exists.
 compinit -C
 
+[[ -r "$HOME/.openclaw/completions/openclaw.zsh" ]] && source "$HOME/.openclaw/completions/openclaw.zsh"
+
 # # This just needs to be immediately before one zinit command. Doesn't matter which.
 zinit ice atinit'unalias zi'
 zinit light g-plane/zsh-yarn-autocompletions
