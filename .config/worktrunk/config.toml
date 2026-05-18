@@ -185,6 +185,7 @@ done
 '''
 hello = "echo 'hello'"
 ls = "wt list {{ args }}"
+new = "wt-new {{ args }}"
 rm = "wt remove {{ args }}"
 sw = "wt switch {{ args }}"
 
