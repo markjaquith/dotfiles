@@ -1,9 +1,28 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
+const COMPLETION_SOUND = "/System/Library/Sounds/Glass.aiff"
+const ATTENTION_SOUND = "/System/Library/Sounds/Ping.aiff"
+
 const lastDingBySession = new Map<string, string>()
 
 export const Ding: Plugin = async ({ $, client }) => {
+	async function playSound(sound: string) {
+		await $`afplay ${sound}`
+	}
+
 	return {
+		async "permission.ask"() {
+			await playSound(ATTENTION_SOUND)
+		},
+
+		async "tool.execute.before"(input) {
+			if (input.tool !== "question") {
+				return
+			}
+
+			await playSound(ATTENTION_SOUND)
+		},
+
 		async event({ event }) {
 			if (event.type !== "session.idle") {
 				return
@@ -35,7 +54,7 @@ export const Ding: Plugin = async ({ $, client }) => {
 
 			lastDingBySession.set(sessionID, lastMessage.info.id)
 
-			await $`afplay /System/Library/Sounds/Glass.aiff`
+			await playSound(COMPLETION_SOUND)
 		},
 	}
 }
