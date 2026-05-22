@@ -307,7 +307,41 @@ alias branch="git branch --show-current"
 alias lg="lazygit"
 
 # OpenCode aliases.
-alias oc="opencode"
+function oc() {
+	emulate -L zsh
+
+	if [[ $# -gt 0 ]]; then
+		opencode "$@"
+		return $?
+	fi
+
+	if ! [[ -o interactive && -t 0 && -t 1 ]]; then
+		print -u2 "Usage: oc [opencode args]"
+		return 1
+	fi
+
+	if ! command -v nvim >/dev/null 2>&1; then
+		print -u2 "nvim not found in PATH"
+		return 1
+	fi
+
+	local prompt_file
+	local prompt
+	prompt_file=$(mktemp -t oc-prompt.XXXXXX) || return 1
+
+	nvim +startinsert "$prompt_file" || {
+		local status=$?
+		rm -f "$prompt_file"
+		return $status
+	}
+
+	prompt=$(<"$prompt_file")
+	rm -f "$prompt_file"
+	[[ -n "$prompt" ]] || return 1
+
+	opencode --prompt "$prompt"
+}
+
 function ocfast() {
 	emulate -L zsh
 
