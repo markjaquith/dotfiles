@@ -362,6 +362,100 @@ function ocfast() {
 	opencode run --agent fast "$@"
 }
 
+autoload -Uz add-zsh-hook
+
+_autofix_preexec() {
+	if [[ "$1" == autofix(|[[:space:]]*) ]]; then
+		AUTOFIX_SKIP_EXIT=1
+		return
+	fi
+
+	if [[ -n "${AUTOFIX_LAST_OUTPUT_FILE:-}" && -f "$AUTOFIX_LAST_OUTPUT_FILE" ]]; then
+		rm -f "$AUTOFIX_LAST_OUTPUT_FILE"
+	fi
+
+	AUTOFIX_LAST_CMD="$1"
+	AUTOFIX_LAST_OUTPUT_FILE=
+}
+
+_autofix_precmd() {
+	local exit_code=$?
+
+	if [[ -n "${AUTOFIX_SKIP_EXIT:-}" ]]; then
+		unset AUTOFIX_SKIP_EXIT
+		return
+	fi
+
+	AUTOFIX_LAST_EXIT=$exit_code
+}
+
+add-zsh-hook -d preexec _fix_preexec 2>/dev/null
+add-zsh-hook -d precmd _fix_precmd 2>/dev/null
+add-zsh-hook -d preexec _autofix_preexec 2>/dev/null
+add-zsh-hook -d precmd _autofix_precmd 2>/dev/null
+add-zsh-hook preexec _autofix_preexec
+add-zsh-hook precmd _autofix_precmd
+
+_autofix_capture() {
+	local tmp
+	local exit_code
+	local output
+	local command_string="${(j: :)${(q)@}}"
+
+	tmp=$(mktemp) || return 1
+
+	print -r -- "+ $command_string"
+
+	"$@" >"$tmp" 2>&1
+	exit_code=$?
+	output=$(<"$tmp")
+
+	print -r -- "$output"
+
+	AUTOFIX_LAST_CMD="$command_string"
+	AUTOFIX_LAST_EXIT=$exit_code
+	AUTOFIX_LAST_OUTPUT_FILE="$tmp"
+
+	return $exit_code
+}
+
+autofix() {
+	if (( $# > 0 )); then
+		_autofix_capture "$@"
+	fi
+
+	if [[ -z "$AUTOFIX_LAST_CMD" ]]; then
+		echo "No previous command captured."
+		return 1
+	fi
+
+	if (( AUTOFIX_LAST_EXIT == 0 )); then
+		echo "Last command succeeded; nothing to autofix."
+		return 0
+	fi
+
+	local output_block=""
+	if [[ -n "${AUTOFIX_LAST_OUTPUT_FILE:-}" && -r "$AUTOFIX_LAST_OUTPUT_FILE" ]]; then
+		output_block="
+
+It produced this output:
+
+\`\`\`
+$(<"$AUTOFIX_LAST_OUTPUT_FILE")
+\`\`\`"
+	fi
+
+	opencode run "The last shell command was:
+
+\`\`\`sh
+$AUTOFIX_LAST_CMD
+\`\`\`
+
+It exited with status $AUTOFIX_LAST_EXIT.$output_block
+
+Please inspect the repository, determine the problem, fix it, and rerun the command until it succeeds. Respond with a one-sentence summary of what was done."
+}
+
 # OpenCode commit.
 function commit() {
 	emulate -L zsh
