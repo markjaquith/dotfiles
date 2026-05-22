@@ -2,10 +2,29 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 const COMPLETION_SOUND = "/System/Library/Sounds/Glass.aiff"
 const ATTENTION_SOUND = "/System/Library/Sounds/Ping.aiff"
+const OPENCODE_PROCESS_ROLE = "OPENCODE_PROCESS_ROLE"
+const OPENCODE_DING = "OPENCODE_DING"
 
 const lastDingBySession = new Map<string, string>()
 
+function shouldPlayDings() {
+	if (process.env[OPENCODE_DING] === "1") {
+		return true
+	}
+
+	if (process.env[OPENCODE_DING] === "0") {
+		return false
+	}
+
+	// The TUI runs server plugins in its worker; standalone servers should stay silent.
+	return process.env[OPENCODE_PROCESS_ROLE] === "worker"
+}
+
 export const Ding: Plugin = async ({ $, client }) => {
+	if (!shouldPlayDings()) {
+		return {}
+	}
+
 	async function playSound(sound: string) {
 		await $`afplay ${sound}`
 	}
