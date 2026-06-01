@@ -3,6 +3,40 @@
 
 # Top-level driver for dotfiles installation
 SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
+SCRIPT_NAME="${0:t}"
+
+print_help() {
+	cat <<EOF
+Usage: ${SCRIPT_NAME} [option]
+
+Install and configure this dotfiles environment.
+
+This runs the full installation flow:
+  - install prerequisites and Homebrew taps
+  - install Homebrew, Bun, pip, mise, Rust, and manual tools
+  - configure fonts, app/tool settings, and git hooks
+  - run ~/.local-dotfiles/bin/dotfiles-install when present
+
+Options:
+  -h, --help    Show this help message and exit.
+
+No other options are currently supported.
+EOF
+}
+
+if (( $# > 0 )); then
+	case "$1" in
+		-h|--help)
+			print_help
+			exit 0
+			;;
+		*)
+			print -u2 "Unknown option: $1"
+			print -u2 "Run '${SCRIPT_NAME} --help' for usage."
+			exit 64
+			;;
+	esac
+fi
 
 source "${SCRIPT_DIR}/dotfiles-install-prereqs.zsh"
 
