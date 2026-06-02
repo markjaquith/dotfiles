@@ -2,6 +2,54 @@
 
 vim.g.format_on_save = vim.g.format_on_save == nil and true or vim.g.format_on_save
 
+local oxfmt_config_files = {
+  'oxfmt.config.mts',
+  'oxfmt.config.ts',
+  'oxfmt.config.mjs',
+  'oxfmt.config.js',
+  'oxfmt.config.cjs',
+  '.oxfmtrc.json',
+  '.oxfmtrc.jsonc',
+}
+
+local oxfmt_root_markers = {
+  '.git',
+  'bun.lock',
+  'bun.lockb',
+  'package-lock.json',
+  'package.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+}
+
+local function find_oxfmt_config(ctx)
+  return vim.fs.find(oxfmt_config_files, {
+    path = ctx.dirname,
+    upward = true,
+    type = 'file',
+    limit = 1,
+  })[1]
+end
+
+local function oxfmt_cwd(_, ctx)
+  local config_path = find_oxfmt_config(ctx)
+  if config_path then return vim.fs.dirname(config_path) end
+
+  return vim.fs.root(ctx.dirname, oxfmt_root_markers) or ctx.dirname
+end
+
+local function oxfmt_args(_, ctx)
+  local args = { 'oxfmt' }
+  local config_path = find_oxfmt_config(ctx)
+
+  if config_path then
+    table.insert(args, '--config=' .. vim.fs.basename(config_path))
+  end
+
+  vim.list_extend(args, { '--stdin-filepath', '$FILENAME' })
+  return args
+end
+
 local function format_ts(bufnr, opts)
   opts = opts or { imports = true }
   bufnr = bufnr or vim.api.nvim_get_current_buf()
@@ -94,13 +142,15 @@ return {
     formatters = {
       bun_oxfmt = {
         command = "bun",
-        args = { "oxfmt", "--stdin-filepath", "$FILENAME" },
+        args = oxfmt_args,
+        cwd = oxfmt_cwd,
         stdin = true,
       },
 
       bunx_oxfmt = {
         command = "bunx",
-        args = { "oxfmt", "--stdin-filepath", "$FILENAME" },
+        args = oxfmt_args,
+        cwd = oxfmt_cwd,
         stdin = true,
       },
 
