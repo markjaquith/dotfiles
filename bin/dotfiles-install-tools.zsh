@@ -1,20 +1,12 @@
 #!/usr/bin/env zsh
 # Manual tool installs
 
-# Configure tmux plugin and resurrect directories
-mkdir -p "$HOME/.local/bin/tmux/plugins"
-mkdir -p "$HOME/.local/state/tmux/resurrect"
+# Configure tmux plugin directory
+mkdir -p ~/.local/bin/tmux/plugins
 
 # Install tmux tpm
-if [[ ! -d "$HOME/.local/bin/tmux/plugins/tpm" ]]; then
-	git clone https://github.com/tmux-plugins/tpm "$HOME/.local/bin/tmux/plugins/tpm"
-fi
-
-# Install tmux plugins declared in tmux.conf
-if command -v tmux &>/dev/null; then
-	tmux start-server
-	tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "$HOME/.local/bin/tmux/plugins"
-	"$HOME/.local/bin/tmux/plugins/tpm/bin/install_plugins"
+if [ ! -d ~/.local/bin/tmux/plugins/tpm ]; then
+	git clone https://github.com/tmux-plugins/tpm ~/.local/bin/tmux/plugins/tpm
 fi
 
 # phpactor
