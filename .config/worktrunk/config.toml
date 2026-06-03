@@ -186,6 +186,58 @@ done
 hello = "echo 'hello'"
 ls = "wt list {{ args }}"
 new = "wt-new {{ args }}"
+review = '''
+set -- {{ args }}
+
+target="$1"
+fetch_branch="$target"
+pr_shortcut=""
+
+if [ -z "$target" ] || [ "$#" -ne 1 ]; then
+	echo "Usage: wt review <github-pr-url|branch>" >&2
+	exit 1
+fi
+
+case "$target" in
+	https://github.com/*/pull/*|http://github.com/*/pull/*|github.com/*/pull/*)
+		pr_path=${target#https://github.com/}
+		pr_path=${pr_path#http://github.com/}
+		pr_path=${pr_path#github.com/}
+		owner_repo=${pr_path%%/pull/*}
+		pr_number=${target#*/pull/}
+		pr_number=${pr_number%%[/?#]*}
+		case "$pr_number" in
+			''|*[!0-9]*)
+				echo "Could not parse GitHub PR URL: $target" >&2
+				exit 1
+				;;
+		esac
+		pr_shortcut="pr:$pr_number"
+		fetch_branch=""
+		if command -v gh >/dev/null 2>&1; then
+			fetch_branch=$(gh pr view "$pr_number" --repo "$owner_repo" --json headRefName --jq .headRefName 2>/dev/null)
+		fi
+		if [ -n "$fetch_branch" ]; then
+			target="$fetch_branch"
+		else
+			target="$pr_shortcut"
+		fi
+		;;
+esac
+
+if [ -n "$fetch_branch" ]; then
+	if ! git fetch origin "$fetch_branch"; then
+		if [ -n "$pr_shortcut" ]; then
+			echo "Could not fetch origin $fetch_branch; falling back to $pr_shortcut" >&2
+			target="$pr_shortcut"
+		else
+			exit 1
+		fi
+	fi
+fi
+
+wt switch "$target" -x opencode -- --prompt "/review this PR"
+'''
 rm = "wt remove {{ args }}"
 sw = "wt switch {{ args }}"
 
