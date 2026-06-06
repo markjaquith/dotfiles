@@ -12,4 +12,5 @@ bun i -g --no-summary \
 		@astrojs/language-server@latest \
 		bash-language-server@latest \
 		diffity@latest \
-		btca@latest
+		btca@latest \
+		@kitlangton/stack@latest
