@@ -41,9 +41,13 @@
 		}
 	},
 	"permission": {
+		"edit": {
+			"~/worktrees/**": "allow"
+		},
 		"external_directory": {
 			"/Users/mark.jaquith/.crit/**": "allow",
-			"/Users/mark/.crit/**": "allow"
+			"/Users/mark/.crit/**": "allow",
+			"~/worktrees/**": "allow"
 		}
 	}
 }
