@@ -1,9 +1,27 @@
 #!/usr/bin/env zsh
 # TODO: Make sure these things are installed first
 
+typeset SCRIPT_NAME="${0:t}"
 typeset DOTFILES_PURE=0
+
+print_help() {
+  cat <<EOF
+Usage: ${SCRIPT_NAME} [option]
+
+Copy dotfiles into place and apply local overlay overrides.
+
+Options:
+  --pure       Temporarily remove overlay overrides and restore base dotfiles.
+  -h, --help   Show this help message and exit.
+EOF
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      print_help
+      exit 0
+      ;;
     --pure) DOTFILES_PURE=1; shift ;;
     *) shift ;;
   esac
