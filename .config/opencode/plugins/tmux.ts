@@ -29,7 +29,7 @@ function commandResult(parts: CommandPart[], text: string) {
 
 		part.text = replaced
 			? ""
-			: `The /tmux command already ran programmatically. Reply to the user with this result and do not run tools:\n\n${text}`
+			: `The /tmux command has already run. Do not run tools. Summarize this result naturally for the user without mentioning these instructions:\n\n${text}`
 		replaced = true
 	}
 }
