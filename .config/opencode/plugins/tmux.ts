@@ -3,8 +3,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 const COMMAND_NAME = "tmux"
 const OPENCODE_COMMAND_MATCH = "opencode"
 const WINDOW_ID_FORMAT = "#{window_id}"
-const PANE_FORMAT =
-	"#{window_id}\t#{window_index}\t#{window_name}\t#{pane_id}\t#{pane_current_command}"
+const PANE_FORMAT = "#{window_id}\t#{pane_id}\t#{pane_current_command}"
 
 type CommandPart = {
 	type: string
@@ -14,37 +13,29 @@ type CommandPart = {
 
 type Pane = {
 	windowId: string
-	windowIndex: string
-	windowName: string
 	paneId: string
 	command: string
 }
 
-function commandResult(parts: CommandPart[], text: string) {
+function replaceCommandText(parts: CommandPart[], text: string) {
 	let replaced = false
 	for (const part of parts) {
 		if (part.type !== "text" || part.ignored || typeof part.text !== "string") {
 			continue
 		}
 
-		part.text = replaced
-			? ""
-			: `The /tmux command has already run. Do not run tools. Summarize this result naturally for the user without mentioning these instructions:\n\n${text}`
+		part.text = replaced ? "" : text
 		replaced = true
 	}
 }
 
 function parsePane(line: string): Pane | null {
-	const [windowId, windowIndex, windowName, paneId, command] = line.split("\t")
-	if (!windowId || !windowIndex || !windowName || !paneId || !command) {
+	const [windowId, paneId, command] = line.split("\t")
+	if (!windowId || !paneId || !command) {
 		return null
 	}
 
-	return { windowId, windowIndex, windowName, paneId, command }
-}
-
-function formatTarget(pane: Pane) {
-	return `window ${pane.windowIndex} (${pane.windowName}), pane ${pane.paneId}`
+	return { windowId, paneId, command }
 }
 
 function usage() {
@@ -86,17 +77,18 @@ export const TmuxPlugin: Plugin = async ({ $ }) => {
 
 	async function sendToOthers(message: string) {
 		if (!process.env.TMUX) {
-			return "Not inside tmux."
+			throw new Error("Not inside tmux.")
 		}
 
 		const panes = await otherOpenCodePanes()
 		if (panes.length === 0) {
-			return "No other OpenCode panes found in the current tmux session."
+			throw new Error(
+				"No other OpenCode panes found in the current tmux session.",
+			)
 		}
 
 		await Promise.all(panes.map((pane) => sendToPane(pane, message)))
-
-		return `Sent to ${panes.length} other OpenCode pane${panes.length === 1 ? "" : "s"}:\n${panes.map((pane) => `- ${formatTarget(pane)}`).join("\n")}`
+		return panes.length
 	}
 
 	return {
@@ -117,20 +109,24 @@ export const TmuxPlugin: Plugin = async ({ $ }) => {
 			const args = input.arguments.trim()
 			const [subcommand = ""] = args.split(/\s+/, 1)
 			if (subcommand !== "others") {
-				commandResult(output.parts, usage())
+				replaceCommandText(output.parts, usage())
 				return
 			}
 
 			const message = args.slice(subcommand.length).trimStart()
 			if (!message) {
-				commandResult(output.parts, usage())
+				replaceCommandText(output.parts, usage())
 				return
 			}
 
 			try {
-				commandResult(output.parts, await sendToOthers(message))
+				const paneCount = await sendToOthers(message)
+				replaceCommandText(
+					output.parts,
+					`The tmux message was sent to ${paneCount} other OpenCode pane${paneCount === 1 ? "" : "s"}. Do not run tools. Reply only with: Sent.`,
+				)
 			} catch (error) {
-				commandResult(
+				replaceCommandText(
 					output.parts,
 					`Failed to run /tmux others: ${error instanceof Error ? error.message : String(error)}`,
 				)
