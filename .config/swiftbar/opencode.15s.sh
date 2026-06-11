@@ -2,6 +2,7 @@
 
 ocmon=${commands[ocmon]}
 jq=${commands[jq]}
+menu_bar_icon="| sfimage=brain.head.profile sfsize=13"
 
 if [[ -z "$ocmon" ]]; then
 	for candidate in "$HOME/.bun/bin/ocmon" /opt/homebrew/bin/ocmon /usr/local/bin/ocmon; do
@@ -22,7 +23,7 @@ if [[ -z "$jq" ]]; then
 fi
 
 if [[ -z "$ocmon" || -z "$jq" ]]; then
-	echo "OpenCode Idle"
+	echo "Idle $menu_bar_icon"
 	exit 0
 fi
 
@@ -40,4 +41,4 @@ if [[ -z "$opencodeStatus" ]]; then
 	opencodeStatus="Idle"
 fi
 
-echo "OpenCode $opencodeStatus"
+echo "$opencodeStatus $menu_bar_icon"
