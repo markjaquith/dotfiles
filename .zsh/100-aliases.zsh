@@ -456,7 +456,7 @@ It exited with status $AUTOFIX_LAST_EXIT.$output_block
 Please inspect the repository, determine the problem, fix it, and rerun the command until it succeeds. Respond with a one-sentence summary of what was done."
 }
 
-# Wait for the current Git repo to receive a new commit.
+# Wait for the current Git repo's working tree to become clean.
 function committed() {
 	emulate -L zsh
 
@@ -464,27 +464,19 @@ function committed() {
 		return 1
 	fi
 
-	if [[ -z "$(git status --porcelain=v1 --untracked-files=all 2>/dev/null)" ]]; then
-		return 0
-	fi
-
-	local initial_head=""
-	initial_head="$(git rev-parse --verify HEAD 2>/dev/null || true)"
-
 	local deadline=$(( EPOCHSECONDS + 180 ))
-	local current_head=""
 
-	while (( EPOCHSECONDS < deadline )); do
-		current_head="$(git rev-parse --verify HEAD 2>/dev/null || true)"
-
-		if [[ -n "$current_head" && "$current_head" != "$initial_head" ]]; then
+	while true; do
+		if [[ -z "$(git status --porcelain=v1 --untracked-files=all 2>/dev/null)" ]]; then
 			return 0
+		fi
+
+		if (( EPOCHSECONDS >= deadline )); then
+			return 1
 		fi
 
 		sleep 1
 	done
-
-	return 1
 }
 
 # OpenCode commit.
