@@ -48,7 +48,7 @@ open_tmux_urls() {
   local urls count selected
 
   # Capture URLs from the tmux pane
-  urls=$(tmux capture-pane -J -p | grep -oE "(https?)://[^ >]+" | sed 's/"$//' | sort -u)
+  urls=$(tmux capture-pane -J -p | grep -oE "https?://[[:alnum:]-]+(\\.[[:alnum:]-]+)+(:[0-9]+)?(/[^[:space:]<>\"'{}\\]*)?" | sort -u)
   count=$(echo "$urls" | wc -l)
 
   if [[ -z "$urls" ]]; then
