@@ -1,6 +1,7 @@
 #!/bin/zsh
 
 switchAudioSource=${commands[SwitchAudioSource]}
+menu_bar_icon="| sfimage=mic.fill sfsize=13"
 
 if [[ -z "$switchAudioSource" ]]; then
 	for candidate in /opt/homebrew/bin/SwitchAudioSource /usr/local/bin/SwitchAudioSource; do
@@ -12,7 +13,7 @@ if [[ -z "$switchAudioSource" ]]; then
 fi
 
 if [[ -z "$switchAudioSource" ]]; then
-	echo "󰍬 Unknown"
+	echo "Unknown $menu_bar_icon"
 	echo "---"
 	echo "SwitchAudioSource not installed"
 	echo "run: brew install switchaudio-osx"
@@ -28,9 +29,9 @@ if [[ "$displayMic" == "MacBook Pro Microphone" ]]; then
 fi
 
 if [[ -z "$currentMic" ]]; then
-	echo "󰍬 Unknown"
+	echo "Unknown $menu_bar_icon"
 else
-	echo "󰍬 $displayMic"
+	echo "$displayMic $menu_bar_icon"
 fi
 
 echo "---"
