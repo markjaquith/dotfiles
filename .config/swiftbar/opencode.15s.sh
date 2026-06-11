@@ -23,22 +23,21 @@ if [[ -z "$jq" ]]; then
 fi
 
 if [[ -z "$ocmon" || -z "$jq" ]]; then
-	echo "Idle $menu_bar_icon"
+	echo "idle $menu_bar_icon"
 	exit 0
 fi
 
 opencodeStatus=$($ocmon list --format json 2>/dev/null | $jq -r '
-	if any(.[]; .status == "working") then
-		"Working"
-	elif any(.[]; .status == "blocked" or (.status == "idle" and (((now * 1000) - .last_status_changed_at) < 300000))) then
-		"Waiting"
+	map(select(.status == "working")) | length |
+	if . > 0 then
+		tostring
 	else
-		"Idle"
+		"idle"
 	end
 ')
 
 if [[ -z "$opencodeStatus" ]]; then
-	opencodeStatus="Idle"
+	opencodeStatus="idle"
 fi
 
 echo "$opencodeStatus $menu_bar_icon"
