@@ -41,6 +41,9 @@
 		}
 	},
 	"permission": {
+		"read": {
+			"~/.local/share/mise/installs/**": "allow"
+		},
 		"edit": {
 			"~/worktrees/**": "allow"
 		},
