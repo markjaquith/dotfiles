@@ -187,6 +187,7 @@ done
 hello = "echo 'hello'"
 ls = "wt list {{ args }}"
 new = "wt-new {{ args }}"
+prewarm = "wt-prewarm {{ args }}"
 review = '''
 set -- {{ args }}
 
