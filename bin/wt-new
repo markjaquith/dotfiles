@@ -242,6 +242,123 @@ function rename_tmux_window_for_ticket() {
 	tmux rename-window "$ticket" >/dev/null 2>&1 || true
 }
 
+function prewarm_lock_path() {
+	local gcd
+	gcd=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+	[[ "$gcd" == /* ]] || gcd="${PWD}/${gcd}"
+	print -r -- "${gcd%/}/wt-prewarm.lock"
+}
+
+function prewarm_acquire_lock() {
+	local lock="$1"
+	local mt now
+
+	if mkdir "$lock" 2>/dev/null; then
+		return 0
+	fi
+
+	# Stale-lock breaker: reclaim a lock older than 5 minutes.
+	mt=$(stat -f %m "$lock" 2>/dev/null) || mt=$(stat -c %Y "$lock" 2>/dev/null)
+	now=$(date +%s)
+	if [[ -n "$mt" ]] && (( now - mt > 300 )); then
+		rmdir "$lock" 2>/dev/null
+		mkdir "$lock" 2>/dev/null && return 0
+	fi
+
+	return 1
+}
+
+function prewarm_release_lock() {
+	[[ -n "$1" ]] && rmdir "$1" 2>/dev/null
+	return 0
+}
+
+# Try to satisfy `wt new <branch>` by claiming a prewarmed worktree instead of
+# paying a full checkout. Returns 0 on success (worktree now exists on
+# "$branch_name"), non-zero to signal the caller should fall back to the slow
+# path. Only the default-base, non-agency case is handled; everything else
+# falls back. Any failure rolls back to a clean state before returning non-zero.
+function try_prewarm_fastpath() {
+	local branch_name="$1"
+	local prewarm_branch="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
+	local marker=".wt-prewarm-ready"
+	local pw_path parent pw_base prewarm_sanitized branch_sanitized target_path lock
+
+	# The destination branch must not already exist.
+	branch_exists "$branch_name" && return 1
+
+	# A ready prewarm worktree (checkout complete) must exist.
+	pw_path=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
+	[[ -n "$pw_path" && -d "$pw_path" ]] || return 1
+	[[ -f "${pw_path}/${marker}" ]] || return 1
+
+	# Only support worktree-path templates whose final component is the
+	# sanitized branch name (e.g. ".../{{ branch | sanitize }}"). For any other
+	# template shape the computed target would be wrong, so fall back.
+	parent="${pw_path:h}"
+	pw_base="${pw_path:t}"
+	prewarm_sanitized="${prewarm_branch//[\/\\]/-}"
+	[[ "$pw_base" == "$prewarm_sanitized" ]] || return 1
+	branch_sanitized="${branch_name//[\/\\]/-}"
+	target_path="${parent}/${branch_sanitized}"
+	[[ -e "$target_path" ]] && return 1
+
+	lock=$(prewarm_lock_path) || return 1
+	prewarm_acquire_lock "$lock" || return 1
+
+	# Re-check under the lock to avoid racing a concurrent claim or rebuild.
+	pw_path=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
+	if [[ -z "$pw_path" || ! -f "${pw_path}/${marker}" ]]; then
+		prewarm_release_lock "$lock"
+		return 1
+	fi
+
+	# Drop the readiness marker so it does not travel into the new worktree.
+	rm -f "${pw_path}/${marker}" 2>/dev/null
+
+	# Rename the branch in place (instant).
+	if ! git branch -m "$prewarm_branch" "$branch_name" 2>/dev/null; then
+		touch "${pw_path}/${marker}" 2>/dev/null
+		prewarm_release_lock "$lock"
+		return 1
+	fi
+
+	# Move the worktree directory to its template path (same-filesystem rename).
+	if ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
+		# Roll back the rename; the worktree is still at pw_path on branch_name.
+		git branch -m "$branch_name" "$prewarm_branch" 2>/dev/null
+		touch "${pw_path}/${marker}" 2>/dev/null
+		prewarm_release_lock "$lock"
+		return 1
+	fi
+
+	prewarm_release_lock "$lock"
+
+	# The claim was a pure branch rename + directory move, so none of the normal
+	# switch/create hooks have run for "$branch_name". Run them now against the
+	# claimed worktree at its final path so behavior matches the slow path
+	# (`wt switch --create`): pre-start blocks (e.g. mise trust); post-switch and
+	# post-start self-background (e.g. zoxide add, copy-ignored, dependency
+	# installs). These must target the real branch/path — the prewarm build runs
+	# with --no-hooks precisely so path-keyed and branch-derived hooks resolve
+	# here, not against the prewarm branch. Best-effort: the worktree already
+	# exists, so a hook failure must not fail `wt new`.
+	if command -v wt >/dev/null 2>&1; then
+		wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
+			|| print -u2 -- "wt new: pre-start hooks failed for ${branch_name} (continuing)"
+		wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1 || true
+		wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1 || true
+	fi
+
+	# Rebuild the prewarm in the background for next time (fully detached).
+	if command -v wt-prewarm >/dev/null 2>&1; then
+		( wt-prewarm --rebuild </dev/null >/dev/null 2>&1 & )
+	fi
+
+	print -u2 -- "wt new: claimed prewarm → ${branch_name}"
+	return 0
+}
+
 print_only=0
 use_agency=0
 base_branch=""
@@ -296,13 +413,25 @@ if [[ "$print_only" -eq 1 ]]; then
 	exit 0
 fi
 
-args=(switch --create --no-cd)
-if [[ -n "$base_branch" ]]; then
-	args+=(--base "$base_branch")
+created_fast=0
+# The opt-in signal is simply whether a prewarm exists: try_prewarm_fastpath
+# returns non-zero (and we fall back to the slow path, re-arming nothing) unless
+# a ready prewarm worktree is present. Arm one with `wt prewarm`.
+if [[ "$use_agency" -eq 0 && -z "$base_branch" ]]; then
+	if try_prewarm_fastpath "$branch_name"; then
+		created_fast=1
+	fi
 fi
-args+=("$branch_name")
 
-wt "${args[@]}" || exit $?
+if [[ "$created_fast" -eq 0 ]]; then
+	args=(switch --create --no-cd)
+	if [[ -n "$base_branch" ]]; then
+		args+=(--base "$base_branch")
+	fi
+	args+=("$branch_name")
+
+	wt "${args[@]}" || exit $?
+fi
 
 if [[ "$use_agency" -eq 1 ]]; then
 	if ! worktree_path=$(worktree_path_for_branch "$branch_name"); then

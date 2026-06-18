@@ -1,0 +1,201 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail
+
+# Maintain a prewarmed worktree so `wt new <branch>` can claim it instantly
+# (a branch rename + directory move) instead of paying a full checkout. The
+# prewarm's existence is the opt-in signal: `wt new` only takes the fast path —
+# and only re-arms a prewarm afterward — when one already exists. Arm it by
+# running `wt prewarm` (alias for this script). See bin/wt-new
+# (try_prewarm_fastpath) for the claim side.
+
+PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
+MARKER=".wt-prewarm-ready"
+
+function usage() {
+	print -r -- "Usage: wt-prewarm [--ensure|--rebuild|--remove|--status]"
+	print -r -- ""
+	print -r -- "Maintains a prewarmed worktree on branch '${PREWARM_BRANCH}'."
+	print -r -- ""
+	print -r -- "  --ensure   Create the prewarm if missing/incomplete (default)"
+	print -r -- "  --rebuild  Remove and recreate from the default branch tip"
+	print -r -- "  --remove   Remove the prewarm worktree and branch"
+	print -r -- "  --status   Report prewarm state"
+}
+
+function die() {
+	print -u2 -- "wt-prewarm: $*"
+	exit 1
+}
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not inside a git repository"
+
+function branch_exists() {
+	git show-ref --verify --quiet "refs/heads/$1"
+}
+
+function worktree_path_for_branch() {
+	local target_branch="$1"
+	local worktree_path
+
+	git worktree list --porcelain | while IFS= read -r line; do
+		if [[ "$line" == worktree\ * ]]; then
+			worktree_path="${line#worktree }"
+			continue
+		fi
+
+		if [[ "$line" == "branch refs/heads/${target_branch}" ]]; then
+			print -r -- "$worktree_path"
+			return 0
+		fi
+	done
+}
+
+function default_branch() {
+	local d c
+
+	if d=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null); then
+		print -r -- "${d#origin/}"
+		return 0
+	fi
+
+	for c in main master; do
+		if branch_exists "$c"; then
+			print -r -- "$c"
+			return 0
+		fi
+	done
+
+	git rev-parse --abbrev-ref HEAD
+}
+
+function lock_path() {
+	local gcd
+	gcd=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+	[[ "$gcd" == /* ]] || gcd="${PWD}/${gcd}"
+	print -r -- "${gcd%/}/wt-prewarm.lock"
+}
+
+function acquire_lock() {
+	local lock="$1"
+	local mt now
+
+	if mkdir "$lock" 2>/dev/null; then
+		return 0
+	fi
+
+	# Stale-lock breaker: reclaim a lock older than 5 minutes.
+	mt=$(stat -f %m "$lock" 2>/dev/null) || mt=$(stat -c %Y "$lock" 2>/dev/null)
+	now=$(date +%s)
+	if [[ -n "$mt" ]] && (( now - mt > 300 )); then
+		rmdir "$lock" 2>/dev/null
+		mkdir "$lock" 2>/dev/null && return 0
+	fi
+
+	return 1
+}
+
+function release_lock() {
+	[[ -n "$1" ]] && rmdir "$1" 2>/dev/null
+	return 0
+}
+
+function remove_prewarm() {
+	local pw
+	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
+	if [[ -n "$pw" ]]; then
+		git worktree remove --force "$pw" 2>/dev/null
+	fi
+	git worktree prune 2>/dev/null
+	if branch_exists "$PREWARM_BRANCH"; then
+		git branch -D "$PREWARM_BRANCH" 2>/dev/null
+	fi
+}
+
+function build_prewarm() {
+	local base pw
+
+	base=$(default_branch) || return 1
+
+	# Clean slate so the prewarm always starts from the current default tip.
+	remove_prewarm
+
+	# Build with --no-hooks: the prewarm is a bare checkout of the default tip.
+	# Hooks must run against the *claiming* branch at its final path, not against
+	# "$PREWARM_BRANCH" at the prewarm path (zoxide/mise trust are path-keyed,
+	# and branch-derived templates would resolve to the wrong branch), so the
+	# claim side (bin/wt-new try_prewarm_fastpath) runs them after the move.
+	wt -y switch --create --no-cd --no-hooks --base "$base" "$PREWARM_BRANCH" || return 1
+
+	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
+	[[ -n "$pw" ]] || return 1
+
+	# The marker means the expensive checkout is complete. Because the build runs
+	# no hooks, there is no background install that a claim could move out from
+	# under, so marker-present truly means claimable.
+	touch "${pw}/${MARKER}"
+	print -r -- "wt-prewarm: ready at ${pw} (branch ${PREWARM_BRANCH}, base ${base})"
+}
+
+action="--ensure"
+if [[ $# -gt 0 ]]; then
+	action="$1"
+fi
+
+case "$action" in
+	-h|--help)
+		usage
+		exit 0
+		;;
+	--status)
+		pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
+		if [[ -n "$pw" && -d "$pw" ]]; then
+			if [[ -f "${pw}/${MARKER}" ]]; then
+				print -r -- "ready: ${pw}"
+			else
+				print -r -- "building (no marker yet): ${pw}"
+			fi
+		elif branch_exists "$PREWARM_BRANCH"; then
+			print -r -- "branch '${PREWARM_BRANCH}' exists but has no worktree"
+		else
+			print -r -- "absent"
+		fi
+		exit 0
+		;;
+	--remove)
+		lock=$(lock_path) || die "could not resolve lock path"
+		acquire_lock "$lock" || die "another wt-prewarm operation is in progress"
+		remove_prewarm
+		release_lock "$lock"
+		print -r -- "wt-prewarm: removed"
+		exit 0
+		;;
+	--rebuild)
+		lock=$(lock_path) || die "could not resolve lock path"
+		# If a rebuild is already running, do nothing.
+		acquire_lock "$lock" || exit 0
+		build_prewarm
+		rc=$?
+		release_lock "$lock"
+		exit $rc
+		;;
+	--ensure)
+		lock=$(lock_path) || die "could not resolve lock path"
+		acquire_lock "$lock" || exit 0
+		pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
+		if [[ -n "$pw" && -f "${pw}/${MARKER}" ]]; then
+			release_lock "$lock"
+			print -r -- "wt-prewarm: already ready at ${pw}"
+			exit 0
+		fi
+		build_prewarm
+		rc=$?
+		release_lock "$lock"
+		exit $rc
+		;;
+	*)
+		usage
+		exit 1
+		;;
+esac
