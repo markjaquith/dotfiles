@@ -1,6 +1,6 @@
 ---
 name: scout-mindset
-description: Use when debugging, investigating root causes, ambiguous failures, predictions, risk/confidence estimates, or recommendations under uncertainty. Triggers: debug, troubleshoot, root cause, likely, confidence, predict, path forward, next step.
+description: Use when debugging, investigating root causes, ambiguous failures, predictions, risk/confidence estimates, or recommendations under uncertainty. Triggers are debug, troubleshoot, root cause, likely, confidence, predict, path forward, next step.
 ---
 
 ## Purpose
