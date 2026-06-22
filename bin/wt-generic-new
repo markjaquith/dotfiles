@@ -15,16 +15,21 @@ emulate -L zsh
 setopt pipefail
 
 function usage() {
-	print -u2 "Usage: wt generic-new [--from <base>] [--print] <branch-name>"
+	print -u2 "Usage: wt generic-new [--from <base>] [--update] [--print] <branch-name>"
 }
 
 print_only=0
+update_after_create=0
 base_branch=""
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--print)
 			print_only=1
+			shift
+			;;
+		--update)
+			update_after_create=1
 			shift
 			;;
 		--from)
@@ -81,6 +86,13 @@ if [[ "$created_fast" -eq 0 ]]; then
 	args+=("$branch_name")
 
 	wt "${args[@]}" || exit $?
+fi
+
+# Optionally bring the new worktree up to speed with the prewarm base branch.
+# This is a purely local fast-forward (no fetch); wt-prewarm reports if it
+# cannot. Skipped when an explicit --from base was requested.
+if [[ "$update_after_create" -eq 1 && -z "$base_branch" ]]; then
+	wt-prewarm --update "$branch_name" || true
 fi
 
 wt switch "$branch_name"

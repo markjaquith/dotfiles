@@ -4,7 +4,7 @@ emulate -L zsh
 setopt pipefail
 
 function usage() {
-	print -u2 "Usage: wt new [--agency] [--from <base>] [--print] <branch-name>"
+	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--print] <branch-name>"
 }
 
 function agency_pattern_value() {
@@ -244,6 +244,7 @@ function rename_tmux_window_for_ticket() {
 
 print_only=0
 use_agency=0
+update_after_create=0
 base_branch=""
 
 while [[ $# -gt 0 ]]; do
@@ -254,6 +255,10 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--agency)
 			use_agency=1
+			shift
+			;;
+		--update)
+			update_after_create=1
 			shift
 			;;
 		--from)
@@ -320,6 +325,15 @@ if [[ "$created_fast" -eq 0 ]]; then
 	args+=("$branch_name")
 
 	wt "${args[@]}" || exit $?
+fi
+
+# Bring the new worktree up to speed with the prewarm base branch before any
+# agency bootstrap runs, so a fast-forward stays clean and any agency commits
+# land on top of the current base tip. Skipped entirely when an explicit --from
+# base was requested (the user deliberately chose a non-default base). This is a
+# purely local fast-forward (no fetch); wt-prewarm reports if it cannot.
+if [[ "$update_after_create" -eq 1 && -z "$base_branch" ]]; then
+	wt-prewarm --update "$branch_name" || true
 fi
 
 if [[ "$use_agency" -eq 1 ]]; then
