@@ -276,8 +276,11 @@ function prewarm_release_lock() {
 # Try to satisfy `wt new <branch>` by claiming a prewarmed worktree instead of
 # paying a full checkout. Returns 0 on success (worktree now exists on
 # "$branch_name"), non-zero to signal the caller should fall back to the slow
-# path. Only the default-base, non-agency case is handled; everything else
-# falls back. Any failure rolls back to a clean state before returning non-zero.
+# path. Only the default-base case is handled; a non-empty --base falls back.
+# Both plain and agency branches are supported: "$branch_name" is already the
+# final (possibly agency-- prefixed) name by the time this runs, so the claim
+# renames straight to it and any agency bootstrap happens in the caller. Any
+# failure rolls back to a clean state before returning non-zero.
 function try_prewarm_fastpath() {
 	local branch_name="$1"
 	local prewarm_branch="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
@@ -413,7 +416,13 @@ created_fast=0
 # The opt-in signal is simply whether a prewarm exists: try_prewarm_fastpath
 # returns non-zero (and we fall back to the slow path, re-arming nothing) unless
 # a ready prewarm worktree is present. Arm one with `wt prewarm`.
-if [[ "$use_agency" -eq 0 && -z "$base_branch" ]]; then
+#
+# The prewarm is always built from the default base as a plain (non-agency)
+# branch, so it can only be claimed when no explicit --base was requested. In
+# agency mode "$branch_name" already carries the agency-- prefix here, so the
+# claim renames the prewarmed branch straight to the agency branch name and the
+# agency bootstrap below runs against the claimed worktree.
+if [[ -z "$base_branch" ]]; then
 	if try_prewarm_fastpath "$branch_name"; then
 		created_fast=1
 	fi
