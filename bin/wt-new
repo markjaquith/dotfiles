@@ -343,17 +343,13 @@ function try_prewarm_fastpath() {
 	# with --no-hooks precisely so path-keyed and branch-derived hooks resolve
 	# here, not against the prewarm branch. Best-effort: the worktree already
 	# exists, so a hook failure must not fail `wt new`.
-	if command -v wt >/dev/null 2>&1; then
-		wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
-			|| print -u2 -- "wt new: pre-start hooks failed for ${branch_name} (continuing)"
-		wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1 || true
-		wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1 || true
-	fi
+	wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
+		|| print -u2 -- "wt new: pre-start hooks failed for ${branch_name} (continuing)"
+	wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1 || true
+	wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1 || true
 
 	# Rebuild the prewarm in the background for next time (fully detached).
-	if command -v wt-prewarm >/dev/null 2>&1; then
-		( wt-prewarm --rebuild </dev/null >/dev/null 2>&1 & )
-	fi
+	( wt-prewarm --rebuild </dev/null >/dev/null 2>&1 & )
 
 	print -u2 -- "wt new: claimed prewarm → ${branch_name}"
 	return 0
