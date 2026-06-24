@@ -154,13 +154,24 @@ function claim_prewarm() {
 
 	[[ -n "$branch_name" ]] || die "--claim requires a branch name"
 
-	# The destination branch must not already exist.
+	# The destination branch must not already exist. Cheap single git show-ref
+	# gate, kept before the lock so an obviously-doomed claim never contends.
 	branch_exists "$branch_name" && return 1
 
-	# A ready prewarm worktree (checkout complete) must exist.
+	# Acquire the lock before enumerating worktrees so the listing below is the
+	# single authoritative read for this claim: there is no separate pre-lock
+	# `git worktree list`, and nothing can race the prewarm out from under us
+	# between validation and the rename/move.
+	lock=$(lock_path) || return 1
+	acquire_lock "$lock" || return 1
+
+	# A ready prewarm worktree (checkout complete) must exist. This is the only
+	# worktree enumeration in the claim path.
 	pw_path=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-	[[ -n "$pw_path" && -d "$pw_path" ]] || return 1
-	[[ -f "${pw_path}/${MARKER}" ]] || return 1
+	if [[ -z "$pw_path" || ! -d "$pw_path" || ! -f "${pw_path}/${MARKER}" ]]; then
+		release_lock "$lock"
+		return 1
+	fi
 
 	# Only support worktree-path templates whose final component is the
 	# sanitized branch name (e.g. ".../{{ branch | sanitize }}"). For any other
@@ -168,17 +179,9 @@ function claim_prewarm() {
 	parent="${pw_path:h}"
 	pw_base="${pw_path:t}"
 	prewarm_sanitized="${PREWARM_BRANCH//[\/\\]/-}"
-	[[ "$pw_base" == "$prewarm_sanitized" ]] || return 1
 	branch_sanitized="${branch_name//[\/\\]/-}"
 	target_path="${parent}/${branch_sanitized}"
-	[[ -e "$target_path" ]] && return 1
-
-	lock=$(lock_path) || return 1
-	acquire_lock "$lock" || return 1
-
-	# Re-check under the lock to avoid racing a concurrent claim or rebuild.
-	pw_path=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-	if [[ -z "$pw_path" || ! -f "${pw_path}/${MARKER}" ]]; then
+	if [[ "$pw_base" != "$prewarm_sanitized" || -e "$target_path" ]]; then
 		release_lock "$lock"
 		return 1
 	fi
