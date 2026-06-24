@@ -37,6 +37,7 @@ brew install --quiet \
     jq \
     gh \
     git-delta \
+    modem-dev/tap/hunk \
     git-filter-repo \
     hub \
     tmux \
