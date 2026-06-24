@@ -328,6 +328,47 @@ alias branch="git branch --show-current"
 # Lazygit.
 alias lg="lazygit"
 
+# Intercept `opencode -c|--continue`: resolve the most recently updated
+# session for the current directory and pass `--session <id>` instead.
+# All other invocations pass straight through to the real binary.
+function opencode() {
+	emulate -L zsh
+
+	local arg has_continue=0
+	for arg in "$@"; do
+		if [[ "$arg" == "--continue" || "$arg" == "-c" ]]; then
+			has_continue=1
+			break
+		fi
+	done
+
+	if (( ! has_continue )); then
+		command opencode "$@"
+		return $?
+	fi
+
+	local session_id
+	session_id=$(command opencode session list --format json \
+		| jq -r --arg d "$PWD" \
+			'[.[] | select(.directory == $d)] | max_by(.updated) | .id')
+
+	if [[ -z "$session_id" || "$session_id" == "null" ]]; then
+		print -u2 "opencode: no session found for $PWD"
+		return 1
+	fi
+
+	local rebuilt=()
+	for arg in "$@"; do
+		if [[ "$arg" == "--continue" || "$arg" == "-c" ]]; then
+			rebuilt+=(--session "$session_id")
+		else
+			rebuilt+=("$arg")
+		fi
+	done
+
+	command opencode "${rebuilt[@]}"
+}
+
 # OpenCode aliases.
 function oc() {
 	emulate -L zsh
