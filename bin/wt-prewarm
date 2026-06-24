@@ -210,16 +210,27 @@ function claim_prewarm() {
 	# The claim was a pure branch rename + directory move, so none of the normal
 	# switch/create hooks have run for "$branch_name". Run them now against the
 	# claimed worktree at its final path so behavior matches the slow path
-	# (`wt switch --create`): pre-start blocks (e.g. mise trust); post-switch and
-	# post-start self-background (e.g. zoxide add, copy-ignored, dependency
-	# installs). These must target the real branch/path — the prewarm build runs
-	# with --no-hooks precisely so path-keyed and branch-derived hooks resolve
-	# here, not against the prewarm branch. Best-effort: the worktree already
-	# exists, so a hook failure must not fail the claim.
+	# (`wt switch --create`). These must target the real branch/path — the
+	# prewarm build runs with --no-hooks precisely so path-keyed and
+	# branch-derived hooks resolve here, not against the prewarm branch.
+	# Best-effort: the worktree already exists, so a hook failure must not fail
+	# the claim.
+	#
+	# Each `wt hook` invocation costs ~1.25s of worktrunk startup, and worktrunk
+	# already self-backgrounds the actual install work. Only pre-start
+	# (e.g. mise trust) is a documented "blocks" hook, so it stays synchronous;
+	# the post-switch/post-start phases are detached into a single background
+	# subshell (run sequentially there so post-start still follows post-switch)
+	# so the claim message prints ~2.5s sooner. The final `wt switch` in wt-new
+	# re-runs post-switch idempotently, so a slight overlap here is harmless.
 	wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
 		|| print -u2 -- "wt-prewarm: pre-start hooks failed for ${branch_name} (continuing)"
-	wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1 || true
-	wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1 || true
+
+	(
+		wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1
+		wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1
+	) &
+	disown 2>/dev/null
 
 	# Rebuild the prewarm in the background for next time (fully detached).
 	( wt-prewarm --rebuild </dev/null >/dev/null 2>&1 & )
