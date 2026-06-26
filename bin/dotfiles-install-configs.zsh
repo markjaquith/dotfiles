@@ -13,3 +13,5 @@ fi
 # Git aliases
 git config --global alias.fixup 'commit --all --amend --no-edit --no-verify'
 git config --global alias.recent '!git reflog | grep "checkout: moving" | awk "!seen[\$NF]++ {print \$NF}"'
+
+

@@ -9,7 +9,7 @@
 --ignore=bun.lock
 --ignore=tsconfig.json
 --ignore=README.md
---ignore=^AGENTS\.md$
+--ignore=^HOME$
 --ignore=.secret
 --ignore=.secretlintrc.json
 --ignore=node_modules
