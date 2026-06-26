@@ -30,7 +30,8 @@ done
 gum style --foreground 212 "Copying dotfiles…"
 (
   cd ~/dotfiles
-  stow .
+  stow --ignore='^AGENTS\.md$' .
+  stow --no-folding HOME
 )
 
 DOTFILES_DIR="$HOME/dotfiles"
