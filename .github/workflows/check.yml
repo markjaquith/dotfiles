@@ -1,0 +1,21 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: hk pkl
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install
+      - run: hk run check

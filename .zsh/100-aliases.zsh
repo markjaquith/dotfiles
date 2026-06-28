@@ -44,23 +44,12 @@ function subl() {
 # This is safe to do, because bat will detect when it's being piped
 alias cat="bat"
 
-open_tmux_urls() {
-  local raw urls count selected url opens closes lefts rights
+extract_urls() {
+  local url opens closes lefts rights
 
-  # Capture candidate URLs from the tmux pane. The path class stays permissive
-  # so URLs that legitimately contain () or [] are kept intact.
-  raw=$(tmux capture-pane -J -p | grep -oE "https?://[[:alnum:]-]+(\\.[[:alnum:]-]+)+(:[0-9]+)?(/[^[:space:]<>\"'{}\\]*)?")
-
-  if [[ -z "$raw" ]]; then
-    echo "No URLs detected"
-    sleep 0.5
-    return
-  fi
-
-  # Strip trailing delimiters that come from surrounding prose/markdown such as
-  # "[text](url)" or "[url]". A closing ) or ] is only removed when unbalanced,
-  # so paths like /wiki/Salt_(chemistry) survive.
-  urls=$(print -r -- "$raw" | while IFS= read -r url; do
+  # The path class stays permissive so URLs that legitimately contain () or []
+  # are kept intact.
+  grep -oE "https?://(localhost|[[:alnum:]-]+(\\.[[:alnum:]-]+)+)(:[0-9]+)?(/[^[:space:]<>\"'{}\\]*)?" | while IFS= read -r url; do
     while true; do
       case "$url" in
         *[.,\;:!?]) url="${url%?}" ;;
@@ -76,7 +65,21 @@ open_tmux_urls() {
       esac
     done
     print -r -- "$url"
-  done | sort -u)
+  done | sort -u
+}
+
+open_tmux_urls() {
+  local raw urls count selected
+
+  raw=$(tmux capture-pane -J -p)
+  urls=$(print -r -- "$raw" | extract_urls)
+
+  if [[ -z "$urls" ]]; then
+    echo "No URLs detected"
+    sleep 0.5
+    return
+  fi
+
   count=$(echo "$urls" | wc -l)
 
   if [[ "$count" -eq 1 ]]; then
