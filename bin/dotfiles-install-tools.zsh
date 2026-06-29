@@ -25,28 +25,33 @@ if ! command -v phpactor &>/dev/null; then
 fi
 
 # Rust
-if ! command -v cargo &>/dev/null; then
-  echo "1" | rustup-init
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+
+if command -v rustup &>/dev/null; then
+  if ! command -v cargo &>/dev/null; then
+    rustup toolchain install stable
+  fi
+  rustup update stable
+  rustup default stable > /dev/null 2>&1
   [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 fi
 
-if command -v rustup &>/dev/null; then
-  rustup update stable
-  rustup default stable > /dev/null 2>&1
-fi
+if command -v cargo &>/dev/null; then
+  # cmdy
+  if ! command -v cmdy &>/dev/null; then
+    cargo install cmdy
+  fi
 
-# cmdy
-if ! command -v cmdy &>/dev/null; then
-  cargo install cmdy
-fi
+  # wrappy
+  if ! command -v wrappy &>/dev/null; then
+    cargo install wrappy
+  fi
 
-# wrappy
-if ! command -v wrappy &>/dev/null; then
-  cargo install wrappy
+  # worktrunk
+  cargo install --locked worktrunk
+else
+  echo "Warning: cargo not found, skipping Rust package installs"
 fi
-
-# worktrunk
-cargo install --locked worktrunk
 
 # framecap
 if ! command -v framecap &>/dev/null; then
