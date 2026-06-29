@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 # Bulk Homebrew install
 
+brew tap modem-dev/tap 2>/dev/null
+
 brew install --quiet \
     tlrc \
     bat \
@@ -36,7 +38,6 @@ brew install --quiet \
     stow \
     jq \
     gh \
-    git-delta \
     modem-dev/tap/hunk \
     git-filter-repo \
     hub \
