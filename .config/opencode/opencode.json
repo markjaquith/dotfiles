@@ -9,44 +9,6 @@
 			"enabled": true
 		}
 	},
-	"agent": {
-		"fast": {
-			"description": "Fast development mode using GPT-5.4 mini",
-			"mode": "primary",
-			"model": "openai/gpt-5.4-mini",
-			"tools": {
-				"write": true,
-				"edit": true,
-				"bash": true,
-				"read": true,
-				"list": true,
-				"glob": true,
-				"grep": true,
-				"task": true,
-				"todowrite": true,
-				"todoread": true,
-				"webfetch": true
-			}
-		},
-		"deep": {
-			"description": "Deep reasoning mode using GPT-5.4",
-			"mode": "primary",
-			"model": "openai/gpt-5.4",
-			"tools": {
-				"write": true,
-				"edit": true,
-				"bas": true,
-				"read": true,
-				"list": true,
-				"glob": true,
-				"grep": true,
-				"task": true,
-				"todowrite": true,
-				"todoread": true,
-				"webfetc": true
-			}
-		}
-	},
 	"permission": {
 		"read": {
 			"~/.local/share/mise/installs/**": "allow"
