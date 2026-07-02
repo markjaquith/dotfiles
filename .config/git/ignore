@@ -31,3 +31,6 @@ Temporary Items
 .apdisk
 
 **/.claude/settings.local.json
+
+# Playwright MCP browser data
+.playwright-mcp/
