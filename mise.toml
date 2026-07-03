@@ -1,5 +1,5 @@
 [tools]
-"github:ogulcancelik/herdr" = "latest"
+herdr = "latest"
 hk = "latest"
 node = "latest"
 "npm:oxfmt" = "latest"
