@@ -1,5 +1,4 @@
 [tools]
-herdr = "latest"
 hk = "latest"
 node = "latest"
 "npm:oxfmt" = "latest"
