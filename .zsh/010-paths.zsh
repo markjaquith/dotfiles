@@ -32,4 +32,7 @@ fi
 
 export PATH=/opt/homebrew/sbin:$PATH
 export PATH=/opt/homebrew/bin:$PATH
+if [[ -d "$HOME/.cargo/bin" ]]; then
+	path=("$HOME/.cargo/bin" ${path:#$HOME/.cargo/bin})
+fi
 export PATH=$HOME/dotfiles/bin:$PATH

@@ -26,14 +26,27 @@ fi
 
 # Rust
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" ${path:#$HOME/.cargo/bin})
+
+if [[ ! -x "$HOME/.cargo/bin/rustup" || -L "$HOME/.cargo/bin/rustup" ]]; then
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+		sh -s -- -y --no-modify-path --default-toolchain stable
+	[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+	[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" ${path:#$HOME/.cargo/bin})
+fi
+
+for rust_tool in rust-analyzer rustfmt cargo-fmt; do
+	rust_tool_path="$HOME/.cargo/bin/$rust_tool"
+	if [[ -L "$rust_tool_path" && "$(readlink "$rust_tool_path")" == /opt/homebrew/opt/rustup/bin/* ]]; then
+		rm -f "$rust_tool_path"
+	fi
+done
 
 if command -v rustup &>/dev/null; then
-  if ! command -v cargo &>/dev/null; then
-    rustup toolchain install stable
-  fi
-  rustup update stable
-  rustup default stable > /dev/null 2>&1
-  [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+	rustup update stable
+	rustup default stable > /dev/null 2>&1
+	rustup component add rust-analyzer clippy rustfmt
+	[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 fi
 
 if command -v cargo &>/dev/null; then
