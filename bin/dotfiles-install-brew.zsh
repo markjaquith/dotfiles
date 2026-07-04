@@ -32,8 +32,6 @@ brew install --quiet \
     lazygit \
     bottom \
     buildkite/buildkite/bk@3 \
-    rustup \
-    rust-analyzer \
     gum \
     stow \
     jq \
