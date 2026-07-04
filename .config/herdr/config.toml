@@ -1,0 +1,80 @@
+onboarding = false
+
+[theme]
+name = "catppuccin"
+
+auto_switch = false
+[theme.custom]
+accent = "#8aadf4"
+panel_bg = "#1e2030"
+surface0 = "#363a4f"
+surface1 = "#494d64"
+surface_dim = "#1e2030"
+overlay0 = "#6e738d"
+overlay1 = "#8087a2"
+text = "#cad3f5"
+subtext0 = "#a5adcb"
+mauve = "#c6a0f6"
+green = "#a6da95"
+yellow = "#eed49f"
+red = "#ed8796"
+blue = "#8aadf4"
+teal = "#8bd5ca"
+peach = "#f5a97f"
+
+[terminal]
+new_cwd = "follow"
+
+[worktrees]
+directory = "~/worktrees"
+
+[keys]
+prefix = "ctrl+b"
+goto = "prefix+g"
+previous_tab = ["prefix+p", "alt+h"]
+next_tab = ["prefix+n", "alt+l"]
+previous_agent = "alt+k"
+next_agent = "alt+j"
+navigate_workspace_up = "k"
+navigate_workspace_down = "j"
+navigate_pane_up = "ctrl+k"
+navigate_pane_down = "ctrl+j"
+
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "vim-herdr-navigation.left"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "vim-herdr-navigation.down"
+description = "navigate down (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "vim-herdr-navigation.up"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "vim-herdr-navigation.right"
+description = "navigate right (vim/herdr)"
+
+[ui]
+mouse_capture = true
+agent_panel_sort = "priority"
+prompt_new_tab_name = false
+
+[ui.toast]
+delivery = "system"
+delay_seconds = 1
+
+[ui.sound]
+enabled = true
+
+[experimental]
+pane_history = true

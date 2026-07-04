@@ -9,11 +9,6 @@ command = """git log -n 20 --oneline | fzf --layout="reverse" | awk '{print $1}'
 tags = ["git"]
 
 [[commands]]
-description = "Restart tmux server"
-command = "tmux kill-server; t"
-tags = ["tmux"]
-
-[[commands]]
 description = "Git rebase origin/main since divergence"
 command = """
 git fetch origin && git rebase --onto origin/main "$(git merge-base --fork-point origin/main HEAD || git merge-base origin/main HEAD)"
@@ -38,12 +33,6 @@ fi
 tags = ["git"]
 
 [[commands]]
-description = "Kill tmux server"
-command = "tmux kill-server"
-tags = ["tmux"]
-
-[[commands]]
 description = "Restart autofs"
 command = "sudo automount -vc"
 tags = ["synology"]
-
