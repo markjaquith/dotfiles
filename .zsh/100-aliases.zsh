@@ -331,6 +331,9 @@ alias branch="git branch --show-current"
 # Lazygit.
 alias lg="lazygit"
 
+# Herdr.
+alias h="herdr"
+
 # Intercept `opencode -c|--continue`: resolve the most recently updated
 # session for the current directory and pass `--session <id>` instead.
 # All other invocations pass straight through to the real binary.

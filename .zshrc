@@ -1,9 +1,7 @@
-# Tmux auto-attach may prompt for input, so keep this bootstrap above the
-# instant prompt block. Herd and Bun append tool-managed code below, so leave
-# their blocks in this file instead of moving them into ~/.zsh/.
+# Herd and Bun append tool-managed code below, so leave their blocks in this
+# file instead of moving them into ~/.zsh/.
 source ~/.zsh/010-paths.zsh
 source ~/.zsh/015-tmux.zsh
-tmux_ensure_session
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]

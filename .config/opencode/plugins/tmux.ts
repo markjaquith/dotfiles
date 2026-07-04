@@ -1,9 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin"
 
-const COMMAND_NAME = "tmux"
+const COMMAND_NAME = "herdr"
 const OPENCODE_COMMAND_MATCH = "opencode"
-const WINDOW_ID_FORMAT = "#{window_id}"
-const PANE_FORMAT = "#{window_id}\t#{pane_id}\t#{pane_current_command}"
 
 type CommandPart = {
 	type: string
@@ -12,10 +10,12 @@ type CommandPart = {
 }
 
 type Pane = {
-	windowId: string
 	paneId: string
-	command: string
+	command?: string
+	agent?: string
 }
+
+type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 
 function replaceCommandText(parts: CommandPart[], text: string) {
 	let replaced = false
@@ -30,60 +30,124 @@ function replaceCommandText(parts: CommandPart[], text: string) {
 }
 
 function parsePane(line: string): Pane | null {
-	const [windowId, paneId, command] = line.split("\t")
-	if (!windowId || !paneId || !command) {
+	const [paneId, command] = line.split("\t")
+	if (!paneId || !command) {
 		return null
 	}
 
-	return { windowId, paneId, command }
+	return { paneId, command }
 }
 
 function usage() {
-	return "Usage: `/tmux others {message to send to other OpenCode panes}`"
+	return "Usage: `/herdr others {message to send to other OpenCode panes}`"
 }
 
-export const TmuxPlugin: Plugin = async ({ $ }) => {
-	async function currentWindowId() {
-		const tmuxPane = process.env.TMUX_PANE
-		if (tmuxPane) {
-			return (
-				await $`tmux display-message -p -t ${tmuxPane} ${WINDOW_ID_FORMAT}`.text()
-			).trim()
+function isJsonObject(value: Json): value is { [key: string]: Json } {
+	return value !== null && typeof value === "object" && !Array.isArray(value)
+}
+
+function stringValue(object: { [key: string]: Json }, key: string) {
+	const value = object[key]
+	return typeof value === "string" ? value : undefined
+}
+
+function collectPanes(value: Json, panes: Pane[]) {
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			collectPanes(item, panes)
+		}
+		return
+	}
+
+	if (!isJsonObject(value)) {
+		return
+	}
+
+	const paneId =
+		stringValue(value, "pane_id") ??
+		stringValue(value, "paneId") ??
+		stringValue(value, "id")
+	if (paneId) {
+		panes.push({
+			paneId,
+			command:
+				stringValue(value, "command") ??
+				stringValue(value, "name") ??
+				stringValue(value, "process") ??
+				stringValue(value, "foreground_command"),
+			agent:
+				stringValue(value, "agent") ??
+				stringValue(value, "label") ??
+				stringValue(value, "agent_label"),
+		})
+	}
+
+	for (const nested of Object.values(value)) {
+		collectPanes(nested, panes)
+	}
+}
+
+function parseJsonPanes(text: string) {
+	const parsed = JSON.parse(text) as Json
+	const panes: Pane[] = []
+	collectPanes(parsed, panes)
+
+	return panes
+}
+
+function looksLikeOpenCode(pane: Pane) {
+	return [pane.agent, pane.command]
+		.filter((value): value is string => typeof value === "string")
+		.some((value) => value.toLowerCase().includes(OPENCODE_COMMAND_MATCH))
+}
+
+export const HerdrPlugin: Plugin = async ({ $ }) => {
+	async function candidateOpenCodePanes() {
+		try {
+			const agents = await $`herdr agent list`.text()
+			const panes = parseJsonPanes(agents).filter(looksLikeOpenCode)
+			if (panes.length > 0) {
+				return panes
+			}
+		} catch {
+			// Fall back to pane inspection for older or differently formatted CLIs.
 		}
 
-		return (await $`tmux display-message -p ${WINDOW_ID_FORMAT}`.text()).trim()
+		try {
+			const panes = await $`herdr pane list`.text()
+			return parseJsonPanes(panes).filter(looksLikeOpenCode)
+		} catch {
+			const panes = await $`herdr pane list`.text()
+
+			return panes
+				.split("\n")
+				.map((line) => parsePane(line))
+				.filter((pane): pane is Pane => pane !== null)
+				.filter(looksLikeOpenCode)
+		}
 	}
 
 	async function otherOpenCodePanes() {
-		const windowId = await currentWindowId()
-		const panes = await $`tmux list-panes -s -F ${PANE_FORMAT}`.text()
+		const currentPaneId = process.env.HERDR_PANE_ID
+		const panes = await candidateOpenCodePanes()
 
-		return panes
-			.split("\n")
-			.map((line) => parsePane(line))
-			.filter((pane): pane is Pane => {
-				if (!pane || pane.windowId === windowId) {
-					return false
-				}
-
-				return pane.command.toLowerCase().includes(OPENCODE_COMMAND_MATCH)
-			})
+		return panes.filter((pane) => pane.paneId !== currentPaneId)
 	}
 
 	async function sendToPane(pane: Pane, message: string) {
-		await $`tmux send-keys -t ${pane.paneId} -l -- ${message}`.quiet()
-		await $`tmux send-keys -t ${pane.paneId} Enter`.quiet()
+		await $`herdr pane send-text ${pane.paneId} ${message}`.quiet()
+		await $`herdr pane send-keys ${pane.paneId} enter`.quiet()
 	}
 
 	async function sendToOthers(message: string) {
-		if (!process.env.TMUX) {
-			throw new Error("Not inside tmux.")
+		if (!process.env.HERDR_ENV && !process.env.HERDR_PANE_ID) {
+			throw new Error("Not inside Herdr.")
 		}
 
 		const panes = await otherOpenCodePanes()
 		if (panes.length === 0) {
 			throw new Error(
-				"No other OpenCode panes found in the current tmux session.",
+				"No other OpenCode panes found in the current Herdr session.",
 			)
 		}
 
@@ -95,7 +159,7 @@ export const TmuxPlugin: Plugin = async ({ $ }) => {
 		async config(config) {
 			config.command ??= {}
 			config.command[COMMAND_NAME] = {
-				description: "Control other tmux windows",
+				description: "Control other Herdr panes",
 				template: usage(),
 				subtask: false,
 			}
@@ -123,12 +187,12 @@ export const TmuxPlugin: Plugin = async ({ $ }) => {
 				const paneCount = await sendToOthers(message)
 				replaceCommandText(
 					output.parts,
-					`The tmux message was sent to ${paneCount} other OpenCode pane${paneCount === 1 ? "" : "s"}. Do not run tools. Reply only with: Sent.`,
+					`The Herdr message was sent to ${paneCount} other OpenCode pane${paneCount === 1 ? "" : "s"}. Do not run tools. Reply only with: Sent.`,
 				)
 			} catch (error) {
 				replaceCommandText(
 					output.parts,
-					`Failed to run /tmux others: ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to run /herdr others: ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
 		},

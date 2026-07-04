@@ -1,0 +1,904 @@
+import { execFile as execFileCallback, spawn } from "node:child_process"
+import { createConnection } from "node:net"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { promisify } from "node:util"
+
+import type { Plugin } from "@opencode-ai/plugin"
+
+import { HEARTBEAT_INTERVAL_MS, REPORT_BATCH_DELAY_MS } from "../src/config"
+import { getReportSocketPath } from "../src/store"
+import { meaningfulTitle } from "../src/title"
+
+const execFile = promisify(execFileCallback)
+const PACKAGE_ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
+const OCMON_BIN = process.env.OCMON_BIN ?? join(PACKAGE_ROOT, "src", "cli.ts")
+const OCMON_HEARTBEAT_INTERVAL_MS = Number(process.env.OCMON_HEARTBEAT_INTERVAL_MS ?? HEARTBEAT_INTERVAL_MS)
+const OCMON_REPORT_BATCH_DELAY_MS = Number(process.env.OCMON_REPORT_BATCH_DELAY_MS ?? REPORT_BATCH_DELAY_MS)
+const PROCESS_START_TIME = Math.max(0, Date.now() - Math.round(process.uptime() * 1000))
+const PLUGIN_VERSION = "0.1.0"
+const OPENCODE_READY_STATUS = ["id", "le"].join("")
+const OPENCODE_READY_EVENT = `session.${OPENCODE_READY_STATUS}`
+const TMUX_SOCKET_PATH = process.env.TMUX?.split(",")[0]
+type SessionInfo = {
+  id: string
+  parentID?: string
+  projectID: string
+  directory: string
+  title: string
+  version: string
+  time: {
+    created: number
+    updated: number
+  }
+}
+
+type TrackedSession = {
+  sessionID: string
+  parentSessionID?: string
+  projectID?: string
+  cwd?: string
+  title?: string
+  opencodeVersion?: string
+  gitBranch?: string
+  gitWorktree?: string
+  gitDirty?: boolean
+  activeSubagentCount?: number
+  startedAt?: number
+  currentStatus?: "working" | "idle" | "blocked"
+  heartbeat?: ReturnType<typeof setInterval>
+  blockingRequestIDs?: Set<string>
+}
+
+const sessions = new Map<string, TrackedSession>()
+const endedSessions = new Set<string>()
+const activeSubagentIDsByParentID = new Map<string, Set<string>>()
+const pendingReports = new Map<string, Record<string, unknown>>()
+const emittedTestReports: Record<string, unknown>[] = []
+let activeTopLevelSessionID: string | undefined
+let reportFlushTimer: ReturnType<typeof setTimeout> | undefined
+let reportFlushChain = Promise.resolve()
+let reportServerStart: Promise<void> | undefined
+
+function resetTestState() {
+  if (reportFlushTimer) {
+    clearTimeout(reportFlushTimer)
+    reportFlushTimer = undefined
+  }
+
+  sessions.clear()
+  endedSessions.clear()
+  activeSubagentIDsByParentID.clear()
+  pendingReports.clear()
+  emittedTestReports.length = 0
+  activeTopLevelSessionID = undefined
+  reportFlushChain = Promise.resolve()
+  reportServerStart = undefined
+}
+
+type GitInfo = {
+  branch?: string
+  worktree?: string
+  dirty?: boolean
+  staged?: boolean
+  untracked?: boolean
+  ahead?: number
+  behind?: number
+  conflict?: boolean
+}
+
+const gitInfoCache = new Map<string, { expiresAt: number; info: GitInfo }>()
+
+async function gitOutput(args: string[], cwd: string) {
+  const { stdout } = await execFile("git", args, { cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }, timeout: 1_000, windowsHide: true, maxBuffer: 64 * 1024 })
+  return stdout.trim()
+}
+
+async function readGitInfo(cwd: string | undefined): Promise<GitInfo> {
+  if (!cwd) {
+    return {}
+  }
+
+  const cached = gitInfoCache.get(cwd)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.info
+  }
+
+  try {
+    const [worktree, branchOutput, statusOutput] = await Promise.all([
+      gitOutput(["rev-parse", "--show-toplevel"], cwd),
+      gitOutput(["branch", "--show-current"], cwd),
+      gitOutput(["status", "--porcelain=v1", "--branch"], cwd),
+    ])
+    const branch = branchOutput || await gitOutput(["rev-parse", "--short", "HEAD"], cwd)
+    const info = parseGitStatus(branch, worktree, statusOutput)
+    gitInfoCache.set(cwd, { expiresAt: Date.now() + 2_000, info })
+    return info
+  } catch {
+    const info: GitInfo = {}
+    gitInfoCache.set(cwd, { expiresAt: Date.now() + 2_000, info })
+    return info
+  }
+}
+
+function parseGitStatus(branch: string, worktree: string, statusOutput: string): GitInfo {
+  let ahead = 0
+  let behind = 0
+  let dirty = false
+  let staged = false
+  let untracked = false
+  let conflict = false
+
+  for (const line of statusOutput.split("\n")) {
+    if (!line) {
+      continue
+    }
+
+    if (line.startsWith("## ")) {
+      ahead = Number(line.match(/ahead (\d+)/)?.[1] ?? 0)
+      behind = Number(line.match(/behind (\d+)/)?.[1] ?? 0)
+      continue
+    }
+
+    const x = line[0]
+    const y = line[1]
+
+    if (x === "?" && y === "?") {
+      untracked = true
+      continue
+    }
+
+    if (x !== " ") {
+      staged = true
+    }
+
+    if (y !== " ") {
+      dirty = true
+    }
+
+    if (x === "U" || y === "U" || (x === "A" && y === "A") || (x === "D" && y === "D")) {
+      conflict = true
+    }
+  }
+
+  return { branch, worktree, dirty, staged, untracked, ahead, behind, conflict }
+}
+
+function reportKey(payload: Record<string, unknown>) {
+  return typeof payload.session_id === "string" ? payload.session_id : JSON.stringify(payload)
+}
+
+async function sendReports(reports: Record<string, unknown>[]) {
+  if (process.env.OCMON_CAPTURE_TEST_REPORTS === "1") {
+    emittedTestReports.push(...reports.map((payload) => JSON.parse(JSON.stringify(payload)) as Record<string, unknown>))
+    return
+  }
+
+  if (await sendReportsToCollector(reports)) {
+    return
+  }
+
+  await startReportServer()
+
+  if (await sendReportsToCollector(reports)) {
+    return
+  }
+
+  try {
+    if (reports.length === 1) {
+      await execFile(OCMON_BIN, ["report", JSON.stringify(reports[0])], { windowsHide: true })
+    } else if (reports.length > 1) {
+      await execFile(OCMON_BIN, ["report-batch", JSON.stringify(reports)], { windowsHide: true })
+    }
+  } catch {}
+}
+
+function sendReportsToCollector(reports: Record<string, unknown>[]): Promise<boolean> {
+  if (!reports.length) {
+    return Promise.resolve(true)
+  }
+
+  return new Promise((resolve) => {
+    const socket = createConnection(getReportSocketPath())
+    let settled = false
+    const done = (ok: boolean) => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      socket.removeAllListeners()
+      socket.destroy()
+      resolve(ok)
+    }
+
+    socket.once("connect", () => {
+      socket.end(`${JSON.stringify(reports)}\n`, () => done(true))
+    })
+    socket.once("error", () => done(false))
+    socket.setTimeout(100, () => done(false))
+  })
+}
+
+async function startReportServer() {
+  reportServerStart ??= new Promise((resolve) => {
+    try {
+      const child = spawn(OCMON_BIN, ["report-server"], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      })
+      child.unref()
+    } catch {}
+
+    setTimeout(resolve, 100).unref?.()
+  })
+
+  await reportServerStart
+}
+
+async function flushReports() {
+  if (reportFlushTimer) {
+    clearTimeout(reportFlushTimer)
+    reportFlushTimer = undefined
+  }
+
+  const reports = [...pendingReports.values()]
+  pendingReports.clear()
+
+  if (!reports.length) {
+    return reportFlushChain
+  }
+
+  reportFlushChain = reportFlushChain.then(() => sendReports(reports), () => sendReports(reports))
+  await reportFlushChain
+}
+
+function scheduleReportFlush() {
+  if (reportFlushTimer) {
+    return
+  }
+
+  reportFlushTimer = setTimeout(() => {
+    reportFlushTimer = undefined
+    void flushReports()
+  }, OCMON_REPORT_BATCH_DELAY_MS)
+  reportFlushTimer.unref?.()
+}
+
+async function emit(payload: Record<string, unknown>, options: { immediate?: boolean } = {}) {
+  pendingReports.set(reportKey(payload), payload)
+
+  if (options.immediate) {
+    await flushReports()
+    return
+  }
+
+  scheduleReportFlush()
+}
+
+async function toPayload(input: {
+  tracked: TrackedSession
+  eventType: string
+  timestamp: number
+  status?: string
+  activeSubagentCount?: number
+  includeDetails?: boolean
+  includeGit?: boolean
+  includeTmux?: boolean
+}) {
+  const includeDetails = input.includeDetails ?? true
+  const includeGit = input.includeGit ?? true
+  const includeTmux = input.includeTmux ?? true
+  const git = includeGit ? await readGitInfo(input.tracked.cwd) : {}
+
+  if (includeGit) {
+    input.tracked.gitBranch = git.branch ?? input.tracked.gitBranch
+    input.tracked.gitWorktree = git.worktree ?? input.tracked.gitWorktree
+    input.tracked.gitDirty = git.dirty ?? input.tracked.gitDirty
+  }
+
+  return {
+    event_type: input.eventType,
+    timestamp: input.timestamp,
+    session_id: input.tracked.sessionID,
+    parent_session_id: includeDetails ? input.tracked.parentSessionID : undefined,
+    project_id: includeDetails ? input.tracked.projectID : undefined,
+    cwd: includeDetails ? input.tracked.cwd : undefined,
+    title: includeDetails ? meaningfulTitle(input.tracked.title) : undefined,
+    status: input.status,
+    pid: process.pid,
+    process_start_time: PROCESS_START_TIME,
+    tmux_pane_id: includeTmux ? process.env.TMUX_PANE : undefined,
+    tmux_socket_path: includeTmux ? TMUX_SOCKET_PATH : undefined,
+    git_branch: includeGit ? input.tracked.gitBranch : undefined,
+    git_worktree: includeGit ? input.tracked.gitWorktree : undefined,
+    git_dirty: includeGit ? git.dirty : undefined,
+    git_staged: includeGit ? git.staged : undefined,
+    git_untracked: includeGit ? git.untracked : undefined,
+    git_ahead: includeGit ? git.ahead : undefined,
+    git_behind: includeGit ? git.behind : undefined,
+    git_conflict: includeGit ? git.conflict : undefined,
+    active_subagent_count: input.activeSubagentCount ?? input.tracked.activeSubagentCount,
+    plugin_version: includeDetails ? PLUGIN_VERSION : undefined,
+    opencode_version: includeDetails ? input.tracked.opencodeVersion : undefined,
+  }
+}
+
+function mapStatus(status: { type: string } | undefined): "working" | "idle" | undefined {
+  if (!status) {
+    return undefined
+  }
+
+  if (status.type === "busy" || status.type === "retry") {
+    return "working"
+  }
+
+  if (status.type === OPENCODE_READY_STATUS) {
+    return "idle"
+  }
+
+  return undefined
+}
+
+function clearHeartbeat(tracked: TrackedSession) {
+  if (!tracked.heartbeat) {
+    return
+  }
+
+  clearInterval(tracked.heartbeat)
+  tracked.heartbeat = undefined
+}
+
+function isSupersededTopLevelSession(tracked: TrackedSession) {
+  return !tracked.parentSessionID && activeTopLevelSessionID !== undefined && tracked.sessionID !== activeTopLevelSessionID
+}
+
+async function stopIfSupersededTopLevelSession(tracked: TrackedSession) {
+  if (!isSupersededTopLevelSession(tracked)) {
+    return false
+  }
+
+  await reportEnded(tracked.sessionID)
+  return true
+}
+
+async function activateTopLevelSession(tracked: TrackedSession) {
+  if (tracked.parentSessionID || activeTopLevelSessionID === tracked.sessionID) {
+    return
+  }
+
+  const current = activeTopLevelSessionID ? sessions.get(activeTopLevelSessionID) : undefined
+  if (current?.startedAt && tracked.startedAt && tracked.startedAt < current.startedAt) {
+    return
+  }
+
+  activeTopLevelSessionID = tracked.sessionID
+  await endSupersededTopLevelSessions(tracked)
+}
+
+async function refreshTrackedStatus(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  if (isSupersededTopLevelSession(tracked)) {
+    return false
+  }
+
+  try {
+    const { data } = await client.session.status({ query: {} })
+    if (tracked.blockingRequestIDs?.size) {
+      tracked.currentStatus = "blocked"
+      return true
+    }
+
+    if (!data || !(tracked.sessionID in data)) {
+      tracked.currentStatus = "idle"
+      return true
+    }
+
+    const status = mapStatus(data?.[tracked.sessionID])
+    tracked.currentStatus = status ?? "idle"
+    return true
+  } catch {
+    if (tracked.blockingRequestIDs?.size) {
+      tracked.currentStatus = "blocked"
+    }
+  }
+
+  return true
+}
+
+function startHeartbeat(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  if (tracked.parentSessionID) {
+    return
+  }
+
+  if (tracked.heartbeat) {
+    return
+  }
+
+  tracked.heartbeat = setInterval(() => {
+    void emitHeartbeat(client, tracked)
+  }, OCMON_HEARTBEAT_INTERVAL_MS)
+  tracked.heartbeat.unref?.()
+}
+
+function activeSubagentCount(parentSessionID: string) {
+  return activeSubagentIDsByParentID.get(parentSessionID)?.size ?? 0
+}
+
+async function emitParentSubagentCount(client: Parameters<Plugin>[0]["client"], parentSessionID: string, options: { immediate?: boolean } = {}) {
+  const parent = await loadSession(client, parentSessionID)
+  const count = activeSubagentCount(parentSessionID)
+
+  parent.activeSubagentCount = count
+  sessions.set(parentSessionID, parent)
+  startHeartbeat(client, parent)
+
+  await emit(
+    await toPayload({
+      tracked: parent,
+      eventType: "session.status",
+      timestamp: Date.now(),
+      status: parent.currentStatus,
+      activeSubagentCount: count,
+    }),
+    options,
+  )
+}
+
+async function setSubagentActive(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession, active: boolean) {
+  if (!tracked.parentSessionID) {
+    return
+  }
+
+  let activeSubagentIDs = activeSubagentIDsByParentID.get(tracked.parentSessionID)
+  if (!activeSubagentIDs) {
+    activeSubagentIDs = new Set()
+    activeSubagentIDsByParentID.set(tracked.parentSessionID, activeSubagentIDs)
+  }
+
+  const wasActive = activeSubagentIDs.has(tracked.sessionID)
+  if (active) {
+    activeSubagentIDs.add(tracked.sessionID)
+  } else {
+    activeSubagentIDs.delete(tracked.sessionID)
+    if (!activeSubagentIDs.size) {
+      activeSubagentIDsByParentID.delete(tracked.parentSessionID)
+    }
+  }
+
+  if (wasActive !== active) {
+    await emitParentSubagentCount(client, tracked.parentSessionID, { immediate: !active })
+  }
+}
+
+async function reportSubagentActive(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  sessions.set(tracked.sessionID, tracked)
+  await setSubagentActive(client, tracked, true)
+}
+
+async function reportSubagentComplete(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  await setSubagentActive(client, tracked, false)
+  forgetSession(tracked.sessionID)
+  endedSessions.add(tracked.sessionID)
+}
+
+async function emitHeartbeat(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  const stillActive = await refreshTrackedStatus(client, tracked)
+  if (!stillActive) {
+    forgetSession(tracked.sessionID)
+    return
+  }
+
+  await emit(
+    await toPayload({
+      tracked,
+      eventType: "session.heartbeat",
+      timestamp: Date.now(),
+      status: tracked.currentStatus,
+      includeDetails: false,
+      includeGit: false,
+      includeTmux: false,
+    }),
+  )
+}
+
+async function loadSession(client: Parameters<Plugin>[0]["client"], sessionID: string) {
+  const existing = sessions.get(sessionID)
+  if (existing?.projectID && existing.cwd && existing.title && existing.opencodeVersion) {
+    return existing
+  }
+
+  const { data } = await client.session.get({ path: { id: sessionID } })
+  if (!data) {
+    return existing ?? { sessionID }
+  }
+
+  return mergeInfo(sessionID, data as SessionInfo)
+}
+
+function mergeInfo(sessionID: string, info: SessionInfo) {
+  const tracked = sessions.get(sessionID) ?? { sessionID }
+  const title = meaningfulTitle(info.title)
+
+  tracked.parentSessionID = info.parentID
+  tracked.projectID = info.projectID
+  tracked.cwd = info.directory
+  tracked.title = title ?? tracked.title
+  tracked.opencodeVersion = info.version
+  tracked.startedAt ??= info.time.created
+
+  sessions.set(sessionID, tracked)
+  return tracked
+}
+
+async function reportCreated(client: Parameters<Plugin>[0]["client"], sessionID: string) {
+  endedSessions.delete(sessionID)
+  const tracked = await loadSession(client, sessionID)
+
+  if (tracked.parentSessionID) {
+    tracked.startedAt ??= Date.now()
+    tracked.currentStatus ??= "working"
+    await reportSubagentActive(client, tracked)
+    return
+  }
+
+  await activateTopLevelSession(tracked)
+  tracked.startedAt ??= Date.now()
+  tracked.currentStatus ??= "idle"
+  await refreshTrackedStatus(client, tracked)
+  sessions.set(sessionID, tracked)
+  startHeartbeat(client, tracked)
+  await emit(await toPayload({ tracked, eventType: "session.started", timestamp: Date.now(), status: tracked.currentStatus }))
+}
+
+async function reportUpdated(client: Parameters<Plugin>[0]["client"], tracked: TrackedSession) {
+  if (tracked.parentSessionID || await stopIfSupersededTopLevelSession(tracked)) {
+    return
+  }
+
+  startHeartbeat(client, tracked)
+  await emit(await toPayload({ tracked, eventType: "session.status", timestamp: Date.now(), status: tracked.currentStatus }))
+}
+
+async function endSupersededTopLevelSessions(active: TrackedSession) {
+  if (active.parentSessionID) {
+    return
+  }
+
+  for (const tracked of [...sessions.values()]) {
+    if (tracked.sessionID !== active.sessionID && !tracked.parentSessionID) {
+      await reportEnded(tracked.sessionID)
+    }
+  }
+}
+
+async function reportStatus(
+  client: Parameters<Plugin>[0]["client"],
+  sessionID: string,
+  status: "working" | "idle" | "blocked" | undefined,
+  eventType: "session.status" | "session.waiting",
+) {
+  if (endedSessions.has(sessionID)) {
+    return
+  }
+
+  const tracked = await loadSession(client, sessionID)
+  if (tracked.parentSessionID) {
+    tracked.currentStatus = status ?? tracked.currentStatus
+    if (eventType === "session.waiting" || status === "idle") {
+      await reportSubagentComplete(client, tracked)
+    } else {
+      await reportSubagentActive(client, tracked)
+    }
+    return
+  }
+
+  if (!tracked.parentSessionID && status === "working") {
+    await activateTopLevelSession(tracked)
+  }
+  if (await stopIfSupersededTopLevelSession(tracked)) {
+    return
+  }
+  tracked.currentStatus = status ?? tracked.currentStatus
+  startHeartbeat(client, tracked)
+  await emit(
+    await toPayload({
+      tracked,
+      eventType,
+      timestamp: Date.now(),
+      status: status ?? tracked.currentStatus,
+    }),
+  )
+}
+
+async function reportEnded(sessionID: string) {
+  const tracked = sessions.get(sessionID)
+  if (!tracked) {
+    endedSessions.add(sessionID)
+    return
+  }
+
+  if (tracked.parentSessionID) {
+    const activeSubagentIDs = activeSubagentIDsByParentID.get(tracked.parentSessionID)
+    activeSubagentIDs?.delete(sessionID)
+    if (!activeSubagentIDs?.size) {
+      activeSubagentIDsByParentID.delete(tracked.parentSessionID)
+    }
+    forgetSession(sessionID)
+    endedSessions.add(sessionID)
+    return
+  }
+
+  clearHeartbeat(tracked)
+  await emit(await toPayload({ tracked, eventType: "session.ended", timestamp: Date.now(), status: tracked.currentStatus }), { immediate: true })
+  sessions.delete(sessionID)
+  endedSessions.add(sessionID)
+}
+
+function forgetSession(sessionID: string) {
+  const tracked = sessions.get(sessionID)
+  if (!tracked) {
+    return
+  }
+
+  clearHeartbeat(tracked)
+  sessions.delete(sessionID)
+}
+
+async function reportWaiting(client: Parameters<Plugin>[0]["client"], sessionID: string) {
+  if (endedSessions.has(sessionID)) {
+    return
+  }
+
+  const tracked = await loadSession(client, sessionID)
+  if (tracked.parentSessionID) {
+    tracked.currentStatus = "idle"
+    await reportSubagentComplete(client, tracked)
+    return
+  }
+
+  if (await stopIfSupersededTopLevelSession(tracked)) {
+    return
+  }
+  tracked.currentStatus = "idle"
+  sessions.set(sessionID, tracked)
+  startHeartbeat(client, tracked)
+  await emit(
+    await toPayload({
+      tracked,
+      eventType: "session.waiting",
+      timestamp: Date.now(),
+      status: "idle",
+    }),
+  )
+}
+
+async function reportBlocked(client: Parameters<Plugin>[0]["client"], sessionID: string) {
+  if (endedSessions.has(sessionID)) {
+    return
+  }
+
+  const tracked = await loadSession(client, sessionID)
+  if (tracked.parentSessionID) {
+    tracked.currentStatus = "blocked"
+    sessions.set(sessionID, tracked)
+    await reportSubagentActive(client, tracked)
+    return
+  }
+
+  if (await stopIfSupersededTopLevelSession(tracked)) {
+    return
+  }
+  tracked.currentStatus = "blocked"
+  sessions.set(sessionID, tracked)
+  startHeartbeat(client, tracked)
+  await emit(
+    await toPayload({
+      tracked,
+      eventType: "session.status",
+      timestamp: Date.now(),
+      status: "blocked",
+    }),
+  )
+}
+
+async function reportInputWaiting(client: Parameters<Plugin>[0]["client"], sessionID: string, requestID: string | undefined) {
+  if (endedSessions.has(sessionID)) {
+    return
+  }
+
+  const tracked = await loadSession(client, sessionID)
+  tracked.blockingRequestIDs ??= new Set()
+
+  if (requestID) {
+    tracked.blockingRequestIDs.add(requestID)
+  }
+
+  await reportBlocked(client, sessionID)
+}
+
+async function reportInputResumed(client: Parameters<Plugin>[0]["client"], sessionID: string, requestID: string | undefined) {
+  if (endedSessions.has(sessionID)) {
+    return
+  }
+
+  const tracked = await loadSession(client, sessionID)
+
+  if (requestID) {
+    tracked.blockingRequestIDs?.delete(requestID)
+  } else {
+    tracked.blockingRequestIDs?.clear()
+  }
+
+  await refreshTrackedStatus(client, tracked)
+  if (tracked.parentSessionID) {
+    if (tracked.currentStatus === "idle") {
+      await reportSubagentComplete(client, tracked)
+    } else {
+      sessions.set(sessionID, tracked)
+      await reportSubagentActive(client, tracked)
+    }
+    return
+  }
+
+  startHeartbeat(client, tracked)
+  await emit(
+    await toPayload({
+      tracked,
+      eventType: tracked.currentStatus === "idle" ? "session.waiting" : "session.status",
+      timestamp: Date.now(),
+      status: tracked.currentStatus,
+    }),
+  )
+}
+
+async function reportCurrentSessions(client: Parameters<Plugin>[0]["client"]) {
+  try {
+    const { data } = await client.session.status({ query: {} })
+
+    for (const [sessionID, rawStatus] of Object.entries(data ?? {})) {
+      if (endedSessions.has(sessionID)) {
+        continue
+      }
+
+      const status = mapStatus(rawStatus)
+
+      if (!status) {
+        continue
+      }
+
+      const tracked = await loadSession(client, sessionID)
+      if (tracked.parentSessionID) {
+        tracked.currentStatus = status
+        if (status === "idle") {
+          await reportSubagentComplete(client, tracked)
+        } else {
+          await reportSubagentActive(client, tracked)
+        }
+        continue
+      }
+
+      if (await stopIfSupersededTopLevelSession(tracked)) {
+        continue
+      }
+      tracked.currentStatus = status
+      sessions.set(sessionID, tracked)
+      startHeartbeat(client, tracked)
+      await emit(
+        await toPayload({
+          tracked,
+          eventType: status === "idle" ? "session.waiting" : "session.status",
+          timestamp: Date.now(),
+          status,
+        }),
+      )
+    }
+  } catch {}
+}
+
+async function flushActiveSessions() {
+  for (const sessionID of [...sessions.keys()]) {
+    await reportEnded(sessionID)
+  }
+
+  await flushReports()
+}
+
+let shuttingDown = false
+
+async function shutdown(code: number) {
+  if (shuttingDown) {
+    return
+  }
+
+  shuttingDown = true
+  await flushActiveSessions()
+  process.exit(code)
+}
+
+process.once("beforeExit", () => {
+  void flushActiveSessions()
+})
+process.once("SIGINT", () => {
+  void shutdown(130)
+})
+process.once("SIGTERM", () => {
+  void shutdown(143)
+})
+process.once("SIGHUP", () => {
+  void shutdown(129)
+})
+process.once("SIGQUIT", () => {
+  void shutdown(131)
+})
+
+export default (async ({ client, directory }) => {
+  if (process.env.OCMON_ENABLE_TEST_HOOKS === "1") {
+    resetTestState()
+  }
+
+  void reportCurrentSessions(client)
+
+  const plugin = {
+    async event({ event }) {
+      switch (event.type) {
+        case "session.created": {
+          mergeInfo(event.properties.info.id, event.properties.info as SessionInfo)
+          await reportCreated(client, event.properties.info.id)
+          break
+        }
+        case "session.updated": {
+          const tracked = mergeInfo(event.properties.info.id, event.properties.info as SessionInfo)
+          await activateTopLevelSession(tracked)
+          await reportUpdated(client, tracked)
+          break
+        }
+        case "session.status": {
+          const status = mapStatus(event.properties.status)
+          const eventType = status === "idle" ? "session.waiting" : "session.status"
+          await reportStatus(client, event.properties.sessionID, status, eventType)
+          break
+        }
+        case "session.deleted": {
+          mergeInfo(event.properties.info.id, event.properties.info as SessionInfo)
+          forgetSession(event.properties.info.id)
+          break
+        }
+        case "permission.asked":
+        case "question.asked": {
+          await reportInputWaiting(client, event.properties.sessionID, event.properties.id)
+          break
+        }
+        case "permission.replied":
+        case "question.replied":
+        case "question.rejected": {
+          await reportInputResumed(client, event.properties.sessionID, event.properties.requestID)
+          break
+        }
+      }
+
+      if (event.type === OPENCODE_READY_EVENT) {
+        await reportStatus(client, event.properties.sessionID, "idle", "session.waiting")
+      }
+    },
+  }
+
+  if (process.env.OCMON_ENABLE_TEST_HOOKS === "1") {
+    return Object.assign(plugin, {
+      __test: {
+        reports: emittedTestReports,
+        async emitHeartbeat(sessionID: string) {
+          const tracked = sessions.get(sessionID)
+          if (!tracked) {
+            throw new Error(`unknown tracked session: ${sessionID}`)
+          }
+
+          await emitHeartbeat(client, tracked)
+        },
+        flushReports,
+      },
+    })
+  }
+
+  return plugin
+}) satisfies Plugin

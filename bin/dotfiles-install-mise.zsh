@@ -14,3 +14,16 @@ fi
 mise use -g herdr@latest > /dev/null
 mise use hk@latest > /dev/null
 mise use pkl@latest > /dev/null
+
+herdr_plugins=(
+	paulbkim-dev/vim-herdr-navigation
+	devashish2203/herdr-worktrunk
+)
+
+for plugin in "${herdr_plugins[@]}"; do
+	if command -v herdr &> /dev/null; then
+		herdr plugin install "$plugin" --yes > /dev/null
+	else
+		mise exec -- herdr plugin install "$plugin" --yes > /dev/null
+	fi
+done
