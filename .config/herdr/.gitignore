@@ -1,0 +1,5 @@
+*.log
+plugins.json
+plugins/
+session-history.json
+session.json
