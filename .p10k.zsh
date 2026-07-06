@@ -34,7 +34,7 @@
     # =========================[ Line #1 ]=========================
     # os_icon                 # os identifier
     dir                     # current directory
-    vcs                     # git status
+    git_branch              # git branch without status
     # =========================[ Line #2 ]=========================
     newline                 # \n
     newline                 # \n
@@ -1672,6 +1672,20 @@
   # typeset -g POWERLEVEL9K_TIME_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # Custom prefix.
   # typeset -g POWERLEVEL9K_TIME_PREFIX='%246Fat '
+
+  ################################[ git_branch: branch without status ]################################
+  function prompt_git_branch() {
+    emulate -L zsh
+
+    command git rev-parse --is-inside-work-tree &>/dev/null || return
+
+    local branch
+    branch=$(command git symbolic-ref --quiet --short HEAD 2>/dev/null) || \
+      branch=$(command git describe --tags --exact-match 2>/dev/null) || \
+      branch=$(command git rev-parse --short HEAD 2>/dev/null) || return
+
+    p10k segment -f '#a6da95' -t "${(g::)POWERLEVEL9K_VCS_BRANCH_ICON}${branch//\%/%%}"
+  }
 
   # Example of a user-defined prompt segment. Function prompt_example will be called on every
   # prompt if `example` prompt segment is added to POWERLEVEL9K_LEFT_PROMPT_ELEMENTS or
