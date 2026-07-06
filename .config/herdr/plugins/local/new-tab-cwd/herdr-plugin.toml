@@ -1,0 +1,18 @@
+id = "new-tab-cwd"
+name = "New Tab CWD"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Open new tabs using the cwd of the focused or first pane"
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "current"
+title = "New tab from focused pane cwd"
+contexts = ["global"]
+command = ["bash", "new-tab.sh", "current"]
+
+[[actions]]
+id = "first"
+title = "New tab from first pane cwd"
+contexts = ["global"]
+command = ["bash", "new-tab.sh", "first"]

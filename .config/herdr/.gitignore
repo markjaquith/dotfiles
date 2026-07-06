@@ -5,5 +5,7 @@ plugins/*
 plugins/local/*
 !plugins/local/url-chooser/
 !plugins/local/url-chooser/**
+!plugins/local/new-tab-cwd/
+!plugins/local/new-tab-cwd/**
 session-history.json
 session.json

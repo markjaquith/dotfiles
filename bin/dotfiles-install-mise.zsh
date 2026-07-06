@@ -30,6 +30,7 @@ done
 
 local_herdr_plugins=(
 	"${SCRIPT_DIR}/../.config/herdr/plugins/local/url-chooser"
+	"${SCRIPT_DIR}/../.config/herdr/plugins/local/new-tab-cwd"
 )
 
 for plugin in "${local_herdr_plugins[@]}"; do

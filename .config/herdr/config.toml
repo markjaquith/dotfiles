@@ -31,6 +31,7 @@ directory = "~/worktrees"
 [keys]
 prefix = "ctrl+b"
 goto = "prefix+g"
+new_tab = ""
 previous_tab = ["prefix+p", "alt+h"]
 next_tab = ["prefix+n", "alt+l"]
 previous_agent = "alt+k"
@@ -63,6 +64,18 @@ key = "ctrl+l"
 type = "plugin_action"
 command = "vim-herdr-navigation.right"
 description = "navigate right (vim/herdr)"
+
+[[keys.command]]
+key = "prefix+c"
+type = "plugin_action"
+command = "new-tab-cwd.current"
+description = "new tab from focused pane cwd"
+
+[[keys.command]]
+key = "prefix+shift+c"
+type = "plugin_action"
+command = "new-tab-cwd.first"
+description = "new tab from first pane cwd"
 
 [[keys.command]]
 key = "prefix+shift+o"
