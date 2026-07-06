@@ -1,0 +1,3 @@
+.config/opencode/package.json
+.config/opencode/package-lock.json
+.config/opencode/plugins/herdr-agent-state.js
