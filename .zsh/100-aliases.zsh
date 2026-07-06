@@ -333,6 +333,21 @@ alias lg="lazygit"
 
 # Herdr.
 alias h="herdr"
+function h-workspace-rename() {
+	emulate -L zsh
+
+	if [[ -z "${1:-}" ]]; then
+		print -u2 "usage: h-workspace-rename <name>"
+		return 2
+	fi
+
+	if [[ -z "${HERDR_WORKSPACE_ID:-}" ]]; then
+		print -u2 "h-workspace-rename: could not determine current workspace id"
+		return 1
+	fi
+
+	herdr workspace rename "$HERDR_WORKSPACE_ID" "$1"
+}
 
 # Intercept `opencode -c|--continue`: resolve the most recently updated
 # session for the current directory and pass `--session <id>` instead.
