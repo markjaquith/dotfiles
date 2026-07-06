@@ -1,5 +1,9 @@
 *.log
 plugins.json
-plugins/
+plugins/*
+!plugins/local/
+plugins/local/*
+!plugins/local/url-chooser/
+!plugins/local/url-chooser/**
 session-history.json
 session.json
