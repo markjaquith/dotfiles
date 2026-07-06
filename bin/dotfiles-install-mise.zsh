@@ -27,3 +27,15 @@ for plugin in "${herdr_plugins[@]}"; do
 		mise exec -- herdr plugin install "$plugin" --yes > /dev/null
 	fi
 done
+
+local_herdr_plugins=(
+	"${SCRIPT_DIR}/../.config/herdr/plugins/local/url-chooser"
+)
+
+for plugin in "${local_herdr_plugins[@]}"; do
+	if command -v herdr &> /dev/null; then
+		herdr plugin link "$plugin" > /dev/null
+	else
+		mise exec -- herdr plugin link "$plugin" > /dev/null
+	fi
+done

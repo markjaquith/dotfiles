@@ -64,6 +64,12 @@ type = "plugin_action"
 command = "vim-herdr-navigation.right"
 description = "navigate right (vim/herdr)"
 
+[[keys.command]]
+key = "prefix+shift+o"
+type = "plugin_action"
+command = "url-chooser.open"
+description = "choose URL from focused pane"
+
 [ui]
 mouse_capture = true
 agent_panel_sort = "spaces"
