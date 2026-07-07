@@ -9,3 +9,4 @@ plugins/local/*
 !plugins/local/new-tab-cwd/**
 session-history.json
 session.json
+release-notes.json
