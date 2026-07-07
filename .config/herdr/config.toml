@@ -89,6 +89,7 @@ description = "choose URL from focused pane"
 mouse_capture = true
 agent_panel_sort = "spaces"
 prompt_new_tab_name = false
+sidebar_collapsed_mode = "hidden"
 
 [ui.toast]
 delivery = "system"
