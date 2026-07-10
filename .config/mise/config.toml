@@ -4,5 +4,5 @@ idiomatic_version_file_enable_tools = []
 [tools]
 herdr = "latest"
 hk = "latest"
-node = "22"
+node = "24.14.0"
 pkl = "latest"
