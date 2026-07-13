@@ -59,10 +59,12 @@ if [[ -n "$fetch_branch" ]]; then
 	fi
 fi
 
-# If the branch does not already exist, retarget a ready prewarm checkout to the
-# fetched commit. Failure simply leaves `wt switch` to create the worktree.
+prepare_args=(--prepare)
 if [[ -n "$fetched_commit" ]]; then
-	wt-prewarm --claim "$target" "$fetched_commit" "origin/$fetch_branch" || true
+	prepare_args+=(--start-point "$fetched_commit" --upstream "origin/$fetch_branch")
 fi
+prepare_args+=("$target")
+
+wt-prewarm "${prepare_args[@]}" || exit $?
 
 wt switch "$target" -x opencode -- "$@"

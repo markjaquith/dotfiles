@@ -13,7 +13,7 @@ PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
 MARKER=".wt-prewarm-ready"
 
 function usage() {
-	print -r -- "Usage: wt-prewarm [--ensure|--rebuild|--remove|--status|--claim <branch> [<start-point> [<upstream>]]|--update <branch>]"
+	print -r -- "Usage: wt-prewarm [--ensure|--rebuild|--remove|--status|--prepare [options] <branch>|--update <branch>]"
 	print -r -- ""
 	print -r -- "Maintains a prewarmed worktree on branch '${PREWARM_BRANCH}'."
 	print -r -- ""
@@ -21,8 +21,9 @@ function usage() {
 	print -r -- "  --rebuild         Remove and recreate from the default branch tip"
 	print -r -- "  --remove          Remove the prewarm worktree and branch"
 	print -r -- "  --status          Report prewarm state"
-	print -r -- "  --claim <branch> [<start-point> [<upstream>]]"
-	print -r -- "                    Claim a ready prewarm as <branch>, optionally at a fetched commit"
+	print -r -- "  --prepare [--create] [--base <base>] [--start-point <commit>]"
+	print -r -- "            [--upstream <ref>] [--update] <branch>"
+	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
 	print -r -- "  --update <branch> Fast-forward <branch>'s worktree to the prewarm base"
 }
 
@@ -127,7 +128,7 @@ function build_prewarm() {
 	# Hooks must run against the *claiming* branch at its final path, not against
 	# "$PREWARM_BRANCH" at the prewarm path (zoxide/mise trust are path-keyed,
 	# and branch-derived templates would resolve to the wrong branch), so the
-	# claim side (bin/wt-new try_prewarm_fastpath) runs them after the move.
+	# claim side runs them after the move.
 	wt -y switch --create --no-cd --no-hooks --base "$base" "$PREWARM_BRANCH" || return 1
 
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
@@ -153,7 +154,7 @@ function claim_prewarm() {
 	local pw_path parent pw_base prewarm_sanitized branch_sanitized target_path lock
 	local prewarm_head target_commit
 
-	[[ -n "$branch_name" ]] || die "--claim requires a branch name"
+	[[ -n "$branch_name" ]] || die "claim requires a branch name"
 
 	# The destination branch must not already exist. Cheap single git show-ref
 	# gate, kept before the lock so an obviously-doomed claim never contends.
@@ -267,6 +268,98 @@ function claim_prewarm() {
 	return 0
 }
 
+# Prepare a worktree, using a ready prewarm when its inputs make that safe.
+# --create prepares a new branch for `wt new`; without it, an existing fetched
+# branch is prepared for `wt try`. The slow path delegates to `wt switch` so
+# normal Worktrunk creation behavior remains the source of truth.
+function prepare_worktree() {
+	local create_branch=0
+	local update_after_create=0
+	local base_branch=""
+	local start_point=""
+	local upstream=""
+	local branch_name
+	local claimed=0
+	local -a switch_args
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--create)
+				create_branch=1
+				shift
+				;;
+			--base)
+				shift
+				[[ -n "$1" ]] || die "--prepare --base requires a branch"
+				base_branch="$1"
+				shift
+				;;
+			--start-point)
+				shift
+				[[ -n "$1" ]] || die "--prepare --start-point requires a commit"
+				start_point="$1"
+				shift
+				;;
+			--upstream)
+				shift
+				[[ -n "$1" ]] || die "--prepare --upstream requires a ref"
+				upstream="$1"
+				shift
+				;;
+			--update)
+				update_after_create=1
+				shift
+				;;
+			--)
+				shift
+				break
+				;;
+			-*)
+				die "unknown --prepare option: $1"
+				;;
+			*)
+				break
+				;;
+		esac
+	done
+
+	[[ $# -eq 1 ]] || die "--prepare requires exactly one branch"
+	branch_name="$1"
+
+	if (( create_branch )); then
+		[[ -z "$start_point" && -z "$upstream" ]] \
+			|| die "--prepare --create cannot use --start-point or --upstream"
+	else
+		[[ -z "$base_branch" && "$update_after_create" -eq 0 ]] \
+			|| die "--prepare requires --create with --base or --update"
+		[[ -z "$upstream" || -n "$start_point" ]] \
+			|| die "--prepare --upstream requires --start-point"
+	fi
+
+	if (( create_branch )) && [[ -z "$base_branch" ]]; then
+		claim_prewarm "$branch_name" && claimed=1
+	elif (( ! create_branch )) && [[ -n "$start_point" ]]; then
+		claim_prewarm "$branch_name" "$start_point" "$upstream" && claimed=1
+	fi
+
+	if (( ! claimed )); then
+		switch_args=(switch --no-cd)
+		if (( create_branch )); then
+			switch_args+=(--create)
+		fi
+		if [[ -n "$base_branch" ]]; then
+			switch_args+=(--base "$base_branch")
+		fi
+		switch_args+=("$branch_name")
+
+		wt "${switch_args[@]}" || return $?
+	fi
+
+	if (( update_after_create )) && [[ -z "$base_branch" ]]; then
+		update_branch "$branch_name"
+	fi
+}
+
 # Bring <branch>'s worktree up to speed with the LOCAL tip of the prewarm base
 # branch (the same default branch the prewarm was built from). There is no
 # fetch — the caller owns remote freshness. This is best-effort: a fast-forward
@@ -333,8 +426,8 @@ case "$action" in
 		print -r -- "wt-prewarm: removed"
 		exit 0
 		;;
-	--claim)
-		claim_prewarm "$2" "$3" "$4"
+	--prepare)
+		prepare_worktree "${@:2}"
 		exit $?
 		;;
 	--update)

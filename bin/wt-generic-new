@@ -8,8 +8,8 @@
 # an instant result when one is armed, and otherwise falling back to a normal
 # `wt switch --create`.
 #
-# Arm a prewarm with `wt prewarm` (alias for bin/wt-prewarm). See bin/wt-prewarm
-# (--claim) for the fast-path implementation that this script delegates to.
+# Arm a prewarm with `wt prewarm` (alias for bin/wt-prewarm); `--prepare`
+# handles both the fast claim and normal Worktrunk fallback paths.
 
 emulate -L zsh
 setopt pipefail
@@ -67,32 +67,15 @@ if [[ "$print_only" -eq 1 ]]; then
 	exit 0
 fi
 
-created_fast=0
-# Whether a prewarm exists is the only opt-in signal: `wt-prewarm --claim`
-# returns non-zero (and we fall back to the slow path) unless a ready prewarm
-# worktree is present. The prewarm is always built from the default base, so it
-# can only be claimed when no explicit --base was requested.
-if [[ -z "$base_branch" ]]; then
-	if wt-prewarm --claim "$branch_name"; then
-		created_fast=1
-	fi
+prepare_args=(--prepare --create)
+if [[ -n "$base_branch" ]]; then
+	prepare_args+=(--base "$base_branch")
 fi
-
-if [[ "$created_fast" -eq 0 ]]; then
-	args=(switch --create --no-cd)
-	if [[ -n "$base_branch" ]]; then
-		args+=(--base "$base_branch")
-	fi
-	args+=("$branch_name")
-
-	wt "${args[@]}" || exit $?
+if [[ "$update_after_create" -eq 1 ]]; then
+	prepare_args+=(--update)
 fi
+prepare_args+=("$branch_name")
 
-# Optionally bring the new worktree up to speed with the prewarm base branch.
-# This is a purely local fast-forward (no fetch); wt-prewarm reports if it
-# cannot. Skipped when an explicit --from base was requested.
-if [[ "$update_after_create" -eq 1 && -z "$base_branch" ]]; then
-	wt-prewarm --update "$branch_name" || true
-fi
+wt-prewarm "${prepare_args[@]}" || exit $?
 
 wt switch "$branch_name"
