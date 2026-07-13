@@ -201,6 +201,7 @@ fi
 
 shift
 fetch_branch="$target"
+fetched_commit=""
 pr_shortcut=""
 
 case "$target" in
@@ -238,7 +239,15 @@ if [ -n "$fetch_branch" ]; then
 		else
 			exit 1
 		fi
+	else
+		fetched_commit=$(git rev-parse --verify "FETCH_HEAD^{commit}") || exit $?
 	fi
+fi
+
+# If the branch does not already exist, retarget a ready prewarm checkout to the
+# fetched commit. Failure simply leaves `wt switch` to create the worktree.
+if [ -n "$fetched_commit" ]; then
+	wt-prewarm --claim "$target" "$fetched_commit" "origin/$fetch_branch" || true
 fi
 
 wt switch "$target" -x opencode -- "$@"

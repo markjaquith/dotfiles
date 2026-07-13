@@ -3,18 +3,17 @@
 emulate -L zsh
 setopt pipefail
 
-# Maintain a prewarmed worktree so `wt new <branch>` can claim it instantly
-# (a branch rename + directory move) instead of paying a full checkout. The
-# prewarm's existence is the opt-in signal: `wt new` only takes the fast path —
-# and only re-arms a prewarm afterward — when one already exists. Arm it by
-# running `wt prewarm` (alias for this script). See bin/wt-new
-# (try_prewarm_fastpath) for the claim side.
+# Maintain a prewarmed worktree so `wt new <branch>` and `wt try <branch>` can
+# claim it instead of paying for a full checkout. The prewarm's existence is the
+# opt-in signal: callers only take the fast path — and only re-arm a prewarm
+# afterward — when one already exists. Arm it by running `wt prewarm` (alias for
+# this script).
 
 PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
 MARKER=".wt-prewarm-ready"
 
 function usage() {
-	print -r -- "Usage: wt-prewarm [--ensure|--rebuild|--remove|--status|--claim <branch>|--update <branch>]"
+	print -r -- "Usage: wt-prewarm [--ensure|--rebuild|--remove|--status|--claim <branch> [<start-point> [<upstream>]]|--update <branch>]"
 	print -r -- ""
 	print -r -- "Maintains a prewarmed worktree on branch '${PREWARM_BRANCH}'."
 	print -r -- ""
@@ -22,7 +21,8 @@ function usage() {
 	print -r -- "  --rebuild         Remove and recreate from the default branch tip"
 	print -r -- "  --remove          Remove the prewarm worktree and branch"
 	print -r -- "  --status          Report prewarm state"
-	print -r -- "  --claim <branch>  Claim a ready prewarm as <branch> (instant 'wt new')"
+	print -r -- "  --claim <branch> [<start-point> [<upstream>]]"
+	print -r -- "                    Claim a ready prewarm as <branch>, optionally at a fetched commit"
 	print -r -- "  --update <branch> Fast-forward <branch>'s worktree to the prewarm base"
 }
 
@@ -140,17 +140,18 @@ function build_prewarm() {
 	print -r -- "wt-prewarm: ready at ${pw} (branch ${PREWARM_BRANCH}, base ${base})"
 }
 
-# Satisfy `wt new <branch>` by claiming the prewarmed worktree instead of paying
-# a full checkout. Returns 0 on success (worktree now exists on "$branch_name"),
-# non-zero to signal the caller should fall back to the slow path. Only the
-# default-base case is supported, so the caller must skip the claim when an
-# explicit base was requested. Both plain and agency branches work: by the time
-# this runs "$branch_name" is already the final (possibly agency-- prefixed)
-# name, so the claim renames straight to it and any agency bootstrap happens in
-# the caller. Any failure rolls back to a clean state before returning non-zero.
+# Claim the prewarmed worktree instead of paying for a full checkout. Returns 0
+# on success (worktree now exists on "$branch_name"), non-zero to signal the
+# caller should fall back to the slow path. A start point lets callers such as
+# `wt try` reuse the checkout for an existing remote branch; without one, the
+# branch remains at the prewarm's default-branch commit for `wt new`. Any failure
+# rolls back to a clean prewarm before returning non-zero.
 function claim_prewarm() {
 	local branch_name="$1"
+	local start_point="$2"
+	local upstream="$3"
 	local pw_path parent pw_base prewarm_sanitized branch_sanitized target_path lock
+	local prewarm_head target_commit
 
 	[[ -n "$branch_name" ]] || die "--claim requires a branch name"
 
@@ -188,9 +189,29 @@ function claim_prewarm() {
 
 	# Drop the readiness marker so it does not travel into the new worktree.
 	rm -f "${pw_path}/${MARKER}" 2>/dev/null
+	prewarm_head=$(git rev-parse --verify "${PREWARM_BRANCH}^{commit}" 2>/dev/null)
+	if [[ -z "$prewarm_head" ]]; then
+		touch "${pw_path}/${MARKER}" 2>/dev/null
+		release_lock "$lock"
+		return 1
+	fi
+
+	# A fetched branch can reuse the prewarm checkout by updating only the files
+	# that differ from the default branch. Do this before the rename and hooks so
+	# every lifecycle hook observes the requested commit at the final path.
+	if [[ -n "$start_point" ]]; then
+		target_commit=$(git rev-parse --verify "${start_point}^{commit}" 2>/dev/null)
+		if [[ -z "$target_commit" ]] || ! git -C "$pw_path" reset --hard "$target_commit" >/dev/null 2>&1; then
+			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
+			touch "${pw_path}/${MARKER}" 2>/dev/null
+			release_lock "$lock"
+			return 1
+		fi
+	fi
 
 	# Rename the branch in place (instant).
 	if ! git branch -m "$PREWARM_BRANCH" "$branch_name" 2>/dev/null; then
+		git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
 		touch "${pw_path}/${MARKER}" 2>/dev/null
 		release_lock "$lock"
 		return 1
@@ -199,16 +220,23 @@ function claim_prewarm() {
 	# Move the worktree directory to its template path (same-filesystem rename).
 	if ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
 		# Roll back the rename; the worktree is still at pw_path on branch_name.
-		git branch -m "$branch_name" "$PREWARM_BRANCH" 2>/dev/null
-		touch "${pw_path}/${MARKER}" 2>/dev/null
+		if git branch -m "$branch_name" "$PREWARM_BRANCH" 2>/dev/null; then
+			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
+			touch "${pw_path}/${MARKER}" 2>/dev/null
+		fi
 		release_lock "$lock"
 		return 1
 	fi
 
+	if [[ -n "$upstream" ]]; then
+		git -C "$target_path" branch --set-upstream-to="$upstream" "$branch_name" >/dev/null 2>&1 \
+			|| print -u2 -- "wt-prewarm: could not set ${branch_name} to track ${upstream} (continuing)"
+	fi
+
 	release_lock "$lock"
 
-	# The claim was a pure branch rename + directory move, so none of the normal
-	# switch/create hooks have run for "$branch_name". Run them now against the
+	# The claim bypassed the normal Worktrunk switch/create path, so none of its
+	# hooks have run for "$branch_name". Run them now against the
 	# claimed worktree at its final path so behavior matches the slow path
 	# (`wt switch --create`). These must target the real branch/path — the
 	# prewarm build runs with --no-hooks precisely so path-keyed and
@@ -221,7 +249,7 @@ function claim_prewarm() {
 	# (e.g. mise trust) is a documented "blocks" hook, so it stays synchronous;
 	# the post-switch/post-start phases are detached into a single background
 	# subshell (run sequentially there so post-start still follows post-switch)
-	# so the claim message prints ~2.5s sooner. The final `wt switch` in wt-new
+	# so the claim message prints ~2.5s sooner. The caller's final `wt switch`
 	# re-runs post-switch idempotently, so a slight overlap here is harmless.
 	wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
 		|| print -u2 -- "wt-prewarm: pre-start hooks failed for ${branch_name} (continuing)"
@@ -306,7 +334,7 @@ case "$action" in
 		exit 0
 		;;
 	--claim)
-		claim_prewarm "$2"
+		claim_prewarm "$2" "$3" "$4"
 		exit $?
 		;;
 	--update)
