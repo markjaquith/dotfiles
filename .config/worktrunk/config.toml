@@ -189,17 +189,19 @@ ls = "wt list {{ args }}"
 new = "wt-new {{ args }}"
 generic-new = "wt-generic-new {{ args }}"
 prewarm = "wt-prewarm {{ args }}"
-review = '''
+try = '''
 set -- {{ args }}
 
 target="$1"
-fetch_branch="$target"
-pr_shortcut=""
 
-if [ -z "$target" ] || [ "$#" -ne 1 ]; then
-	echo "Usage: wt review <github-pr-url|branch>" >&2
+if [ -z "$target" ]; then
+	echo "Usage: wt try <github-pr-url|branch> [-- <opencode-args>...]" >&2
 	exit 1
 fi
+
+shift
+fetch_branch="$target"
+pr_shortcut=""
 
 case "$target" in
 	https://github.com/*/pull/*|http://github.com/*/pull/*|github.com/*/pull/*)
@@ -239,7 +241,17 @@ if [ -n "$fetch_branch" ]; then
 	fi
 fi
 
-wt switch "$target" -x opencode -- --prompt "/review this PR"
+wt switch "$target" -x opencode -- "$@"
+'''
+review = '''
+set -- {{ args }}
+
+if [ "$#" -ne 1 ]; then
+	echo "Usage: wt review <github-pr-url|branch>" >&2
+	exit 1
+fi
+
+wt try "$1" -- --prompt "/review this PR"
 '''
 rm = "wt remove {{ args }}"
 sw = "wt switch {{ args }}"
