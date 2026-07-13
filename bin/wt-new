@@ -312,40 +312,16 @@ if [[ "$print_only" -eq 1 ]]; then
 	exit 0
 fi
 
-created_fast=0
-# The opt-in signal is simply whether a prewarm exists: `wt-prewarm --claim`
-# returns non-zero (and we fall back to the slow path, re-arming nothing) unless
-# a ready prewarm worktree is present. Arm one with `wt prewarm`.
-#
-# The prewarm is always built from the default base as a plain (non-agency)
-# branch, so it can only be claimed when no explicit --base was requested. In
-# agency mode "$branch_name" already carries the agency-- prefix here, so the
-# claim renames the prewarmed branch straight to the agency branch name and the
-# agency bootstrap below runs against the claimed worktree.
-if [[ -z "$base_branch" ]]; then
-	if wt-prewarm --claim "$branch_name"; then
-		created_fast=1
-	fi
+prepare_args=(--prepare --create)
+if [[ -n "$base_branch" ]]; then
+	prepare_args+=(--base "$base_branch")
 fi
-
-if [[ "$created_fast" -eq 0 ]]; then
-	args=(switch --create --no-cd)
-	if [[ -n "$base_branch" ]]; then
-		args+=(--base "$base_branch")
-	fi
-	args+=("$branch_name")
-
-	wt "${args[@]}" || exit $?
+if [[ "$update_after_create" -eq 1 ]]; then
+	prepare_args+=(--update)
 fi
+prepare_args+=("$branch_name")
 
-# Bring the new worktree up to speed with the prewarm base branch before any
-# agency bootstrap runs, so a fast-forward stays clean and any agency commits
-# land on top of the current base tip. Skipped entirely when an explicit --from
-# base was requested (the user deliberately chose a non-default base). This is a
-# purely local fast-forward (no fetch); wt-prewarm reports if it cannot.
-if [[ "$update_after_create" -eq 1 && -z "$base_branch" ]]; then
-	wt-prewarm --update "$branch_name" || true
-fi
+wt-prewarm "${prepare_args[@]}" || exit $?
 
 if [[ "$use_agency" -eq 1 ]]; then
 	if ! worktree_path=$(worktree_path_for_branch "$branch_name"); then
