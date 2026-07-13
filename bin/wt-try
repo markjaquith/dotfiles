@@ -59,7 +59,7 @@ if [[ -n "$fetch_branch" ]]; then
 	fi
 fi
 
-prepare_args=(--prepare)
+prepare_args=(prepare)
 if [[ -n "$fetched_commit" ]]; then
 	prepare_args+=(--start-point "$fetched_commit" --upstream "origin/$fetch_branch")
 fi
