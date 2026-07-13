@@ -8,7 +8,7 @@
 # an instant result when one is armed, and otherwise falling back to a normal
 # `wt switch --create`.
 #
-# Arm a prewarm with `wt prewarm` (alias for bin/wt-prewarm); `--prepare`
+# Arm a prewarm with `wt prewarm` (alias for bin/wt-prewarm); `prepare`
 # handles both the fast claim and normal Worktrunk fallback paths.
 
 emulate -L zsh
@@ -67,7 +67,7 @@ if [[ "$print_only" -eq 1 ]]; then
 	exit 0
 fi
 
-prepare_args=(--prepare --create)
+prepare_args=(prepare --create)
 if [[ -n "$base_branch" ]]; then
 	prepare_args+=(--base "$base_branch")
 fi

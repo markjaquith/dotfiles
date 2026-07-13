@@ -312,7 +312,7 @@ if [[ "$print_only" -eq 1 ]]; then
 	exit 0
 fi
 
-prepare_args=(--prepare --create)
+prepare_args=(prepare --create)
 if [[ -n "$base_branch" ]]; then
 	prepare_args+=(--base "$base_branch")
 fi
