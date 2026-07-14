@@ -18,7 +18,7 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["zsh-tests"] {
-		check = "zsh test/open-tmux-urls.test.zsh"
+		check = "for test_file in test/*.test.zsh; do zsh \"$test_file\"; done"
 	}
 }
 
