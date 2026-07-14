@@ -106,6 +106,26 @@ function release_lock() {
 	return 0
 }
 
+function acquire_lock_wait() {
+	local lock="$1"
+
+	until acquire_lock "$lock"; do
+		sleep 0.1
+	done
+}
+
+# This script runs inside a Worktrunk alias, so it inherits the interactive
+# shell's directive files. Only the caller's final `wt switch` should write to
+# them; internal and background calls must never redirect the parent shell.
+function wt_internal() {
+	(
+		unset WORKTRUNK_DIRECTIVE_CD_FILE
+		unset WORKTRUNK_DIRECTIVE_EXEC_FILE
+		unset WORKTRUNK_DIRECTIVE_FILE
+		command wt "$@"
+	)
+}
+
 function remove_prewarm() {
 	local pw
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
@@ -131,7 +151,7 @@ function build_prewarm() {
 	# "$PREWARM_BRANCH" at the prewarm path (zoxide/mise trust are path-keyed,
 	# and branch-derived templates would resolve to the wrong branch), so the
 	# claim side runs them after the move.
-	wt -y switch --create --no-cd --no-hooks --base "$base" "$PREWARM_BRANCH" || return 1
+	wt_internal -y switch --create --no-cd --no-hooks --base "$base" "$PREWARM_BRANCH" || return 1
 
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
@@ -254,17 +274,24 @@ function claim_prewarm() {
 	# subshell (run sequentially there so post-start still follows post-switch)
 	# so the claim message prints ~2.5s sooner. The caller's final `wt switch`
 	# re-runs post-switch idempotently, so a slight overlap here is harmless.
-	wt -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
+	wt_internal -C "$target_path" -y hook pre-start </dev/null >/dev/null 2>&1 \
 		|| print -u2 -- "wt-prewarm: pre-start hooks failed for ${branch_name} (continuing)"
 
 	(
-		wt -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1
-		wt -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1
+		wt_internal -C "$target_path" -y hook post-switch </dev/null >/dev/null 2>&1
+		wt_internal -C "$target_path" -y hook post-start </dev/null >/dev/null 2>&1
 	) &
 	disown 2>/dev/null
 
-	# Rebuild the prewarm in the background for next time (fully detached).
-	( wt-prewarm rebuild </dev/null >/dev/null 2>&1 & )
+	# Re-arm the prewarm in the background. `ensure` waits behind any concurrent
+	# checkout and avoids rebuilding if another claim already restored it.
+	(
+		unset WORKTRUNK_DIRECTIVE_CD_FILE
+		unset WORKTRUNK_DIRECTIVE_EXEC_FILE
+		unset WORKTRUNK_DIRECTIVE_FILE
+		wt-prewarm ensure </dev/null >/dev/null 2>&1
+	) &
+	disown 2>/dev/null
 
 	print -u2 -- "wt-prewarm: claimed prewarm → ${branch_name}"
 	return 0
@@ -282,6 +309,7 @@ function prepare_worktree() {
 	local upstream=""
 	local branch_name
 	local claimed=0
+	local lock rc
 	local -a switch_args
 
 	while [[ $# -gt 0 ]]; do
@@ -354,7 +382,15 @@ function prepare_worktree() {
 		fi
 		switch_args+=("$branch_name")
 
-		wt "${switch_args[@]}" || return $?
+		# `git worktree add` runs repository post-checkout hooks. Serialize it
+		# with other slow-path creates and prewarm builds: hooks that stop shared
+		# processes are often individually idempotent but not concurrency-safe.
+		lock=$(lock_path) || return 1
+		acquire_lock_wait "$lock" || return 1
+		wt_internal "${switch_args[@]}"
+		rc=$?
+		release_lock "$lock"
+		(( rc == 0 )) || return $rc
 	fi
 
 	if (( update_after_create )) && [[ -z "$base_branch" ]]; then
@@ -452,7 +488,7 @@ case "$command_name" in
 	ensure)
 		[[ $# -eq 0 ]] || die "ensure does not accept arguments"
 		lock=$(lock_path) || die "could not resolve lock path"
-		acquire_lock "$lock" || exit 0
+		acquire_lock_wait "$lock" || exit 1
 		pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
 		if [[ -n "$pw" && -f "${pw}/${MARKER}" ]]; then
 			release_lock "$lock"
