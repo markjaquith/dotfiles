@@ -30,6 +30,8 @@ function configure_worktree_path() {
 	' "$source_config" > "$temporary_config" || return 1
 
 	export WORKTRUNK_CONFIG_PATH="$temporary_config"
+	export WT_NEW_SOURCE_CONFIG="$source_config"
+	export WT_NEW_WORKTREE_PATH="$requested_path"
 }
 
 function agency_pattern_value() {
