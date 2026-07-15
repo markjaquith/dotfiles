@@ -4,7 +4,32 @@ emulate -L zsh
 setopt pipefail
 
 function usage() {
-	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--print] <branch-name>"
+	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--worktree-path <path>] [--print] <branch-name>"
+}
+
+function configure_worktree_path() {
+	local requested_path="$1"
+	local source_config="${WORKTRUNK_CONFIG_PATH:-$HOME/.config/worktrunk/config.toml}"
+
+	if [[ ! -f "$source_config" ]]; then
+		print -u2 "Worktrunk config not found: $source_config"
+		return 1
+	fi
+
+	temporary_config=$(mktemp "${TMPDIR:-/tmp}/wt-new.XXXXXX.toml") || return 1
+	awk -v path="$requested_path" '
+		BEGIN {
+			print "worktree-path = \"" path "\""
+			replaced = 0
+		}
+		!replaced && $0 ~ /^worktree-path[[:space:]]*=/ {
+			replaced = 1
+			next
+		}
+		{ print }
+	' "$source_config" > "$temporary_config" || return 1
+
+	export WORKTRUNK_CONFIG_PATH="$temporary_config"
 }
 
 function agency_pattern_value() {
@@ -257,6 +282,10 @@ print_only=0
 use_agency=0
 update_after_create=0
 base_branch=""
+worktree_path=""
+temporary_config=""
+
+trap '[[ -n "$temporary_config" ]] && rm -f "$temporary_config"' EXIT
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -270,6 +299,15 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--update)
 			update_after_create=1
+			shift
+			;;
+		--worktree-path)
+			shift
+			if [[ -z "$1" ]]; then
+				usage
+				exit 1
+			fi
+			worktree_path="$1"
 			shift
 			;;
 		--from)
@@ -310,6 +348,10 @@ fi
 if [[ "$print_only" -eq 1 ]]; then
 	print -r -- "$branch_name"
 	exit 0
+fi
+
+if [[ -n "$worktree_path" ]]; then
+	configure_worktree_path "$worktree_path" || exit $?
 fi
 
 prepare_args=(prepare --create)
