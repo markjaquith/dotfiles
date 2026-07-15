@@ -197,18 +197,25 @@ function claim_prewarm() {
 		return 1
 	fi
 
-	# Only support worktree-path templates whose final component is the
-	# sanitized branch name (e.g. ".../{{ branch | sanitize }}"). For any other
-	# template shape the computed target would be wrong, so fall back.
+	# The normal path is a sibling of the prewarm using the sanitized branch name.
+	# Callers such as `wt new --worktree-path` may supply an exact destination.
 	parent="${pw_path:h}"
 	pw_base="${pw_path:t}"
 	prewarm_sanitized="${PREWARM_BRANCH//[\/\\]/-}"
 	branch_sanitized="${branch_name//[\/\\]/-}"
-	target_path="${parent}/${branch_sanitized}"
+	if [[ -n "${WT_NEW_WORKTREE_PATH:-}" ]]; then
+		target_path="$WT_NEW_WORKTREE_PATH"
+	else
+		target_path="${parent}/${branch_sanitized}"
+	fi
 	if [[ "$pw_base" != "$prewarm_sanitized" || -e "$target_path" ]]; then
 		release_lock "$lock"
 		return 1
 	fi
+	mkdir -p "${target_path:h}" || {
+		release_lock "$lock"
+		return 1
+	}
 
 	# Drop the readiness marker so it does not travel into the new worktree.
 	rm -f "${pw_path}/${MARKER}" 2>/dev/null
@@ -289,6 +296,11 @@ function claim_prewarm() {
 		unset WORKTRUNK_DIRECTIVE_CD_FILE
 		unset WORKTRUNK_DIRECTIVE_EXEC_FILE
 		unset WORKTRUNK_DIRECTIVE_FILE
+		unset WT_NEW_WORKTREE_PATH
+		if [[ -n "${WT_NEW_SOURCE_CONFIG:-}" ]]; then
+			export WORKTRUNK_CONFIG_PATH="$WT_NEW_SOURCE_CONFIG"
+		fi
+		unset WT_NEW_SOURCE_CONFIG
 		wt-prewarm ensure </dev/null >/dev/null 2>&1
 	) &
 	disown 2>/dev/null
@@ -309,7 +321,7 @@ function prepare_worktree() {
 	local upstream=""
 	local branch_name
 	local claimed=0
-	local lock rc
+	local default_base lock rc
 	local -a switch_args
 
 	while [[ $# -gt 0 ]]; do
@@ -368,6 +380,11 @@ function prepare_worktree() {
 
 	if (( create_branch )) && [[ -z "$base_branch" ]]; then
 		claim_prewarm "$branch_name" && claimed=1
+	elif (( create_branch )); then
+		default_base=$(default_branch)
+		if [[ "$base_branch" == "$default_base" ]]; then
+			claim_prewarm "$branch_name" "$base_branch" && claimed=1
+		fi
 	elif (( ! create_branch )) && [[ -n "$start_point" ]]; then
 		claim_prewarm "$branch_name" "$start_point" "$upstream" && claimed=1
 	fi
