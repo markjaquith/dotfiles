@@ -3,7 +3,7 @@
 # Clean reference implementation of the worktrunk prewarm integration.
 #
 # This is the shareable counterpart to bin/wt-new: it shows how to wire up
-# `wt-prewarm` with zero local opinions (no agency, jira, or tmux logic). It
+# `wt-prewarm` with zero local opinions (no ticket or terminal logic). It
 # creates a new worktree for <branch-name>, claiming a prewarmed worktree for
 # an instant result when one is armed, and otherwise falling back to a normal
 # `wt switch --create`.

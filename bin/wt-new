@@ -4,7 +4,7 @@ emulate -L zsh
 setopt pipefail
 
 function usage() {
-	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--reuse-existing] [--worktree-path <path>] [--print] <branch-name>"
+	print -u2 "Usage: wt new [--from <base>] [--update] [--reuse-existing] [--worktree-path <path>] [--print] <branch-name>"
 }
 
 function configure_worktree_path() {
@@ -34,196 +34,8 @@ function configure_worktree_path() {
 	export WT_NEW_WORKTREE_PATH="$requested_path"
 }
 
-function agency_pattern_value() {
-	local key="$1"
-	local default_value="$2"
-	local config_dir="${AGENCY_CONFIG_DIR:-$HOME/.config/agency}"
-	local config_path="${AGENCY_CONFIG_PATH:-${config_dir}/agency.json}"
-	local configured_value
-
-	if command -v jq >/dev/null 2>&1 && [[ -f "$config_path" ]]; then
-		configured_value=$(jq -r --arg key "$key" '.[$key] // empty' "$config_path" 2>/dev/null)
-		if [[ -n "$configured_value" && "$configured_value" != "null" ]]; then
-			print -r -- "$configured_value"
-			return 0
-		fi
-	fi
-
-	print -r -- "$default_value"
-}
-
-function agency_apply_branch_pattern() {
-	local pattern="$1"
-	local branch="$2"
-	local prefix
-	local suffix
-
-	if [[ "$pattern" == *'%branch%'* ]]; then
-		prefix="${pattern%%\%branch\%*}"
-		suffix="${pattern#*\%branch\%}"
-		print -r -- "${prefix}${branch}${suffix}"
-	else
-		print -r -- "${pattern}${branch}"
-	fi
-}
-
-function agency_extract_clean_branch() {
-	local source_branch="$1"
-	local pattern
-	local prefix
-	local suffix
-	local remainder
-
-	pattern=$(agency_pattern_value sourceBranchPattern 'agency--%branch%')
-
-	if [[ "$pattern" == *'%branch%'* ]]; then
-		prefix="${pattern%%\%branch\%*}"
-		suffix="${pattern#*\%branch\%}"
-
-		[[ "$source_branch" == "$prefix"* ]] || return 1
-		remainder="${source_branch#"$prefix"}"
-
-		if [[ -n "$suffix" ]]; then
-			[[ "$remainder" == *"$suffix" ]] || return 1
-			remainder="${remainder%"$suffix"}"
-		fi
-
-		[[ -n "$remainder" ]] || return 1
-		print -r -- "$remainder"
-		return 0
-	fi
-
-	[[ "$source_branch" == "$pattern"* ]] || return 1
-	remainder="${source_branch#"$pattern"}"
-	[[ -n "$remainder" ]] || return 1
-	print -r -- "$remainder"
-}
-
-function agency_source_branch_name() {
-	local branch="$1"
-	local pattern
-
-	pattern=$(agency_pattern_value sourceBranchPattern 'agency--%branch%')
-	agency_apply_branch_pattern "$pattern" "$branch"
-}
-
-function normalize_agency_branch_name() {
-	local branch="$1"
-
-	if agency_extract_clean_branch "$branch" >/dev/null 2>&1; then
-		print -r -- "$branch"
-		return 0
-	fi
-
-	agency_source_branch_name "$branch"
-}
-
-function agency_emit_branch_name() {
-	local branch="$1"
-	local pattern
-
-	pattern=$(agency_pattern_value emitBranch '%branch%')
-	agency_apply_branch_pattern "$pattern" "$branch"
-}
-
 function branch_exists() {
 	git show-ref --verify --quiet "refs/heads/$1"
-}
-
-function worktree_path_for_branch() {
-	local target_branch="$1"
-	local worktree_path
-
-	git worktree list --porcelain | while IFS= read -r line; do
-		if [[ "$line" == worktree\ * ]]; then
-			worktree_path="${line#worktree }"
-			continue
-		fi
-
-		if [[ "$line" == "branch refs/heads/${target_branch}" ]]; then
-			print -r -- "$worktree_path"
-			return 0
-		fi
-	done
-}
-
-function branch_has_agency_metadata() {
-	local branch="$1"
-	local worktree_path
-
-	if worktree_path=$(worktree_path_for_branch "$branch" 2>/dev/null); then
-		[[ -f "${worktree_path}/agency.json" ]] && return 0
-	fi
-
-	git cat-file -e "${branch}:agency.json" >/dev/null 2>&1
-}
-
-function agency_branch_field() {
-	local branch="$1"
-	local field="$2"
-	local value
-	local worktree_path
-
-	if ! command -v jq >/dev/null 2>&1; then
-		print -u2 "jq is required for agency branch metadata"
-		return 1
-	fi
-
-	branch_has_agency_metadata "$branch" || return 1
-
-	if worktree_path=$(worktree_path_for_branch "$branch" 2>/dev/null); then
-		if [[ -f "${worktree_path}/agency.json" ]]; then
-			value=$(jq -r --arg field "$field" '.[$field] // empty' "${worktree_path}/agency.json" 2>/dev/null)
-			[[ -n "$value" && "$value" != "null" ]] || return 1
-			print -r -- "$value"
-			return 0
-		fi
-	fi
-
-	value=$(git show "${branch}:agency.json" 2>/dev/null | jq -r --arg field "$field" '.[$field] // empty' 2>/dev/null)
-	[[ -n "$value" && "$value" != "null" ]] || return 1
-	print -r -- "$value"
-}
-
-function resolve_agency_emit_branch() {
-	local source_branch="$1"
-	local emit_branch
-	local clean_branch
-
-	if emit_branch=$(agency_branch_field "$source_branch" emitBranch); then
-		print -r -- "$emit_branch"
-		return 0
-	fi
-
-	if clean_branch=$(agency_extract_clean_branch "$source_branch"); then
-		agency_emit_branch_name "$clean_branch"
-		return 0
-	fi
-
-	print -u2 "Could not determine the emitted branch for: $source_branch"
-	return 1
-}
-
-function resolve_agency_base_branch() {
-	local input_base="$1"
-	local candidate
-
-	if [[ -z "$input_base" ]]; then
-		return 0
-	fi
-
-	if branch_exists "$input_base" && branch_has_agency_metadata "$input_base"; then
-		resolve_agency_emit_branch "$input_base"
-		return $?
-	fi
-
-	candidate=$(agency_source_branch_name "$input_base")
-	if branch_exists "$candidate" && branch_has_agency_metadata "$candidate"; then
-		resolve_agency_emit_branch "$candidate"
-		return $?
-	fi
-
-	print -r -- "$input_base"
 }
 
 function resolve_branch_name() {
@@ -281,7 +93,6 @@ function rename_terminal_tab_for_ticket() {
 }
 
 print_only=0
-use_agency=0
 update_after_create=0
 reuse_existing=0
 base_branch=""
@@ -294,10 +105,6 @@ while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--print)
 			print_only=1
-			shift
-			;;
-		--agency)
-			use_agency=1
 			shift
 			;;
 		--update)
@@ -347,11 +154,6 @@ fi
 
 branch_name=$(resolve_branch_name "$1") || exit $?
 
-if [[ "$use_agency" -eq 1 ]]; then
-	branch_name=$(normalize_agency_branch_name "$branch_name") || exit $?
-	base_branch=$(resolve_agency_base_branch "$base_branch") || exit $?
-fi
-
 if [[ "$print_only" -eq 1 ]]; then
 	print -r -- "$branch_name"
 	exit 0
@@ -377,25 +179,6 @@ fi
 prepare_args+=("$branch_name")
 
 wt-prewarm "${prepare_args[@]}" || exit $?
-
-if [[ "$use_agency" -eq 1 ]]; then
-	if ! worktree_path=$(worktree_path_for_branch "$branch_name"); then
-		print -u2 "Could not determine the new worktree path for $branch_name"
-		exit 1
-	fi
-
-	if ! (cd "$worktree_path" && agency task --from-current --task 'TBD'); then
-		print -u2 "Failed to bootstrap agency files for $branch_name"
-		exit 1
-	fi
-
-	if [[ -n "$base_branch" ]]; then
-		if ! (cd "$worktree_path" && agency base set "$base_branch"); then
-			print -u2 "Failed to set the agency base branch for $branch_name"
-			exit 1
-		fi
-	fi
-fi
 
 wt switch "$branch_name"
 rename_terminal_tab_for_ticket "$branch_name"
