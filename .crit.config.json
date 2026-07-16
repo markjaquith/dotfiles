@@ -2,10 +2,8 @@
 	"share_url": "",
 	"auto_viewed_patterns": [
 		"TASK.md",
-		"AGENCY.md",
 		"AGENTS.md",
 		"CLAUDE.md",
-		"agency.json",
 		"opencode.json",
 		"opencode.jsonc"
 	]
