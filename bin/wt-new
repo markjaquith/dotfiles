@@ -4,7 +4,7 @@ emulate -L zsh
 setopt pipefail
 
 function usage() {
-	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--worktree-path <path>] [--print] <branch-name>"
+	print -u2 "Usage: wt new [--agency] [--from <base>] [--update] [--reuse-existing] [--worktree-path <path>] [--print] <branch-name>"
 }
 
 function configure_worktree_path() {
@@ -283,6 +283,7 @@ function rename_terminal_tab_for_ticket() {
 print_only=0
 use_agency=0
 update_after_create=0
+reuse_existing=0
 base_branch=""
 worktree_path=""
 temporary_config=""
@@ -301,6 +302,10 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--update)
 			update_after_create=1
+			shift
+			;;
+		--reuse-existing)
+			reuse_existing=1
 			shift
 			;;
 		--worktree-path)
@@ -354,6 +359,12 @@ fi
 
 if [[ -n "$worktree_path" ]]; then
 	configure_worktree_path "$worktree_path" || exit $?
+fi
+
+if [[ "$reuse_existing" -eq 1 ]] && branch_exists "$branch_name"; then
+	wt switch "$branch_name" || exit $?
+	rename_terminal_tab_for_ticket "$branch_name"
+	exit 0
 fi
 
 prepare_args=(prepare --create)
