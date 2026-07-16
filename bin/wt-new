@@ -10,13 +10,14 @@ function usage() {
 function configure_worktree_path() {
 	local requested_path="$1"
 	local source_config="${WORKTRUNK_CONFIG_PATH:-$HOME/.config/worktrunk/config.toml}"
+	local temporary_directory="${TMPDIR:-/tmp}"
 
 	if [[ ! -f "$source_config" ]]; then
 		print -u2 "Worktrunk config not found: $source_config"
 		return 1
 	fi
 
-	temporary_config=$(mktemp "${TMPDIR:-/tmp}/wt-new.XXXXXX.toml") || return 1
+	temporary_config=$(mktemp "${temporary_directory%/}/wt-new.XXXXXX") || return 1
 	awk -v path="$requested_path" '
 		BEGIN {
 			print "worktree-path = \"" path "\""
