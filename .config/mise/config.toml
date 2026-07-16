@@ -1,5 +1,4 @@
 [settings]
-idiomatic_version_file_enable_tools = []
 
 [tools]
 herdr = "latest"
