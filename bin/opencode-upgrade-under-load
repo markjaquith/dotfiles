@@ -68,8 +68,8 @@ Environment:
 
 The script acquires sudo access, starts and loads the servers, upgrades OpenCode,
 then remains running. Every 5 seconds it checks for idle sessions and re-sends
-the original prompt. It also polls data.kalloc.1024 and reports its percentage
-of the 20 GiB ceiling only when that percentage changes.
+the original prompt. It also polls data.kalloc.1024 and reports its absolute
+usage in GiB only when the displayed value changes.
 EOF
 }
 
@@ -110,7 +110,6 @@ readonly upgrade_version=${3:-1.18.3}
 readonly run_dir=${OPENCODE_REPRO_RUN_DIR:-${${TMPDIR:-/tmp}%/}/opencode-upgrade-under-load-$$}
 readonly base_port=${OPENCODE_REPRO_BASE_PORT:-$((20000 + ($$ % 40000)))}
 readonly zone_name=data.kalloc.1024
-readonly zone_ceiling_bytes=$((20 * 1024 * 1024 * 1024))
 readonly prompt=${OPENCODE_REPRO_PROMPT:-"Fix every bug in this codebase. Be exhaustive: \
 inspect the code, make fixes, run relevant tests, and keep looking for more bugs \
 until there is nothing left to fix."}
@@ -119,7 +118,7 @@ log_info "Target: $target_dir"
 log_info "Agents: $agent_count"
 log_info "Versions: $server_version -> $upgrade_version"
 log_info "Ports: $base_port-$((base_port + agent_count - 1))"
-log_info "Kernel zone: $zone_name (20 GiB ceiling)"
+log_info "Kernel zone: $zone_name"
 print
 
 log_step "Checking dependencies"
@@ -283,10 +282,10 @@ log_info "Server URLs: ${server_urls[*]}"
 log_info "Session IDs: ${session_ids[*]}"
 log_info "Server logs: $run_dir"
 
-typeset previous_kalloc_percent=''
+typeset previous_kalloc_gib=''
 
 report_kalloc_usage() {
-	local zone_stats element_size in_use usage_bytes usage_percent usage_gib
+	local zone_stats element_size in_use usage_bytes usage_gib
 
 	if ! zone_stats=$(sudo /usr/bin/zprint "$zone_name" 2>/dev/null \
 		| /usr/bin/awk -v zone="$zone_name" '$1 == zone { print $2, $7; exit }'); then
@@ -300,15 +299,13 @@ report_kalloc_usage() {
 
 	read -r element_size in_use <<< "$zone_stats"
 	usage_bytes=$((element_size * in_use))
-	usage_percent=$(/usr/bin/awk -v used="$usage_bytes" -v ceiling="$zone_ceiling_bytes" \
-		'BEGIN { printf "%.1f", used / ceiling * 100 }')
 	usage_gib=$(/usr/bin/awk -v used="$usage_bytes" \
 		'BEGIN { printf "%.2f", used / 1024 / 1024 / 1024 }')
-	if [[ $usage_percent == $previous_kalloc_percent ]]; then
+	if [[ $usage_gib == $previous_kalloc_gib ]]; then
 		return
 	fi
-	previous_kalloc_percent=$usage_percent
-	log_info "kalloc.1024 usage: ${usage_percent}% (${usage_gib} GiB of 20 GiB)"
+	previous_kalloc_gib=$usage_gib
+	log_info "kalloc.1024 usage: ${usage_gib} GiB"
 }
 
 reprompt_idle_sessions() {
