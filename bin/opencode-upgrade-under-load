@@ -1,0 +1,354 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt err_exit pipefail no_unset
+readonly script_name=${0:t}
+
+if [[ -t 1 && -z ${NO_COLOR:-} ]]; then
+	readonly bold=$'\e[1m'
+	readonly blue=$'\e[34m'
+	readonly cyan=$'\e[36m'
+	readonly green=$'\e[32m'
+	readonly red=$'\e[31m'
+	readonly reset=$'\e[0m'
+else
+	readonly bold=''
+	readonly blue=''
+	readonly cyan=''
+	readonly green=''
+	readonly red=''
+	readonly reset=''
+fi
+
+log_step() {
+	local timestamp
+	timestamp=$(date '+%H:%M:%S')
+	print -r -- "${blue}[$timestamp]${reset} ${bold}${cyan}==>${reset} ${bold}$*${reset}"
+}
+
+log_info() {
+	local timestamp
+	timestamp=$(date '+%H:%M:%S')
+	print -r -- "${blue}[$timestamp]${reset}     ${blue}::${reset} $*"
+}
+
+log_ok() {
+	local timestamp
+	timestamp=$(date '+%H:%M:%S')
+	print -r -- "${blue}[$timestamp]${reset}     ${green}OK${reset} $*"
+}
+
+log_error() {
+	local timestamp
+	timestamp=$(date '+%H:%M:%S')
+	print -ru2 -- "${blue}[$timestamp]${reset} ${bold}${red}ERROR:${reset} $*"
+}
+
+usage() {
+	cat <<EOF
+Usage: $script_name [-n agent-count] [target-dir [server-version [upgrade-version]]]
+
+Reproduce an OpenCode upgrade while multiple servers are under sustained load.
+
+Options:
+  -n count  Number of servers and agents to run (default: 4)
+  -h        Show this help text
+  --help    Show this help text
+
+Arguments:
+  target-dir       Directory in which agents work (default: current directory)
+  server-version   Version used to start the servers (default: 1.18.2)
+  upgrade-version  Version installed while agents are busy (default: 1.18.3)
+
+Environment:
+  OPENCODE_REPRO_RUN_DIR    Directory for server logs
+  OPENCODE_REPRO_BASE_PORT  First server port
+  OPENCODE_REPRO_PROMPT     Prompt sent to each agent
+  NO_COLOR                  Disable colored output when set
+
+The script acquires sudo access, starts and loads the servers, upgrades OpenCode,
+then remains running. Every 5 seconds it checks for idle sessions and re-sends
+the original prompt. It also polls data.kalloc.1024 and reports its percentage
+of the 20 GiB ceiling only when that percentage changes.
+EOF
+}
+
+if [[ ${1:-} == --help ]]; then
+	usage
+	exit 0
+fi
+
+agent_count=4
+while getopts ':hn:' option; do
+	case $option in
+		h)
+			usage
+			exit 0
+			;;
+		n) agent_count=$OPTARG ;;
+		?)
+			log_error "Unknown option: -$OPTARG"
+			exit 2
+			;;
+		:)
+			log_error "Option -$OPTARG requires an argument"
+			exit 2
+			;;
+	esac
+done
+shift $((OPTIND - 1))
+
+if [[ ! $agent_count =~ ^[1-9][0-9]*$ ]]; then
+	log_error "Agent count must be a positive integer: $agent_count"
+	exit 2
+fi
+
+readonly agent_count
+readonly target_dir=${1:-$PWD}
+readonly server_version=${2:-1.18.2}
+readonly upgrade_version=${3:-1.18.3}
+readonly run_dir=${OPENCODE_REPRO_RUN_DIR:-${${TMPDIR:-/tmp}%/}/opencode-upgrade-under-load-$$}
+readonly base_port=${OPENCODE_REPRO_BASE_PORT:-$((20000 + ($$ % 40000)))}
+readonly zone_name=data.kalloc.1024
+readonly zone_ceiling_bytes=$((20 * 1024 * 1024 * 1024))
+readonly prompt=${OPENCODE_REPRO_PROMPT:-"Fix every bug in this codebase. Be exhaustive: \
+inspect the code, make fixes, run relevant tests, and keep looking for more bugs \
+until there is nothing left to fix."}
+
+log_info "Target: $target_dir"
+log_info "Agents: $agent_count"
+log_info "Versions: $server_version -> $upgrade_version"
+log_info "Ports: $base_port-$((base_port + agent_count - 1))"
+log_info "Kernel zone: $zone_name (20 GiB ceiling)"
+print
+
+log_step "Checking dependencies"
+for dependency in awk curl jq opencode sudo zprint; do
+	if ! command -v "$dependency" >/dev/null 2>&1; then
+		log_error "$dependency not found in PATH"
+		exit 1
+	fi
+done
+log_ok "Required commands are available"
+
+log_step "Acquiring sudo access for kernel-zone monitoring"
+sudo -v
+log_ok "Sudo credentials cached"
+
+log_step "Installing server version $server_version"
+opencode upgrade "$server_version"
+
+installed_version=$(opencode --version)
+if [[ $installed_version != $server_version ]]; then
+	log_error "Expected opencode $server_version after install, found $installed_version"
+	exit 1
+fi
+log_ok "OpenCode $installed_version installed"
+
+if [[ ! -d $target_dir ]]; then
+	log_error "Target directory does not exist: $target_dir"
+	exit 1
+fi
+
+mkdir -p "$run_dir"
+log_info "Logs: $run_dir"
+
+typeset -a server_pids server_urls session_ids log_files
+typeset -i cleanup_started=0
+
+cleanup() {
+	local exit_status=$?
+	local server_pid
+
+	if (( cleanup_started )); then
+		return $exit_status
+	fi
+	cleanup_started=1
+	trap - EXIT
+
+	for server_pid in $server_pids; do
+		if kill -0 "$server_pid" 2>/dev/null; then
+			kill "$server_pid" 2>/dev/null || true
+		fi
+	done
+	if (( exit_status == 130 && ${#server_pids} )); then
+		log_ok "Shut down server PIDs: ${server_pids[*]}"
+	fi
+
+	return $exit_status
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+log_step "Starting $agent_count persistent servers sequentially"
+for (( index = 1; index <= agent_count; ++index )); do
+	port=$((base_port + index - 1))
+	server_url="http://127.0.0.1:$port"
+	log_file="$run_dir/server-$index.log"
+	: > "$log_file"
+
+	OPENCODE_SERVER_PASSWORD= nohup opencode serve --hostname 127.0.0.1 --port "$port" \
+		</dev/null > "$log_file" 2>&1 &!
+	server_pid=$!
+	server_pids+=("$server_pid")
+	server_urls+=("$server_url")
+	log_files+=("$log_file")
+	log_info "Server $index: PID $server_pid at $server_url"
+	typeset -i attempts=0
+
+	while ! curl -fsS "$server_url/global/health" >/dev/null 2>&1; do
+		if ! kill -0 "$server_pid" 2>/dev/null; then
+			log_error "Server $server_pid exited during startup; see $log_file"
+			exit 1
+		fi
+		if (( attempts >= 120 )); then
+			log_error "Timed out waiting for $server_url; see $log_file"
+			exit 1
+		fi
+		sleep 0.25
+		(( ++attempts ))
+	done
+	log_ok "Server $index is healthy"
+done
+
+prompt_body=$(jq -cn --arg prompt "$prompt" \
+	'{parts: [{type: "text", text: $prompt}]}')
+
+log_step "Creating sessions and dispatching prompts"
+for (( index = 1; index <= agent_count; ++index )); do
+	server_url=$server_urls[$index]
+	session=$(curl -fsS -X POST \
+		-H 'content-type: application/json' \
+		-H "x-opencode-directory: $target_dir" \
+		--data '{}' \
+		"$server_url/session")
+	session_id=$(jq -er '.id' <<< "$session")
+	session_ids+=("$session_id")
+
+	curl -fsS -X POST \
+		-H 'content-type: application/json' \
+		-H "x-opencode-directory: $target_dir" \
+		--data "$prompt_body" \
+		"$server_url/session/$session_id/prompt_async" >/dev/null
+	log_info "Agent $index: session $session_id prompted"
+done
+
+log_step "Waiting for every agent to become busy"
+for (( index = 1; index <= agent_count; ++index )); do
+	server_pid=$server_pids[$index]
+	server_url=$server_urls[$index]
+	session_id=$session_ids[$index]
+	log_file=$log_files[$index]
+	typeset -i attempts=0
+
+	while true; do
+		session_status_json=$(curl -fsS \
+			-H "x-opencode-directory: $target_dir" \
+			"$server_url/session/status")
+		if [[ $(jq -r --arg id "$session_id" '.[$id].type // ""' <<< "$session_status_json") == busy ]]; then
+			break
+		fi
+		if ! kill -0 "$server_pid" 2>/dev/null; then
+			log_error \
+				"Server $server_pid exited before its session became busy; see $log_file"
+			exit 1
+		fi
+		if (( attempts >= 120 )); then
+			log_error "Timed out waiting for session $session_id; see $log_file"
+			exit 1
+		fi
+		sleep 0.25
+		(( ++attempts ))
+	done
+	log_ok "Agent $index is busy"
+done
+
+log_step "Upgrading to $upgrade_version while agents are busy"
+opencode upgrade "$upgrade_version"
+
+installed_version=$(opencode --version)
+if [[ $installed_version != $upgrade_version ]]; then
+	log_error "Expected opencode $upgrade_version after install, found $installed_version"
+	exit 1
+fi
+log_ok "OpenCode $installed_version installed under load"
+
+log_info "Version: $server_version -> $installed_version"
+log_info "Original servers remain running; none were relaunched"
+log_info "Server PIDs: ${server_pids[*]}"
+log_info "Server URLs: ${server_urls[*]}"
+log_info "Session IDs: ${session_ids[*]}"
+log_info "Server logs: $run_dir"
+
+typeset previous_kalloc_percent=''
+
+report_kalloc_usage() {
+	local zone_stats element_size in_use usage_bytes usage_percent usage_gib
+
+	if ! zone_stats=$(sudo /usr/bin/zprint "$zone_name" 2>/dev/null \
+		| /usr/bin/awk -v zone="$zone_name" '$1 == zone { print $2, $7; exit }'); then
+		log_error "Unable to read $zone_name"
+		return
+	fi
+	if [[ -z $zone_stats ]]; then
+		log_error "$zone_name was not present in zprint output"
+		return
+	fi
+
+	read -r element_size in_use <<< "$zone_stats"
+	usage_bytes=$((element_size * in_use))
+	usage_percent=$(/usr/bin/awk -v used="$usage_bytes" -v ceiling="$zone_ceiling_bytes" \
+		'BEGIN { printf "%.1f", used / ceiling * 100 }')
+	usage_gib=$(/usr/bin/awk -v used="$usage_bytes" \
+		'BEGIN { printf "%.2f", used / 1024 / 1024 / 1024 }')
+	if [[ $usage_percent == $previous_kalloc_percent ]]; then
+		return
+	fi
+	previous_kalloc_percent=$usage_percent
+	log_info "kalloc.1024 usage: ${usage_percent}% (${usage_gib} GiB of 20 GiB)"
+}
+
+reprompt_idle_sessions() {
+	local index server_url session_id session_status_json session_status
+
+	for (( index = 1; index <= agent_count; ++index )); do
+		server_url=$server_urls[$index]
+		session_id=$session_ids[$index]
+		if ! session_status_json=$(curl -fsS \
+			-H "x-opencode-directory: $target_dir" \
+			"$server_url/session/status"); then
+			log_error "Unable to read session status from server $index"
+			continue
+		fi
+		session_status=$(jq -r --arg id "$session_id" \
+			'.[$id].type // ""' <<< "$session_status_json")
+		if [[ $session_status != idle ]]; then
+			continue
+		fi
+
+		log_info "Server $index is idle; re-sending the original prompt"
+		if curl -fsS -X POST \
+			-H 'content-type: application/json' \
+			-H "x-opencode-directory: $target_dir" \
+			--data "$prompt_body" \
+			"$server_url/session/$session_id/prompt_async" >/dev/null; then
+			log_ok "Re-prompted idle session $session_id"
+		else
+			log_error "Unable to re-prompt idle session $session_id"
+		fi
+	done
+}
+
+print
+log_step "Monitoring kalloc.1024 every 5 seconds (only logs changes)"
+sudo -v
+log_ok "Sudo credentials ready for continuous monitoring"
+report_kalloc_usage
+reprompt_idle_sessions
+while sleep 5; do
+	report_kalloc_usage
+	reprompt_idle_sessions
+done
