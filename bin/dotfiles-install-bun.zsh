@@ -6,7 +6,6 @@ bun i -g --no-summary \
     typescript-language-server@latest \
     svelte-language-server@latest \
     oxfmt@latest \
-    opencode-ai@latest \
     @tailwindcss/language-server@latest \
     vscode-langservers-extracted@latest \
 		@astrojs/language-server@latest \
