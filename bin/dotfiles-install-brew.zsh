@@ -59,3 +59,6 @@ brew install --quiet \
 		terminal-notifier \
 		switchaudio-osx \
 		trash
+
+# Older Hunk builds can retain a broken OpenTUI preload.
+brew upgrade --quiet modem-dev/tap/hunk
