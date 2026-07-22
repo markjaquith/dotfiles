@@ -1,7 +1,9 @@
 #!/usr/bin/env zsh
 set -eo pipefail
 
-source .zsh/100-aliases.zsh
+URL_CHOOSER_FUNCTIONS_ONLY=1
+source .config/herdr/plugins/local/url-chooser/picker.sh
+unset URL_CHOOSER_FUNCTIONS_ONLY
 
 set -u
 
@@ -56,4 +58,4 @@ assert_urls \
 	"not a match: http://not-localhost/" \
 	""
 
-print -r -- "open-tmux-urls tests passed"
+print -r -- "url-chooser tests passed"

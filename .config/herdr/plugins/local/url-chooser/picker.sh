@@ -23,6 +23,10 @@ extract_urls() {
 	done | sort -u
 }
 
+if [[ "${URL_CHOOSER_FUNCTIONS_ONLY:-}" == "1" ]]; then
+	return 0 2>/dev/null || exit 0
+fi
+
 pause() {
 	printf '\nPress any key to close'
 	IFS= read -r -n 1 _ || sleep 10
