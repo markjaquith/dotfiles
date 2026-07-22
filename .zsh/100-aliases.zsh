@@ -416,7 +416,8 @@ function h-workspace-rename() {
 }
 
 # Intercept `opencode -c|--continue`: resolve the most recently updated
-# session for the current directory and pass `--session <id>` instead.
+# session for the current directory and pass `--session <id>` instead, or
+# omit the continue flag to start a new session when no match exists.
 # All other invocations pass straight through to the real binary.
 function opencode() {
 	emulate -L zsh
@@ -439,15 +440,12 @@ function opencode() {
 		| jq -r --arg d "$PWD" \
 			'[.[] | select(.directory == $d)] | max_by(.updated) | .id')
 
-	if [[ -z "$session_id" || "$session_id" == "null" ]]; then
-		print -u2 "opencode: no session found for $PWD"
-		return 1
-	fi
-
 	local rebuilt=()
 	for arg in "$@"; do
 		if [[ "$arg" == "--continue" || "$arg" == "-c" ]]; then
-			rebuilt+=(--session "$session_id")
+			if [[ -n "$session_id" && "$session_id" != "null" ]]; then
+				rebuilt+=(--session "$session_id")
+			fi
 		else
 			rebuilt+=("$arg")
 		fi
