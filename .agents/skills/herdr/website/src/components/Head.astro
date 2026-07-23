@@ -1,0 +1,10 @@
+---
+import { docsVersion } from '../docs-path';
+
+const { head } = Astro.locals.starlightRoute;
+const version = docsVersion(Astro.url.pathname);
+---
+
+{head.map(({ tag: Tag, attrs, content }) => <Tag {...attrs} set:html={content} />)}
+<meta data-pagefind-filter="version[content]" content={version} />
+{version !== 'stable' && <meta name="robots" content="noindex, nofollow" />}
