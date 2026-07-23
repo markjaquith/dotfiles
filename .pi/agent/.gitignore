@@ -1,0 +1,12 @@
+# Pi runtime state and credentials
+/auth.json
+/models-store.json
+/sessions/
+/trust.json
+
+# Pi mixes generated changelog state into this file. Desired settings are
+# applied declaratively by bin/dotfiles-install-configs.zsh instead.
+/settings.json
+
+# Generated and updated by `herdr integration install pi`.
+/extensions/herdr-agent-state.ts
