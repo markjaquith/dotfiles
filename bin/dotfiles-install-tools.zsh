@@ -1,6 +1,11 @@
 #!/usr/bin/env zsh
 # Manual tool installs
 
+# OpenCode
+if ! command -v opencode &>/dev/null; then
+	curl -fsSL https://opencode.ai/install | bash
+fi
+
 # Configure tmux plugin and resurrect directories
 mkdir -p "$HOME/.local/bin/tmux/plugins"
 mkdir -p "$HOME/.local/state/tmux/resurrect"
