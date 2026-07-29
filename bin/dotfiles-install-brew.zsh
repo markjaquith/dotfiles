@@ -34,6 +34,7 @@ brew install --quiet \
     buildkite/buildkite/bk@3 \
     gum \
     stow \
+    jj \
     jq \
     gh \
     modem-dev/tap/hunk \
