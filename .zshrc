@@ -61,4 +61,4 @@ fi
 if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
 
 # opencode
-export PATH=/Users/mark.jaquith/.opencode/bin:$PATH
+export PATH="$HOME/.opencode/bin:$PATH"
