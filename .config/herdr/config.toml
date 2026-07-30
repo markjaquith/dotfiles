@@ -92,7 +92,7 @@ prompt_new_tab_name = false
 sidebar_collapsed_mode = "hidden"
 
 [ui.toast]
-delivery = "system"
+delivery = "herdr"
 delay_seconds = 1
 
 [ui.sound]
