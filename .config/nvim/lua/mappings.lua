@@ -40,9 +40,11 @@ M.define_general_mappings = function()
   -- Clever... it will exit insert mode if you type jk in succession
   vim.keymap.set('i', 'jk', '<ESC>')
 
-  -- More vim mode magic (exit insert mode if you insert jjj or kkk)
-  vim.keymap.set('i', 'jjj', '<ESC>jjj')
-  vim.keymap.set('i', 'kkk', '<ESC>kkk')
+  -- Exit insert mode and replay movement commands in normal mode
+  vim.keymap.set('i', 'jj', '<ESC>jj')
+  vim.keymap.set('i', 'kk', '<ESC>kk')
+  vim.keymap.set('i', 'gj', '<ESC>gj')
+  vim.keymap.set('i', 'gk', '<ESC>gk')
 
   -- More cleverness... if typing :w<CR> or variations in insert mode, assume you meant to be in normal mode
   vim.keymap.set('i', ':w<CR>', '<CMD>:w<CR>', { noremap = true })
