@@ -106,8 +106,8 @@ command = "opencode run -m openai/gpt-5.4-mini-fast --variant fast"
 # timeout-ms = 0        # Wall-clock budget for the entire collect phase; 0 disables
 
 [list]
-task-timeout-ms = 500 # kill individual git commands after 500ms
 timeout-ms = 1000 # total wall-clock budget for all data collection
+json-schema = 2
 
 #
 # ### Commit
