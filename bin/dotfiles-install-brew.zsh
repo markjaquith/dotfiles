@@ -14,6 +14,7 @@ brew install --quiet \
     python \
     zinit \
     lua \
+		stylua \
 		bruno \
 		crit \
 		tokei \
