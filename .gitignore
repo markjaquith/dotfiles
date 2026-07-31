@@ -4,3 +4,4 @@
 /node_modules
 .config/zed/prompts
 .config/gh/hosts.yml
+/.config/jj/repos/
