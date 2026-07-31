@@ -1,2 +1,6 @@
 [snapshot]
-max-new-file-size = 2507556
+max-new-file-size = "3MiB"
+
+[user]
+email = "mark@jaquith.me"
+name = "Mark Jaquith"
