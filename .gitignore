@@ -5,3 +5,4 @@
 .config/zed/prompts
 .config/gh/hosts.yml
 /.config/jj/repos/
+/.jj/

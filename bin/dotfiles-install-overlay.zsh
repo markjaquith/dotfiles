@@ -57,13 +57,13 @@ for overlay_dir in "${overlay_dirs[@]}"; do
     [[ "$overlay_abs" != "$overlay_dir"/* ]] && continue
 
     rel="${overlay_abs#$overlay_dir/}"
-    [[ "$rel" == .git/* ]] && continue
+    [[ "$rel" == .git/* || "$rel" == .jj/* ]] && continue
     [[ "$rel" == .ignore ]] && continue
     [[ "$rel" == .gitignore ]] && continue
     [[ "$rel" == local-init.zsh ]] && continue
 
     print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
-  done < <(fd -HI -t f -t l -E .git . "$overlay_dir")
+  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_dir")
 done
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
@@ -112,7 +112,7 @@ while IFS= read -r main_link; do
   [[ "$main_link" != "$DOTFILES_DIR"/* ]] && continue
 
   rel="${main_link#$DOTFILES_DIR/}"
-  [[ "$rel" == .git/* ]] && continue
+  [[ "$rel" == .git/* || "$rel" == .jj/* ]] && continue
 
   resolved_target=""
   link_target=$(readlink "$main_link" 2>/dev/null)
@@ -131,7 +131,7 @@ while IFS= read -r main_link; do
       break
     fi
   done
-done < <(fd -HI -t l -E .git . "$DOTFILES_DIR")
+done < <(fd -HI -t l -E .git -E .jj . "$DOTFILES_DIR")
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$actual_map" > "$actual_map.tmp"
 mv "$actual_map.tmp" "$actual_map"
