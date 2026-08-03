@@ -38,7 +38,7 @@ DOTFILES_DIR="$HOME/dotfiles"
 LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
 
 if [[ -f "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" ]]; then
-  source "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh"
+  source "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" || exit 1
 fi
 
 if [[ "$DOTFILES_PURE" == "1" ]]; then
