@@ -3,6 +3,9 @@
 emulate -L zsh
 setopt typeset_silent
 
+typeset overlay_script_dir="${0:A:h}"
+source "$overlay_script_dir/dotfiles-overlay-common.zsh" || exit 1
+
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 LOCAL_DOTFILES_DIR="${LOCAL_DOTFILES_DIR:-$HOME/.local-dotfiles}"
 
@@ -43,6 +46,10 @@ typeset desired_tracked_rel="$tmp_dir/desired.tracked.rel"
 typeset undesired_skip_rel="$tmp_dir/undesired_skip.rel"
 typeset missing_skip_rel="$tmp_dir/missing_skip.rel"
 typeset stale_override_rel="$tmp_dir/stale_override.rel"
+typeset jj_tracked_rel="$tmp_dir/jj.tracked.rel"
+typeset desired_jj_tracked_rel="$tmp_dir/desired.jj-tracked.rel"
+typeset current_sparse="$tmp_dir/current.sparse"
+typeset desired_sparse="$tmp_dir/desired.sparse"
 
 : > "$desired_raw"
 : > "$actual_raw"
@@ -85,7 +92,7 @@ while IFS= read -r main_link; do
   [[ -z "$link_target" ]] && continue
 
   if [[ "$link_target" == /* ]]; then
-    resolved_target="$link_target"
+    resolved_target="${link_target:A}"
   else
     resolved_target="${main_link:h}/$link_target"
     resolved_target="${resolved_target:A}"
@@ -115,6 +122,22 @@ comm -23 "$skip_rel" "$desired_tracked_rel" > "$undesired_skip_rel"
 comm -13 "$skip_rel" "$desired_tracked_rel" > "$missing_skip_rel"
 comm -23 "$actual_rel" "$desired_rel" > "$stale_override_rel"
 
+typeset jj_enabled=0
+typeset jj_sparse_drift=0
+typeset jj_root=""
+
+if command -v jj >/dev/null 2>&1 && [[ -d "$DOTFILES_DIR/.jj" ]]; then
+  jj_root=$(cd "$DOTFILES_DIR" && jj --ignore-working-copy root 2>/dev/null) || jj_root=""
+  if [[ -n "$jj_root" && "${jj_root:A}" == "${DOTFILES_DIR:A}" ]]; then
+    jj_enabled=1
+    (cd "$DOTFILES_DIR" && jj --ignore-working-copy file list -r @) | sort -u > "$jj_tracked_rel"
+    (cd "$DOTFILES_DIR" && jj --ignore-working-copy sparse list) | sort -u > "$current_sparse"
+    comm -12 "$desired_rel" "$jj_tracked_rel" > "$desired_jj_tracked_rel"
+    overlay_sparse_patterns "$jj_tracked_rel" "$desired_jj_tracked_rel" "$desired_sparse"
+    cmp -s "$current_sparse" "$desired_sparse" || jj_sparse_drift=1
+  fi
+fi
+
 typeset desired_count actual_count broken_count stale_count skip_count undesired_skip_count missing_skip_count
 desired_count=$(wc -l < "$desired_rel" | tr -d ' ')
 actual_count=$(wc -l < "$actual_rel" | tr -d ' ')
@@ -136,6 +159,11 @@ print "  stale overrides:   $stale_count"
 print "  skip-worktree:     $skip_count"
 print "  skip drift extra:  $undesired_skip_count"
 print "  skip drift miss:   $missing_skip_count"
+if [[ "$jj_enabled" == "1" ]]; then
+  print "  jj sparse drift:   $jj_sparse_drift"
+else
+  print "  jj sparse drift:   (jj not active)"
+fi
 
 print ""
 print "Active Overrides"
@@ -174,4 +202,18 @@ if [[ "$stale_count" -eq 0 ]]; then
   print "  (none)"
 else
   awk '{ print "  " $0 }' "$stale_override_rel"
+fi
+
+print ""
+print "JJ Sparse Drift"
+if [[ "$jj_enabled" != "1" ]]; then
+  print "  (jj not active)"
+elif [[ "$jj_sparse_drift" == "0" ]]; then
+  print "  (none)"
+else
+  print "  current patterns do not match the desired overlay exclusions"
+  print "  current pattern count:  $(wc -l < "$current_sparse" | tr -d ' ')"
+  print "  expected pattern count: $(wc -l < "$desired_sparse" | tr -d ' ')"
+  print "  tracked overlay paths:"
+  awk '{ print "    " $0 }' "$desired_jj_tracked_rel"
 fi

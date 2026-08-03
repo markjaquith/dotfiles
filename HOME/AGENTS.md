@@ -17,3 +17,7 @@ Be smart about composing these. i.e. do the right thing for "create and work" or
 - Prompt: `make this task` Outcome: create, open and work without `--auto`
 - Prompt: `launch this task` Outcome: open and work with `--auto`
 - Prompt: `create and work this phase` Outcome: create, open, and work with `--auto`
+
+# Version control guidelines
+
+If a repository is jj-enabled, prefer `jj` over `git` for all version control commands.
