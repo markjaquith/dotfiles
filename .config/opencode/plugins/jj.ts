@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin"
 import { execFileSync } from "child_process"
 
 export function getJjRoot(directory: string): string | null {
@@ -29,3 +29,8 @@ export const JjPlugin: Plugin = async ({ directory }) => {
 		},
 	}
 }
+
+export default {
+	id: "jj",
+	server: JjPlugin,
+} satisfies PluginModule

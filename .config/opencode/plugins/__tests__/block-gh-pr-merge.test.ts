@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { mkdtempSync, rmSync } from "fs"
 import { tmpdir } from "os"
 import { join } from "path"
-import {
+import BlockGhPrMergePluginModule, {
+	BlockGhPrMergePlugin,
 	evaluateToolCall,
 	getCurrentRepository,
 	normalizeGitHubRepository,
@@ -14,6 +15,11 @@ function bash(command: string): ToolCall {
 }
 
 describe("block-gh-pr-merge", () => {
+	test("exports an explicit plugin module", () => {
+		expect(BlockGhPrMergePluginModule.id).toBe("block-gh-pr-merge")
+		expect(BlockGhPrMergePluginModule.server).toBe(BlockGhPrMergePlugin)
+	})
+
 	test("allows merges in an allowlisted current repository", () => {
 		expect(
 			evaluateToolCall(bash("gh pr merge 123 --squash"), "markjaquith/agency"),
