@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "fs"
 import { tmpdir } from "os"
 import { join } from "path"
 import JjPluginModule, {
+	evaluateBashCommand,
 	getJjRoot,
 	getJjSystemInstruction,
 	JjPlugin,
@@ -38,7 +39,31 @@ describe("jj", () => {
 	test("instructs the model to prefer jj", () => {
 		const instruction = getJjSystemInstruction("/workspace/example")
 		expect(instruction).toContain("repository is jj-enabled")
-		expect(instruction).toContain("Prefer `jj` over `git`")
+		expect(instruction).toContain(
+			"Raw `git` commands through the bash tool are blocked",
+		)
+		expect(instruction).toContain("`jj git push`")
 		expect(instruction).toContain("/workspace/example")
 	})
+
+	test.each([
+		"git status",
+		"cd nested && git diff",
+		"git log | less",
+		"GIT_CONFIG_GLOBAL=/dev/null git status",
+		"command git status",
+		"/usr/bin/git status",
+	])("blocks raw git in a jj workspace: %s", (command) => {
+		const decision = evaluateBashCommand(command, "/workspace/example")
+		expect(decision.blocked).toBe(true)
+		if (decision.blocked) expect(decision.reason).toContain("jj equivalent")
+	})
+
+	test.each(["jj git fetch", "echo git status", "gh pr view", "git status"])(
+		"does not block an allowed command or a non-jj workspace: %s",
+		(command) => {
+			const root = command === "git status" ? null : "/workspace/example"
+			expect(evaluateBashCommand(command, root)).toEqual({ blocked: false })
+		},
+	)
 })
