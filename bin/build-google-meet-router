@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly APP_NAME="Google Meet Router"
+readonly BUNDLE_ID="local.finicky.google-meet-router"
+readonly SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
+readonly REPO_ROOT="$(dirname "$(dirname "$SCRIPT_PATH")")"
+readonly SOURCE_PATH="$REPO_ROOT/.config/finicky/google-meet-router.applescript"
+readonly APPLICATIONS_DIR="$HOME/Applications"
+readonly APP_PATH="$APPLICATIONS_DIR/$APP_NAME.app"
+readonly LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+BUILD_DIR=""
+
+fail() {
+  printf 'Error: %s\n' "$1" >&2
+  exit 1
+}
+
+cleanup() {
+  if [[ -n "$BUILD_DIR" ]]; then
+    rm -rf "$BUILD_DIR"
+  fi
+}
+
+main() {
+  local built_app
+
+  [[ "$(uname -s)" == "Darwin" ]] || fail "This builder requires macOS"
+  [[ -f "$SOURCE_PATH" ]] || fail "AppleScript source not found: $SOURCE_PATH"
+
+  mkdir -p "$APPLICATIONS_DIR"
+  BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/google-meet-router.XXXXXX")"
+  trap cleanup EXIT
+  built_app="$BUILD_DIR/$APP_NAME.app"
+
+  osacompile -o "$built_app" "$SOURCE_PATH"
+  /usr/libexec/PlistBuddy \
+    -c "Add :CFBundleIdentifier string $BUNDLE_ID" \
+    -c "Add :CFBundleURLTypes array" \
+    -c "Add :CFBundleURLTypes:0 dict" \
+    -c "Add :CFBundleURLTypes:0:CFBundleURLName string $BUNDLE_ID" \
+    -c "Add :CFBundleURLTypes:0:CFBundleTypeRole string Viewer" \
+    -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" \
+    -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string http" \
+    -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:1 string https" \
+    "$built_app/Contents/Info.plist"
+  codesign --force --deep --sign - "$built_app"
+
+  rm -rf "$APP_PATH"
+  mv "$built_app" "$APP_PATH"
+  "$LSREGISTER" -f "$APP_PATH"
+
+  printf 'Built and registered %s\n' "$APP_PATH"
+}
+
+main "$@"
