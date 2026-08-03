@@ -6,6 +6,11 @@ if ! command -v opencode &>/dev/null && [[ ! -x "$HOME/.opencode/bin/opencode" ]
 	curl -fsSL https://opencode.ai/install | bash
 fi
 
+# GitHub CLI extensions
+if command -v gh &>/dev/null; then
+	gh extension install dlvhdr/gh-dash --force
+fi
+
 # Configure tmux plugin and resurrect directories
 mkdir -p "$HOME/.local/bin/tmux/plugins"
 mkdir -p "$HOME/.local/state/tmux/resurrect"
