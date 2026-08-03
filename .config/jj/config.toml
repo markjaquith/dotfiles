@@ -4,3 +4,6 @@ max-new-file-size = "3MiB"
 [user]
 email = "mark@jaquith.me"
 name = "Mark Jaquith"
+
+[ui]
+default-command = "log"
