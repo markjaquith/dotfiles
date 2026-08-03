@@ -1,4 +1,5 @@
 [tools]
+"github:agavra/tuicr" = "latest"
 hk = "latest"
 node = "latest"
 "npm:oxfmt" = "latest"
