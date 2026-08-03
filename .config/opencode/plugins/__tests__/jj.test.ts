@@ -2,9 +2,18 @@ import { describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "fs"
 import { tmpdir } from "os"
 import { join } from "path"
-import { getJjRoot, getJjSystemInstruction } from "../jj"
+import JjPluginModule, {
+	getJjRoot,
+	getJjSystemInstruction,
+	JjPlugin,
+} from "../jj"
 
 describe("jj", () => {
+	test("exports an explicit plugin module", () => {
+		expect(JjPluginModule.id).toBe("jj")
+		expect(JjPluginModule.server).toBe(JjPlugin)
+	})
+
 	test("detects a jj workspace from a nested directory", () => {
 		const directory = mkdtempSync(join(tmpdir(), "opencode-jj-plugin-"))
 		const nested = join(directory, "nested")

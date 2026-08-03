@@ -1,7 +1,7 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin"
 import { execFileSync } from "child_process"
 
-export const GH_PR_MERGE_ALLOWLIST = new Set(["markjaquith/agency"])
+const GH_PR_MERGE_ALLOWLIST = new Set(["markjaquith/agency"])
 
 export interface ToolCall {
 	tool: string
@@ -82,3 +82,8 @@ export const BlockGhPrMergePlugin: Plugin = async ({ directory }) => {
 		},
 	}
 }
+
+export default {
+	id: "block-gh-pr-merge",
+	server: BlockGhPrMergePlugin,
+} satisfies PluginModule
