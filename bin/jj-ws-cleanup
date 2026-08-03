@@ -1,0 +1,64 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail
+
+typeset workspace_output default_root="" selected
+typeset -a choices
+
+workspace_output=$(jj workspace list --template 'name ++ "\t" ++ root ++ "\n"') || exit $?
+
+typeset name workspace_path
+while IFS=$'\t' read -r name workspace_path; do
+	[[ -z "$name" ]] && continue
+
+	if [[ "$name" == default ]]; then
+		default_root="$workspace_path"
+		continue
+	fi
+
+	choices+=("$name"$'\t'"$workspace_path")
+done <<< "$workspace_output"
+
+if (( ${#choices} == 0 )); then
+	print "No extra workspaces"
+	exit 0
+fi
+
+if [[ -z "$default_root" ]]; then
+	print -u2 "Could not find the default workspace"
+	exit 1
+fi
+
+if ! command -v gum >/dev/null 2>&1; then
+	print -u2 "gum is required for jj-ws-cleanup"
+	exit 1
+fi
+
+if ! command -v trash >/dev/null 2>&1; then
+	print -u2 "trash is required for jj-ws-cleanup"
+	exit 1
+fi
+
+if ! selected=$(print -rl -- "${choices[@]}" | gum choose \
+	--no-limit \
+	--ordered \
+	--header "Remove workspaces"); then
+	print -u2 "No workspaces selected"
+	exit 1
+fi
+
+if [[ -z "$selected" ]]; then
+	print -u2 "No workspaces selected"
+	exit 1
+fi
+
+typeset choice
+for choice in "${(@f)selected}"; do
+	name="${choice%%$'\t'*}"
+	workspace_path="${choice#*$'\t'}"
+
+	print "Removing $name ($workspace_path)..."
+	trash "$workspace_path" || exit $?
+	jj -R "$default_root" workspace forget "$name" || exit $?
+done
