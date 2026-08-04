@@ -59,11 +59,6 @@ zoxide_remove = "zoxide remove {{ worktree_path }}"
 #
 # Generate commit messages automatically during merge. Requires an external CLI tool.
 #
-# ### Claude Code
-#
-# [commit.generation]
-# command = "CLAUDECODE= MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
-#
 # ### Codex
 #
 # [commit.generation]
@@ -72,20 +67,10 @@ zoxide_remove = "zoxide remove {{ worktree_path }}"
 # ### OpenCode
 #
 # [commit.generation]
-# command = "opencode run -m anthropic/claude-haiku-4.5 --variant fast"
+# command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 
 [commit.generation]
-command = "opencode run -m openai/gpt-5.4-mini-fast --variant fast"
-#
-# ### llm
-#
-# [commit.generation]
-# command = "llm -m claude-haiku-4.5"
-#
-# ### aichat
-#
-# [commit.generation]
-# command = "aichat -m claude:claude-haiku-4.5"
+command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 #
 # See LLM commits docs (https://worktrunk.dev/llm-commits/) for setup and Custom prompt templates (#custom-prompt-templates) for template customization.
 #

@@ -6,14 +6,14 @@ Worktrunk generates commit messages by building a templated prompt and piping it
 
 Any command that reads a prompt from stdin and outputs a commit message works. Add to `~/.config/worktrunk/config.toml`:
 
-### Claude Code
+### OpenCode
 
 ```toml
 [commit.generation]
-command = "CLAUDECODE= MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
+command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 ```
 
-`CLAUDECODE=` unsets the nesting guard so `claude -p` works from within a Claude Code session. `--no-session-persistence` prevents the commit conversation from polluting `claude --continue`. The other flags disable tools, skills, settings, and system prompt for fast text-only output. See [Claude Code docs](https://docs.anthropic.com/en/docs/build-with-claude/claude-code) for installation.
+The fast variant keeps commit-message generation responsive. See [OpenCode docs](https://opencode.ai/docs/) for installation.
 
 ### Codex
 
@@ -23,19 +23,6 @@ command = "codex exec -m gpt-5.1-codex-mini -c model_reasoning_effort='low' -c s
 ```
 
 Uses the fast mini model with low reasoning effort and an empty system prompt for faster output. Requires `jq` for JSON parsing. See [Codex CLI docs](https://developers.openai.com/codex/cli/).
-
-### Other tools
-
-```toml
-# opencode — use a fast model variant
-command = "opencode run -m anthropic/claude-haiku-4.5 --variant fast"
-
-# llm
-command = "llm -m claude-haiku-4.5"
-
-# aichat
-command = "aichat -m claude:claude-haiku-4.5"
-```
 
 ## How it works
 
@@ -105,7 +92,7 @@ Override the defaults with inline templates:
 
 ```toml
 [commit.generation]
-command = "llm -m claude-haiku-4.5"
+command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 
 template = """
 Write a commit message for this diff. One line, under 50 chars.
