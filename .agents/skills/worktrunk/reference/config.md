@@ -44,7 +44,7 @@ Organizations can also deploy a system-wide config file for shared defaults — 
 worktree-path = ".worktrees/{{ branch | sanitize }}"
 
 [commit.generation]
-command = "CLAUDECODE= MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
+command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 ```
 
 **Project config** — shared team settings:
@@ -113,13 +113,6 @@ worktree-path = "{{ repo_path }}/../{{ branch | sanitize }}"
 
 Generate commit messages automatically during merge. Requires an external CLI tool.
 
-### Claude Code
-
-```toml
-[commit.generation]
-command = "CLAUDECODE= MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku --tools='' --disable-slash-commands --setting-sources='' --system-prompt=''"
-```
-
 ### Codex
 
 ```toml
@@ -131,21 +124,7 @@ command = "codex exec -m gpt-5.1-codex-mini -c model_reasoning_effort='low' -c s
 
 ```toml
 [commit.generation]
-command = "opencode run -m anthropic/claude-haiku-4.5 --variant fast"
-```
-
-### llm
-
-```toml
-[commit.generation]
-command = "llm -m claude-haiku-4.5"
-```
-
-### aichat
-
-```toml
-[commit.generation]
-command = "aichat -m claude:claude-haiku-4.5"
+command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 ```
 
 See [LLM commits docs](https://worktrunk.dev/llm-commits/) for setup and [Custom prompt templates](#custom-prompt-templates) for template customization.
