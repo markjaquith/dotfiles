@@ -351,6 +351,10 @@ function occ() {
 	opencode --continue "$@"
 }
 
+function ocm() {
+	opencode --mini "$@"
+}
+
 function ocfast() {
 	emulate -L zsh
 
