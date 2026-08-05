@@ -70,7 +70,8 @@ Closed tab and pane IDs are not reused. A pane moved into another workspace rece
 Herdr injects the caller's context into each managed pane:
 
 ```bash
-printf '%s\n' "$HERDR_WORKSPACE_ID" "$HERDR_TAB_ID" "$HERDR_PANE_ID"
+printf 'HERDR_WORKSPACE_ID=%s\nHERDR_TAB_ID=%s\nHERDR_PANE_ID=%s\n' \
+  "$HERDR_WORKSPACE_ID" "$HERDR_TAB_ID" "$HERDR_PANE_ID"
 ```
 
 Prefer `--current` when a pane command should target the calling pane. Omitting a target may use the UI-focused pane, which can belong to the user or another client.

@@ -96,8 +96,10 @@ independently meaningful tasks need coordination.
 2. Confirm `target`, `graph.readiness`, `authority`, `workspace`, and `validation`.
 3. Read the returned task and phase document paths for prose requirements.
 4. Stop on validation errors, dependency blockers, an unexpected writable
-   repository, or a conflicting active owner. For an active agent, a `working`
-   status blocker is expected only when the current session owns the claim.
+   repository, a conflicting active owner, or any workspace warning containing
+   `Unable to resolve reference`. For an active agent, a `working` status blocker
+   is expected only when the current session owns the claim. Treat unresolved
+   reference warnings as launch blockers; do not bypass them with `--force`.
 
 ### Work
 
@@ -126,6 +128,16 @@ integration files, then selects work and checks readiness. For an execution unit
 it materializes managed checkouts, claims the unit, marks it working, and starts
 the selected built-in or configured runner. Epic and multi-phase task launches
 start in orchestration context without materializing or claiming execution work.
+
+Before launching execution work, preflight worktree preparation and inspect the
+JSON result:
+
+```bash
+agency worktree prepare <task> --dry-run --json
+```
+
+Do not launch if the command fails or reports an `Unable to resolve reference`
+workspace warning. Resolve the repository reference first.
 
 An agent already running in an Agency checkout must not call `agency work` to
 start itself again. It should inspect context, perform the assigned work, and

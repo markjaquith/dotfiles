@@ -31,9 +31,26 @@ If the user says "in a new tab" or "in a new workspace" then unless there is cle
 
 # Agency guidelines
 
+Before applying any Agency launch rule, determine whether this OpenCode process
+is already an Agency-launched worker. If `AGENCY_SESSION_ID` or `AGENCY_TARGET`
+is set, this process is the active worker. Treat generated prompts such as
+"Start the task", "Continue the task", "Work on the task", or "Work on the
+epic" as instructions to perform the assigned work: start with
+`agency context . --json`, and do not call `agency work`, delegate to `@agency`,
+or open another Herdr tab unless the user explicitly asks to launch a separate
+nested or replacement agent. The launch rules below apply only when neither
+variable is set.
+
+Use labeled output when checking the launch environment:
+
+```bash
+printf 'AGENCY_SESSION_ID=%s\nAGENCY_TARGET=%s\n' \
+  "${AGENCY_SESSION_ID:-}" "${AGENCY_TARGET:-}"
+```
+
 If the user explicitly addresses `@agency`, delegate the complete Agency request to the `@agency` subagent. Do not reproduce the Agency workflow with CLI calls in the main agent unless delegation fails.
 
-If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab in the same workspace as the request. Always pass `--workspace "$HERDR_WORKSPACE_ID"`; never rely on the UI-focused workspace. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
+If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab in the same workspace as the request. Always pass `--workspace "$HERDR_WORKSPACE_ID"`; never rely on the UI-focused workspace. Before launching execution work, run `agency worktree prepare <task> --dry-run --json` and stop if it fails or reports an `Unable to resolve reference` workspace warning. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
 
 If the user says to "create" an agency item, then by default you should create it in the @agency subagent, and then "open" the item in a new tab, as outlined above.
 
