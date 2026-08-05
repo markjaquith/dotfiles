@@ -31,18 +31,23 @@ If the user says "in a new tab" or "in a new workspace" then unless there is cle
 
 # Agency guidelines
 
-If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab, defaulting to the same workspace as the request was made in. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
+If the user explicitly addresses `@agency`, delegate the complete Agency request to the `@agency` subagent. Do not reproduce the Agency workflow with CLI calls in the main agent unless delegation fails.
+
+If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab in the same workspace as the request. Always pass `--workspace "$HERDR_WORKSPACE_ID"`; never rely on the UI-focused workspace. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
 
 If the user says to "create" an agency item, then by default you should create it in the @agency subagent, and then "open" the item in a new tab, as outlined above.
 
-If, however, the user says to "work" or "launch" or "start" an agency item, then do all of the above, but pass the `--auto` flag so agency starts working on the item.
+If, however, the user says to "work", "launch", "start", or "kick off" an agency item, then do all of the above, but pass the `--auto` flag so agency starts working on the item.
 
 Be smart about composing these. i.e. do the right thing for "create and work" or "create and open"
+
+After launching work, verify it with one `agency context <document-path> --json` call. Do not also inspect the Herdr pane or list all agents unless that verification fails.
 
 ## Examples
 
 - Prompt: `make this task` Outcome: create, open and work without `--auto`
 - Prompt: `launch this task` Outcome: open and work with `--auto`
+- Prompt: `kick off a new task` Outcome: create, open, and work with `--auto`
 - Prompt: `create and work this phase` Outcome: create, open, and work with `--auto`
 
 # Version control guidelines
