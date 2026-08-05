@@ -31,7 +31,7 @@ gum style --foreground 212 "Copying dotfiles…"
 (
   cd ~/dotfiles
   stow --ignore='^AGENTS\.md$' .
-  stow --no-folding HOME
+  stow --ignore='^\.gitkeep$' --no-folding HOME
 )
 
 DOTFILES_DIR="$HOME/dotfiles"
