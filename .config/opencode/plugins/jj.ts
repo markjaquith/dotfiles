@@ -41,7 +41,6 @@ export function evaluateBashCommand(
 
 export const JjPlugin: Plugin = async ({ directory }) => {
 	const root = getJjRoot(directory)
-	return {}
 
 	return {
 		"experimental.chat.system.transform": async (_input, output) => {
