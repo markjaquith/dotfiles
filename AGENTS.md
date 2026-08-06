@@ -14,6 +14,17 @@ A frequent user request you will get is to install a package. When the user says
 - `hk.pkl` defines the repo's hook-driven check/fix workflow.
 - `.stowrc` controls what is and is not synced into `$HOME`.
 
+## OpenCode and Pi Parity
+
+- Whenever possible, build features for both OpenCode and Pi. A request for an
+  OpenCode command or plugin usually also implies the equivalent Pi command or
+  extension, and vice versa.
+- Account for platform-specific differences rather than forcing identical
+  implementations.
+- When editing functionality that exists in both systems, keep the equivalent
+  behavior synchronized in the other system. Prefer a shared source of truth,
+  such as a symlink, when both can consume the same file safely.
+
 ## High-Signal Commands
 
 ### Setup / bootstrap
