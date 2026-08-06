@@ -19,8 +19,8 @@ return {
       { '<leader>S', group = '[S]ession' },
       { '<leader>l', group = '[L]SP' },
       { '<leader>t', group = '[T]oggle' },
-      { '<leader>h', group = 'Git [H]unk',     mode = { 'n', 'v' } },
-      { '<leader>w', proxy = '<c-w>',          group = 'windows' },
+      { '<leader>h', group = 'VCS [H]unk', mode = { 'n', 'v' } },
+      { '<leader>w', proxy = '<c-w>', group = 'windows' },
     },
   },
   keys = {
