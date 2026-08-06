@@ -7,6 +7,10 @@
 		"branch": "master",
 		"commit": "c1851d5c519611dfc451b6582961b2602e0af89b"
 	},
+	"async.nvim": {
+		"branch": "main",
+		"commit": "46adf61a022d5c923f981d527443f406e7d0f63e"
+	},
 	"back-pocket.nvim": {
 		"branch": "main",
 		"commit": "d83e4aa9aa7f11da7193c3edf039fadc5fff9d14"
@@ -42,10 +46,6 @@
 	"git-blame.nvim": {
 		"branch": "master",
 		"commit": "8503b199edf9a666fe7b1a989cf14e3c26b2eb03"
-	},
-	"gitsigns.nvim": {
-		"branch": "main",
-		"commit": "8d82c240f190fc33723d48c308ccc1ed8baad69d"
 	},
 	"lazy.nvim": {
 		"branch": "main",
@@ -158,6 +158,14 @@
 	"typescript-tools.nvim": {
 		"branch": "master",
 		"commit": "c2f5910074103705661e9651aa841e0d7eea9932"
+	},
+	"vclib.nvim": {
+		"branch": "main",
+		"commit": "24c36d22ddd28c8d001d85e1fb69fcd2e38a8858"
+	},
+	"vcsigns.nvim": {
+		"branch": "main",
+		"commit": "40fb52b35d5402740b83642ac53dcc3e29552ac2"
 	},
 	"vim-herdr-navigation": {
 		"branch": "main",
