@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent"
+import { rewriteGhCommands } from "../../../.config/opencode/plugins/lib/jj-shell"
 
 const rawGitCommandPattern =
 	/(?:^|&&|\|\||[;|\n(])\s*(?:[A-Za-z_][A-Za-z0-9_]*=(?:'[^']*'|"[^"]*"|[^\s]+)\s+)*(?:(?:command|env|sudo)(?:\s+-\S+)*\s+)*(?:[^\s;&|()]*\/)?git(?=\s|$)/
@@ -25,9 +26,22 @@ export function evaluateBashCommand(
 	command: string,
 	root: string | null,
 ): JjCommandDecision {
-	if (!root || !containsRawGitCommand(command)) return { blocked: false }
+	const commandForGitCheck = command.replace(
+		/\$\(\s*jj\s+git\s+root\s*\)/g,
+		"JJ_GIT_ROOT",
+	)
+	if (!root || !containsRawGitCommand(commandForGitCheck)) {
+		return { blocked: false }
+	}
 
 	return { blocked: true, reason: rawGitBlockReason }
+}
+
+export function rewriteBashCommand(
+	command: string,
+	root: string | null,
+): string {
+	return root ? rewriteGhCommands(command) : command
 }
 
 async function getJjRoot(
@@ -69,9 +83,11 @@ export default function (pi: ExtensionAPI) {
 
 		const root = await getJjRoot(pi, roots, ctx.cwd)
 		const decision = evaluateBashCommand(event.input.command, root)
-		if (!decision.blocked) return
+		if (decision.blocked) {
+			pi.events.emit("pi:attention", { label: "Blocked raw git command" })
+			return { block: true, reason: decision.reason }
+		}
 
-		pi.events.emit("pi:attention", { label: "Blocked raw git command" })
-		return { block: true, reason: decision.reason }
+		event.input.command = rewriteBashCommand(event.input.command, root)
 	})
 }
