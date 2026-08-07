@@ -7,6 +7,21 @@ description: Interact with Obsidian vaults using the Obsidian CLI to read, creat
 
 Use the `obsidian` CLI to interact with a running Obsidian instance. Requires Obsidian to be open.
 
+## Connectivity preflight
+
+Before invoking `obsidian` for any operation, verify connectivity without
+launching the app:
+
+```bash
+command -v obsidian >/dev/null && pgrep -x Obsidian >/dev/null
+```
+
+If either check fails, report that the CLI is unavailable or Obsidian is not
+running and stop. Do not invoke the app executable to test connectivity: CLI
+arguments can cold-start Electron and hang before a vault is ready. If the
+process exists but a CLI command still cannot connect, report that a focused
+vault may be missing and stop rather than retrying commands.
+
 ## Command reference
 
 Run `obsidian help` to see all available commands. This is always up to date. Full docs: https://help.obsidian.md/cli
