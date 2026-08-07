@@ -34,6 +34,7 @@ brew install --quiet \
     bottom \
     buildkite/buildkite/bk@3 \
     gum \
+		flock \
     stow \
     jj \
     jq \
