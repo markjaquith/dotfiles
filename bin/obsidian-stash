@@ -1,0 +1,94 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail
+
+function usage() {
+	print -u2 "Usage:"
+	print -u2 "  obsidian-stash candidates \"search terms\""
+	print -u2 "  obsidian-stash read \"Scratchpad/path.md\""
+	print -u2 "  obsidian-stash write \"Scratchpad/path.md\" < note.md"
+}
+
+function require_obsidian() {
+	if ! command -v obsidian >/dev/null 2>&1; then
+		print -u2 "Error: obsidian CLI is not available"
+		exit 127
+	fi
+
+	if ! pgrep -x Obsidian >/dev/null 2>&1; then
+		print -u2 "Error: Obsidian is not running"
+		exit 1
+	fi
+}
+
+function require_scratchpad_path() {
+	local path="$1"
+
+	if [[ "$path" != Scratchpad/*.md || "$path" == *'/../'* || "$path" == *$'\n'* ]]; then
+		print -u2 "Error: path must be a Markdown file under Scratchpad/: $path"
+		exit 2
+	fi
+}
+
+if [[ "$#" -ne 2 ]]; then
+	usage
+	exit 2
+fi
+
+command_name="$1"
+argument="$2"
+
+case "$command_name" in
+	candidates)
+		if [[ -z "${argument//[[:space:]]/}" ]]; then
+			print -u2 "Error: search terms must not be empty"
+			exit 2
+		fi
+		if ! command -v jq >/dev/null 2>&1; then
+			print -u2 "Error: jq is not available"
+			exit 127
+		fi
+
+		require_obsidian
+		files_json=$(obsidian files folder="Scratchpad" ext=md | jq -Rsc \
+			'split("\n") | map(select(length > 0))') || exit $?
+		matches=$(obsidian search:context query="$argument" path="Scratchpad" \
+			limit=20 format=json) || exit $?
+		[[ -z "$matches" ]] && matches='[]'
+
+		jq -n \
+			--arg topic "$argument" \
+			--argjson files "$files_json" \
+			--argjson matches "$matches" \
+			'{
+				topic: $topic,
+				files: $files,
+				matches: ($matches | map(.matches |= unique_by([.line, .text])))
+			}'
+		;;
+	read)
+		require_scratchpad_path "$argument"
+		require_obsidian
+		obsidian read path="$argument"
+		;;
+	write)
+		require_scratchpad_path "$argument"
+		if [[ -t 0 ]]; then
+			print -u2 "Error: note content must be provided on stdin"
+			exit 2
+		fi
+
+		require_obsidian
+		content=$(cat) || exit $?
+		if [[ -z "$content" ]]; then
+			print -u2 "Error: note content on stdin must not be empty"
+			exit 2
+		fi
+		obsidian create path="$argument" content="$content" overwrite
+		;;
+	*)
+		usage
+		exit 2
+		;;
+esac
