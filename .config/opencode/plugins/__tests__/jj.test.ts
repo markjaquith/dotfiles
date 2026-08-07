@@ -7,6 +7,7 @@ import JjPluginModule, {
 	getJjRoot,
 	getJjSystemInstruction,
 	JjPlugin,
+	rewriteBashCommand,
 } from "../jj"
 
 describe("jj", () => {
@@ -59,11 +60,27 @@ describe("jj", () => {
 		if (decision.blocked) expect(decision.reason).toContain("jj equivalent")
 	})
 
-	test.each(["jj git fetch", "echo git status", "gh pr view", "git status"])(
+	test.each([
+		"jj git fetch",
+		"echo git status",
+		"gh pr view",
+		"GIT_DIR=$(jj git root) gh pr view",
+		"git status",
+	])(
 		"does not block an allowed command or a non-jj workspace: %s",
 		(command) => {
 			const root = command === "git status" ? null : "/workspace/example"
 			expect(evaluateBashCommand(command, root)).toEqual({ blocked: false })
 		},
 	)
+
+	test("rewrites gh commands in a jj workspace", () => {
+		expect(
+			rewriteBashCommand("echo ok && gh pr view", "/workspace/example"),
+		).toBe("echo ok && GIT_DIR=$(jj git root) gh pr view")
+	})
+
+	test("leaves gh commands unchanged outside a jj workspace", () => {
+		expect(rewriteBashCommand("gh pr view", null)).toBe("gh pr view")
+	})
 })
