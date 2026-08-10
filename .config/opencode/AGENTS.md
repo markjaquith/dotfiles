@@ -58,7 +58,11 @@ If, however, the user says to "work", "launch", "start", or "kick off" an agency
 
 Be smart about composing these. i.e. do the right thing for "create and work" or "create and open"
 
-After launching work, verify it with one `agency context <document-path> --json` call. Do not also inspect the Herdr pane or list all agents unless that verification fails.
+After launching or opening an Agency item, perform exactly one
+`agency context <document-path> --json` verification. If it succeeds, stop
+immediately. Do not inspect, read, poll, monitor, or otherwise babysit the Herdr
+pane or launched agent unless the user explicitly requests it. Only investigate
+the pane when that verification fails.
 
 ## Examples
 
