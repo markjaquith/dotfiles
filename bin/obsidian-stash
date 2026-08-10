@@ -55,7 +55,12 @@ case "$command_name" in
 			'split("\n") | map(select(length > 0))') || exit $?
 		matches=$(obsidian search:context query="$argument" path="Scratchpad" \
 			limit=20 format=json) || exit $?
-		[[ -z "$matches" ]] && matches='[]'
+		if [[ -z "$matches" || "$matches" == 'No matches found.' ]]; then
+			matches='[]'
+		elif ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"$matches"; then
+			print -u2 "Error: obsidian search returned invalid JSON"
+			exit 1
+		fi
 
 		jq -n \
 			--arg topic "$argument" \
