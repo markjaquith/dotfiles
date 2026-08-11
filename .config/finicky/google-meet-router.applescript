@@ -4,6 +4,7 @@ use scripting additions
 on open location meetURL
   if my routeMeetTab(meetURL) then
     my bringMeetToFront()
+    my clickJoinButton()
     return
   end if
 
@@ -14,6 +15,7 @@ on open location meetURL
 
     if my routeMeetTab(meetURL) then
       my bringMeetToFront()
+      my clickJoinButton()
       return
     end if
   end repeat
@@ -35,6 +37,11 @@ on routeMeetTab(meetURL)
 
   return false
 end routeMeetTab
+
+on clickJoinButton()
+  set joinHelper to POSIX path of (path to resource "Google Meet Join Helper.app")
+  do shell script "/usr/bin/open -g " & quoted form of joinHelper
+end clickJoinButton
 
 on bringMeetToFront()
   set meetApps to current application's NSRunningApplication's runningApplicationsWithBundleIdentifier:"com.google.Chrome.app.kjgfgldnnfoeklkmfkjfagphfepbbdan"
