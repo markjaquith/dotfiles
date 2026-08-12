@@ -85,6 +85,12 @@ type = "plugin_action"
 command = "url-chooser.open"
 description = "choose URL from focused pane"
 
+[[keys.command]]
+key = "prefix+ctrl+o"
+type = "plugin_action"
+command = "agent-chooser.open"
+description = "choose an agent needing attention"
+
 [ui]
 mouse_capture = true
 agent_panel_sort = "spaces"

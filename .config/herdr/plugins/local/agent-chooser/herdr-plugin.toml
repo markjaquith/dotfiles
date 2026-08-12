@@ -1,0 +1,18 @@
+id = "agent-chooser"
+name = "Agent Chooser"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Choose a done or blocked Herdr agent to focus"
+platforms = ["macos"]
+
+[[actions]]
+id = "open"
+title = "Choose an agent needing attention"
+contexts = ["global"]
+command = ["bash", "open.sh"]
+
+[[panes]]
+id = "picker"
+title = "󰚩 Agents"
+placement = "popup"
+command = ["bash", "-c", "exec bash \"$HERDR_PLUGIN_ROOT/picker.sh\""]
