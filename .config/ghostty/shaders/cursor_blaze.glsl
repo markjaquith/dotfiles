@@ -66,6 +66,8 @@ const vec4 CURRENT_CURSOR_COLOR = TRAIL_COLOR;
 const vec4 PREVIOUS_CURSOR_COLOR = TRAIL_COLOR;
 const vec4 TRAIL_COLOR_ACCENT = vec4(0.718, 0.745, 0.973, 1.0);
 const float DURATION = 0.4;
+const float TRAIL_DEBOUNCE = 0.035;
+const float TRAIL_REVEAL = 0.015;
 const float OPACITY = 0.8;
 const float DRAW_THRESHOLD = 1.5;
 
@@ -97,8 +99,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec4 newColor = vec4(fragColor);
 
-    float progress = blend(clamp((iTime - iTimeCursorChange) / DURATION, 0.0, 1.0));
+    float elapsed = iTime - iTimeCursorChange;
+    float progress = blend(clamp(elapsed / DURATION, 0.0, 1.0));
     float easedProgress = ease(progress);
+    float trailReveal = smoothstep(
+        TRAIL_DEBOUNCE,
+        TRAIL_DEBOUNCE + TRAIL_REVEAL,
+        elapsed
+    );
 
     // Distance between cursors determine the total length of the parallelogram
     vec2 centerCC = getRectangleCenter(currentCursor);
@@ -120,7 +128,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         newColor = mix(newColor, TRAIL_COLOR_ACCENT, 1.0 - smoothstep(sdfTrail, -0.01, 0.001));
         newColor = mix(newColor, TRAIL_COLOR, antialiasing(sdfTrail, aaThreshold));
-        newColor = mix(fragColor, newColor, (1.0 - alphaModifier) * OPACITY);
+        newColor = mix(
+            fragColor,
+            newColor,
+            (1.0 - alphaModifier) * OPACITY * trailReveal
+        );
         fragColor = mix(newColor, fragColor, step(sdfCursor, 0.0));
     }
 }
