@@ -3,6 +3,8 @@ plugins.json
 plugins/*
 !plugins/local/
 plugins/local/*
+!plugins/local/agent-chooser/
+!plugins/local/agent-chooser/**
 !plugins/local/url-chooser/
 !plugins/local/url-chooser/**
 !plugins/local/new-tab-cwd/
