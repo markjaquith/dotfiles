@@ -50,13 +50,23 @@ printf 'AGENCY_SESSION_ID=%s\nAGENCY_TARGET=%s\n' \
 
 If the user explicitly addresses `@agency`, delegate the complete Agency request to the `@agency` subagent. Do not reproduce the Agency workflow with CLI calls in the main agent unless delegation fails.
 
+Treat explicit new-item language as an Agency item boundary. Phrases such as
+"the investigation is complete" followed by "new", "separate", or "follow-up
+coding task" mean create a distinct item for implementation rather than reuse
+the investigation item. This explicit boundary overrides reuse even when the
+current task permits implementation; implementation permission does not imply
+that later work belongs to the same item.
+
 If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab in the same workspace as the request. Always pass `--workspace "$HERDR_WORKSPACE_ID"`; never rely on the UI-focused workspace. Before launching execution work, run `agency worktree prepare <task> --dry-run --json` and stop if it fails or reports an `Unable to resolve reference` workspace warning. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
 
 If the user says to "create" an agency item, then by default you should create it in the @agency subagent, and then "open" the item in a new tab, as outlined above.
 
 If, however, the user says to "work", "launch", "start", or "kick off" an agency item, then do all of the above, but pass the `--auto` flag so agency starts working on the item.
 
-Be smart about composing these. i.e. do the right thing for "create and work" or "create and open"
+Compose these intents directly. "Create and open" means create the item and open
+it without `--auto`. "Create and work" or "kick off a new coding task" means
+create the item, open it in a new Herdr tab in the same workspace, and launch it
+with `--auto`.
 
 After launching or opening an Agency item, perform exactly one
 `agency context <document-path> --json` verification. If it succeeds, stop
@@ -70,6 +80,11 @@ the pane when that verification fails.
 - Prompt: `launch this task` Outcome: open and work with `--auto`
 - Prompt: `kick off a new task` Outcome: create, open, and work with `--auto`
 - Prompt: `create and work this phase` Outcome: create, open, and work with `--auto`
+- Prompt: `the investigation is complete; create a follow-up coding task`
+  Outcome: create a distinct item and open it without `--auto`
+- Prompt: `the investigation is complete; kick off a new coding task`
+  Outcome: create a distinct item, open it in a new Herdr tab in the current
+  workspace, and launch with `--auto`; do not focus or babysit it
 
 # Version control guidelines
 

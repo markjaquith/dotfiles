@@ -76,6 +76,12 @@ Use a single-phase task for one outcome delivered by one PR. Use phases when an
 outcome needs multiple PRs or ordered execution units. Use an epic when several
 independently meaningful tasks need coordination.
 
+When interpreting an orchestration handoff, explicit new-item language wins over
+reuse. For example, "the investigation is complete" followed by a request for a
+"new", "separate", or "follow-up coding task" establishes a distinct Agency
+item even if the investigation task permits implementation. Treat permission to
+implement and intent to reuse an item as separate decisions.
+
 ## Safety Invariants
 
 - Keep task-wide decisions in `TASK.md` and phase delivery details in `PHASE.md`.
