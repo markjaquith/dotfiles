@@ -130,7 +130,7 @@ switch_view() {
 	local key="$1" view
 	view=$(next_view "$(<"$cache_dir/active")" "$key")
 	printf '%s' "$view" >"$cache_dir/active"
-	(bash "$script" refresh-post >/dev/null 2>&1 &)
+	(bash "$script" refresh >/dev/null 2>&1 &)
 	reload_action "$view"
 }
 
@@ -205,6 +205,7 @@ fzf_socket=""
 case "${1:-}" in
 	header) tab_header "$2"; exit ;;
 	switch) switch_view "$2"; exit ;;
+	refresh) refresh_cache true; exit ;;
 	periodic) periodic_refresh; exit ;;
 	refresh-post) refresh_and_post; exit ;;
 esac
