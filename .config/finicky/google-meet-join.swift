@@ -3,6 +3,7 @@ import ApplicationServices
 
 let meetBundleID = "com.google.Chrome.app.kjgfgldnnfoeklkmfkjfagphfepbbdan"
 let joinLabels = Set(["Join now", "Ask to join", "Join anyway"])
+let notesDialogTitle = "Gemini is taking notes"
 
 let trustOptions = [
 	kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true,
@@ -108,6 +109,72 @@ func clickJoinButton(in element: AXUIElement, depth: Int = 0) -> Bool {
 	}
 }
 
+func button(
+	withLabel label: String,
+	in element: AXUIElement,
+	depth: Int = 0
+) -> AXUIElement? {
+	guard depth < 25 else { return nil }
+
+	let role: String? = attribute(kAXRoleAttribute, of: element)
+	if role == kAXButtonRole as String {
+		let title: String = attribute(kAXTitleAttribute, of: element) ?? ""
+		let description: String =
+			attribute(kAXDescriptionAttribute, of: element) ?? ""
+
+		if title == label || description == label {
+			return element
+		}
+	}
+
+	let children: [AXUIElement] =
+		attribute(kAXChildrenAttribute, of: element) ?? []
+	for child in children {
+		if let match = button(withLabel: label, in: child, depth: depth + 1) {
+			return match
+		}
+	}
+
+	return nil
+}
+
+func clickNotesDialogJoinButton(
+	in element: AXUIElement,
+	depth: Int = 0
+) -> Bool {
+	guard depth < 25 else { return false }
+
+	let title: String = attribute(kAXTitleAttribute, of: element) ?? ""
+	let value: String = attribute(kAXValueAttribute, of: element) ?? ""
+	let description: String =
+		attribute(kAXDescriptionAttribute, of: element) ?? ""
+
+	if title == notesDialogTitle || value == notesDialogTitle ||
+		description == notesDialogTitle
+	{
+		var ancestor: AXUIElement? = element
+		while let candidate = ancestor {
+			let role: String? = attribute(kAXRoleAttribute, of: candidate)
+			if role == kAXWindowRole as String ||
+				role == kAXApplicationRole as String
+			{
+				break
+			}
+
+			if let joinButton = button(withLabel: "Join now", in: candidate) {
+				return click(joinButton)
+			}
+			ancestor = attribute(kAXParentAttribute, of: candidate)
+		}
+	}
+
+	let children: [AXUIElement] =
+		attribute(kAXChildrenAttribute, of: element) ?? []
+	return children.contains { child in
+		clickNotesDialogJoinButton(in: child, depth: depth + 1)
+	}
+}
+
 while Date() < joinDeadline {
 	if let meetApp = NSRunningApplication.runningApplications(
 		withBundleIdentifier: meetBundleID
@@ -125,6 +192,13 @@ while Date() < joinDeadline {
 		}
 
 		if clickJoinButton(in: meetElement) {
+			let notesDialogDeadline = Date().addingTimeInterval(10)
+			while Date() < notesDialogDeadline {
+				if clickNotesDialogJoinButton(in: meetElement) {
+					exit(EXIT_SUCCESS)
+				}
+				Thread.sleep(forTimeInterval: 0.1)
+			}
 			exit(EXIT_SUCCESS)
 		}
 	}

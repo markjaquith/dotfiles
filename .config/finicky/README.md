@@ -17,8 +17,9 @@ The router has two responsibilities:
    `Ask to join`, or `Join anyway`, then clicks the first match.
 
 The join helper checks every 50 ms for the first five seconds. It then doubles
-the interval up to a 500 ms maximum and stops after 30 seconds. It exits
-immediately after a successful click.
+the interval up to a 500 ms maximum and stops after 30 seconds. After clicking
+the initial join button, it waits up to 10 seconds for the optional Gemini notes
+dialog and clicks that dialog's `Join now` button.
 
 ### Automation Boundaries
 
