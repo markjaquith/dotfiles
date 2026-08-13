@@ -23,6 +23,7 @@ brew install --quiet \
 		yamlfix \
 		pkl-lsp \
 		fswatch \
+		watchman \
 		tree-sitter-cli \
     1password-cli \
     lua-language-server \

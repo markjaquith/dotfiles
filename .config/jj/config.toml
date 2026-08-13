@@ -1,6 +1,9 @@
 [snapshot]
 max-new-file-size = "3MiB"
 
+[fsmonitor]
+backend = "watchman"
+
 [user]
 email = "mark@jaquith.me"
 name = "Mark Jaquith"
