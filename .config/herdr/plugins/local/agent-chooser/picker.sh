@@ -181,6 +181,7 @@ main() {
 			--with-nth=2 \
 			--id-nth=4 \
 			--track \
+			--highlight-line \
 			--layout=reverse \
 			--info=hidden \
 			--prompt='  ' \
