@@ -64,7 +64,7 @@ describe("jj", () => {
 		"jj git fetch",
 		"echo git status",
 		"gh pr view",
-		"GIT_DIR=$(jj git root) gh pr view",
+		"GIT_DIR=$(jj git root --ignore-working-copy) gh pr view",
 		"git status",
 	])(
 		"does not block an allowed command or a non-jj workspace: %s",
@@ -77,7 +77,9 @@ describe("jj", () => {
 	test("rewrites gh commands in a jj workspace", () => {
 		expect(
 			rewriteBashCommand("echo ok && gh pr view", "/workspace/example"),
-		).toBe("echo ok && GIT_DIR=$(jj git root) gh pr view")
+		).toBe(
+			"echo ok && GIT_DIR=$(jj git root --ignore-working-copy) gh pr view",
+		)
 	})
 
 	test("leaves gh commands unchanged outside a jj workspace", () => {

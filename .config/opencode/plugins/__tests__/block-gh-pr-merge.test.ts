@@ -36,7 +36,7 @@ describe("block-gh-pr-merge", () => {
 	test("blocks jj-rewritten merge commands", () => {
 		expect(
 			evaluateToolCall(
-				bash("GIT_DIR=$(jj git root) gh pr merge 123"),
+				bash("GIT_DIR=$(jj git root --ignore-working-copy) gh pr merge 123"),
 				"example/other",
 			).blocked,
 		).toBe(true)

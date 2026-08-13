@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { rewriteGhCommands } from "../lib/jj-shell"
 
-const prefix = "GIT_DIR=$(jj git root) "
+const prefix = "GIT_DIR=$(jj git root --ignore-working-copy) "
 
 describe("rewriteGhCommands", () => {
 	test.each([
@@ -56,7 +56,7 @@ describe("rewriteGhCommands", () => {
 		"# gh pr view",
 		"echo ok # gh pr view",
 		"GIT_DIR=/tmp/repo gh pr view",
-		`GIT_DIR=$(jj git root) gh pr view`,
+		`GIT_DIR=$(jj git root --ignore-working-copy) gh pr view`,
 	])("does not rewrite a non-command or configured gh token: %s", (command) => {
 		expect(rewriteGhCommands(command)).toBe(command)
 	})

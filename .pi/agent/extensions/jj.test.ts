@@ -37,7 +37,7 @@ describe("Pi jj extension", () => {
 		"jj git fetch",
 		"echo git status",
 		"gh pr view",
-		"GIT_DIR=$(jj git root) gh pr view",
+		"GIT_DIR=$(jj git root --ignore-working-copy) gh pr view",
 	])("allows non-git commands in a jj workspace: %s", (command) => {
 		expect(evaluateBashCommand(command, "/workspace/example")).toEqual({
 			blocked: false,
@@ -51,7 +51,9 @@ describe("Pi jj extension", () => {
 	test("rewrites gh commands in a jj workspace", () => {
 		expect(
 			rewriteBashCommand("echo ok && gh pr view", "/workspace/example"),
-		).toBe("echo ok && GIT_DIR=$(jj git root) gh pr view")
+		).toBe(
+			"echo ok && GIT_DIR=$(jj git root --ignore-working-copy) gh pr view",
+		)
 	})
 
 	test("leaves gh commands unchanged outside a jj workspace", () => {

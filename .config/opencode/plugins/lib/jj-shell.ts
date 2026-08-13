@@ -1,4 +1,4 @@
-const GH_GIT_DIR_PREFIX = "GIT_DIR=$(jj git root) "
+const GH_GIT_DIR_PREFIX = "GIT_DIR=$(jj git root --ignore-working-copy) "
 
 const commandStarters = new Set([
 	"do",
