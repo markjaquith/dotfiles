@@ -1,6 +1,6 @@
 {
 	"$schema": "https://opencode.ai/config.json",
-	"plugin": ["opencode-queue@0.11.2"],
+	"plugin": ["opencode-queue@0.11.2", "@plannotator/opencode@latest"],
 	"snapshot": false,
 	"mcp": {
 		"playwright": {
