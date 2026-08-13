@@ -29,21 +29,20 @@ dialog and clicks that dialog's `Join now` button.
 - Clicking occurs through the Google Meet PWA's native macOS accessibility tree.
   Running the helper from a terminal is not a valid permission test because the
   terminal may already have Accessibility access.
-- macOS Accessibility approval is tied to the helper's code signature, not only
-  its path or bundle identifier. With ad-hoc signing, recompiling the helper
-  changes its CDHash and requires new approval even if System Settings still
-  displays a stale enabled row.
-- The build script therefore preserves the exact signed helper app whenever the
-  Swift source hash is unchanged. Do not deep-sign the outer router afterward;
-  that would replace the nested helper's signature and invalidate approval.
+- macOS Accessibility approval is tied to the helper's designated requirement,
+  not only its path or bundle identifier. The helper is ad-hoc signed with an
+  explicit requirement based on its fixed bundle identifier, so recompiling it
+  does not change the identity stored by TCC.
+- Do not deep-sign the outer router afterward; that would replace the nested
+  helper's signature and its explicit designated requirement.
 - Permission prompting must remain conditional on `AXIsProcessTrusted()`.
   Calling `AXIsProcessTrustedWithOptions` with prompting enabled on every launch
   can repeatedly open Accessibility settings.
 
 ### Troubleshooting
 
-If the helper source changed and macOS shows an enabled entry but continues to
-prompt, clear only its stale approval and invoke the router again:
+Builds made before the stable designated requirement was added used the helper's
+CDHash as its identity. Clear that stale approval once, then invoke the router:
 
 ```sh
 tccutil reset Accessibility local.finicky.google-meet-router.join-helper

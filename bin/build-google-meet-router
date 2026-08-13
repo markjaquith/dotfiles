@@ -6,6 +6,7 @@ readonly APP_NAME="Google Meet Router"
 readonly BUNDLE_ID="local.finicky.google-meet-router"
 readonly JOIN_HELPER_NAME="Google Meet Join Helper"
 readonly JOIN_HELPER_BUNDLE_ID="$BUNDLE_ID.join-helper"
+readonly JOIN_HELPER_REQUIREMENT="=designated => identifier \"$JOIN_HELPER_BUNDLE_ID\""
 readonly SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]}")"
 readonly REPO_ROOT="$(dirname "$(dirname "$SCRIPT_PATH")")"
 readonly SOURCE_PATH="$REPO_ROOT/.config/finicky/google-meet-router.applescript"
@@ -28,9 +29,7 @@ cleanup() {
 
 main() {
   local built_app
-  local existing_join_helper_hash=""
   local join_helper_app
-  local join_helper_hash
 
   [[ "$(uname -s)" == "Darwin" ]] || fail "This builder requires macOS"
   [[ -f "$SOURCE_PATH" ]] || fail "AppleScript source not found: $SOURCE_PATH"
@@ -41,43 +40,24 @@ main() {
   trap cleanup EXIT
   built_app="$BUILD_DIR/$APP_NAME.app"
   join_helper_app="$built_app/Contents/Resources/$JOIN_HELPER_NAME.app"
-  join_helper_hash="$(shasum -a 256 "$JOIN_HELPER_SOURCE")"
-  join_helper_hash="${join_helper_hash%% *}"
-
-  if [[ -f "$APP_PATH/Contents/Info.plist" ]]; then
-    existing_join_helper_hash="$(
-      /usr/libexec/PlistBuddy \
-        -c "Print :GoogleMeetJoinHelperSourceHash" \
-        "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-    )"
-  fi
 
   osacompile -o "$built_app" "$SOURCE_PATH"
-  # Preserve the helper's CDHash so existing Accessibility approval remains valid.
-  if [[
-    "$existing_join_helper_hash" == "$join_helper_hash" &&
-      -d "$APP_PATH/Contents/Resources/$JOIN_HELPER_NAME.app"
-  ]]; then
-    cp -R \
-      "$APP_PATH/Contents/Resources/$JOIN_HELPER_NAME.app" \
-      "$join_helper_app"
-  else
-    mkdir -p "$join_helper_app/Contents/MacOS"
-    xcrun swiftc -O \
-      -o "$join_helper_app/Contents/MacOS/$JOIN_HELPER_NAME" \
-      "$JOIN_HELPER_SOURCE"
-    /usr/libexec/PlistBuddy \
-      -c "Add :CFBundleExecutable string $JOIN_HELPER_NAME" \
-      -c "Add :CFBundleIdentifier string $JOIN_HELPER_BUNDLE_ID" \
-      -c "Add :CFBundleName string $JOIN_HELPER_NAME" \
-      -c "Add :CFBundlePackageType string APPL" \
-      -c "Add :LSUIElement bool true" \
-      "$join_helper_app/Contents/Info.plist"
-    codesign --force --sign - "$join_helper_app"
-  fi
+  mkdir -p "$join_helper_app/Contents/MacOS"
+  xcrun swiftc -O \
+    -o "$join_helper_app/Contents/MacOS/$JOIN_HELPER_NAME" \
+    "$JOIN_HELPER_SOURCE"
+  /usr/libexec/PlistBuddy \
+    -c "Add :CFBundleExecutable string $JOIN_HELPER_NAME" \
+    -c "Add :CFBundleIdentifier string $JOIN_HELPER_BUNDLE_ID" \
+    -c "Add :CFBundleName string $JOIN_HELPER_NAME" \
+    -c "Add :CFBundlePackageType string APPL" \
+    -c "Add :LSUIElement bool true" \
+    "$join_helper_app/Contents/Info.plist"
+  codesign --force --sign - \
+    --requirements "$JOIN_HELPER_REQUIREMENT" \
+    "$join_helper_app"
   /usr/libexec/PlistBuddy \
     -c "Add :CFBundleIdentifier string $BUNDLE_ID" \
-    -c "Add :GoogleMeetJoinHelperSourceHash string $join_helper_hash" \
     -c "Add :CFBundleURLTypes array" \
     -c "Add :CFBundleURLTypes:0 dict" \
     -c "Add :CFBundleURLTypes:0:CFBundleURLName string $BUNDLE_ID" \
@@ -90,6 +70,8 @@ main() {
 
   rm -rf "$APP_PATH"
   mv "$built_app" "$APP_PATH"
+  "$LSREGISTER" -f \
+    "$APP_PATH/Contents/Resources/$JOIN_HELPER_NAME.app"
   "$LSREGISTER" -f "$APP_PATH"
 
   printf 'Built and registered %s\n' "$APP_PATH"
