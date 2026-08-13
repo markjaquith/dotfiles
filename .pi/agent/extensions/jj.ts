@@ -27,7 +27,7 @@ export function evaluateBashCommand(
 	root: string | null,
 ): JjCommandDecision {
 	const commandForGitCheck = command.replace(
-		/\$\(\s*jj\s+git\s+root\s*\)/g,
+		/\$\(\s*jj\s+git\s+root(?:\s+--ignore-working-copy)?\s*\)/g,
 		"JJ_GIT_ROOT",
 	)
 	if (!root || !containsRawGitCommand(commandForGitCheck)) {
