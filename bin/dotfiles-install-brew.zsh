@@ -16,7 +16,6 @@ brew install --quiet \
     lua \
 		stylua \
 		bruno \
-		crit \
 		tokei \
 		bacon \
 		kondo \
