@@ -18,7 +18,7 @@ while !AXIsProcessTrusted(), Date() < trustDeadline {
 }
 
 guard AXIsProcessTrusted() else {
-	exit(EXIT_FAILURE)
+	exit(2)
 }
 
 let joinDeadline = Date().addingTimeInterval(30)
