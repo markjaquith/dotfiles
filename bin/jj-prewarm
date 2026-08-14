@@ -4,11 +4,7 @@ emulate -L zsh
 setopt pipefail
 
 PREWARM_NAME="${JJ_PREWARM_NAME:-prewarm}"
-STORE_HELPER="${0:A:h}/jj-workspace-store-path.ts"
-REPO_LINK_HELPER="${0:A:h}/jj-workspace-repo-link.ts"
 ACTIVE_LOCK=""
-REPLENISH_PATH=""
-REPLENISH_REVISION=""
 
 function usage() {
 	print -r -- "Usage: jj-prewarm [command] [options]"
@@ -31,14 +27,12 @@ function die() {
 }
 
 command -v jj >/dev/null 2>&1 || die "jj is required"
-command -v bun >/dev/null 2>&1 || die "bun is required"
 command -v flock >/dev/null 2>&1 || die "flock is required"
-[[ -f "$STORE_HELPER" ]] || die "metadata helper is missing: ${STORE_HELPER}"
-[[ -f "$REPO_LINK_HELPER" ]] || die "repo-link helper is missing: ${REPO_LINK_HELPER}"
+command -v rsync >/dev/null 2>&1 || die "rsync is required"
 
 function repo_path() {
 	local root repo_file relative_repo
-	root=$(jj workspace root 2>/dev/null) || return 1
+	root=$(jj --ignore-working-copy workspace root 2>/dev/null) || return 1
 	repo_file="${root}/.jj/repo"
 
 	if [[ -d "$repo_file" ]]; then
@@ -57,7 +51,7 @@ function repo_path() {
 
 function repository_name() {
 	local git_path primary_root repo_name
-	git_path=$(jj git root 2>/dev/null) || die "set JJ_PREWARM_ROOT for a non-Git repository"
+	git_path=$(jj --ignore-working-copy git root 2>/dev/null) || die "set JJ_PREWARM_ROOT for a non-Git repository"
 	primary_root="${git_path:h}"
 	repo_name="${primary_root:t}"
 	print -r -- "$repo_name"
@@ -175,7 +169,7 @@ function TRAPTERM() {
 function workspace_exists() {
 	local wanted="$1"
 	local output name
-	output=$(jj workspace list --template 'name ++ "\n"' 2>/dev/null) || return 1
+	output=$(jj --ignore-working-copy workspace list --template 'name ++ "\n"' 2>/dev/null) || return 1
 	while IFS= read -r name; do
 		[[ "$name" == "$wanted" ]] && return 0
 	done <<<"$output"
@@ -183,11 +177,7 @@ function workspace_exists() {
 }
 
 function workspace_root() {
-	jj workspace root --name "$1" 2>/dev/null
-}
-
-function device_id() {
-	stat -f %d "$1" 2>/dev/null || stat -c %d "$1" 2>/dev/null
+	jj --ignore-working-copy workspace root --name "$1" 2>/dev/null
 }
 
 function parse_common_options() {
@@ -231,18 +221,6 @@ function resolve_prewarm_path() {
 
 	parent=$(default_prewarm_parent) || return 1
 	print -r -- "${parent:A}/${PREWARM_NAME}"
-}
-
-function write_journal() {
-	local journal="$1"
-	local phase="$2"
-	local old_path="$3"
-	local new_name="$4"
-	local new_path="$5"
-	local temporary="${journal}.tmp.$$"
-
-	print -rl -- "$phase" "$old_path" "$new_name" "$new_path" >"$temporary" || return 1
-	mv "$temporary" "$journal"
 }
 
 function state_path() {
@@ -342,102 +320,13 @@ function validate_owned_prewarm() {
 	[[ "$actual_identity" == "$expected_identity" ]]
 }
 
-function patch_workspace_path() {
-	local repo="$1"
-	local workspace_name="$2"
-	local old_path="$3"
-	local new_path="$4"
-	local index="${repo}/workspace_store/index"
-	local index_lock="${index}.lock"
-
-	[[ -f "$index" ]] || return 1
-	flock "$index_lock" bun "$STORE_HELPER" \
-		"$index" "$repo" "$workspace_name" "$old_path" "$new_path"
-}
-
-function update_repo_link() {
-	local repo="$1"
-	local workspace_dir="$2"
-	[[ -f "${workspace_dir}/.jj/repo" ]] || return 1
-	bun "$REPO_LINK_HELPER" "$workspace_dir" "$repo"
-}
-
-function recover_journal() {
-	local repo="$1"
-	local journal="${repo}/jj-prewarm-journal"
-	local phase old_path new_name new_path resolved
-
-	[[ -f "$journal" ]] || return 0
-	{
-		IFS= read -r phase
-		IFS= read -r old_path
-		IFS= read -r new_name
-		IFS= read -r new_path
-	} <"$journal"
-
-	[[ -n "$phase" && -n "$old_path" && -n "$new_name" && -n "$new_path" ]] \
-		|| die "invalid recovery journal at ${journal}"
-
-	if [[ -d "$new_path" && ! -e "$old_path" ]]; then
-		update_repo_link "$repo" "$new_path" \
-			|| die "could not repair repo link while recovering ${new_name}"
-		patch_workspace_path "$repo" "$new_name" "$old_path" "$new_path" \
-			|| die "could not finish metadata recovery for ${new_name}"
-		resolved=$(workspace_root "$new_name") \
-			|| die "could not resolve recovered workspace ${new_name}"
-		[[ "${resolved:A}" == "${new_path:A}" ]] \
-			|| die "recovered workspace ${new_name} resolves to ${resolved}"
-		clear_owned_path "$repo"
-		rm -f "$journal"
-		print -u2 -- "jj-prewarm: completed interrupted adoption of ${new_name}"
-		return 0
-	fi
-
-	if [[ -d "$old_path" && ! -e "$new_path" ]]; then
-		update_repo_link "$repo" "$old_path" \
-			|| die "could not repair prewarm repo link while recovering ${new_name}"
-		if workspace_exists "$new_name"; then
-			patch_workspace_path "$repo" "$new_name" "$new_path" "$old_path" \
-				|| die "could not restore metadata while recovering ${new_name}"
-			jj -R "$old_path" workspace rename "$PREWARM_NAME" >/dev/null \
-				|| die "could not roll back workspace name ${new_name}"
-		elif ! workspace_exists "$PREWARM_NAME"; then
-			die "could not identify workspace while recovering ${new_name}"
-		fi
-		rm -f "$journal"
-		print -u2 -- "jj-prewarm: rolled back interrupted adoption of ${new_name}"
-		return 0
-	fi
-
-	die "cannot recover adoption; inspect ${old_path}, ${new_path}, and ${journal}"
-}
-
-function rollback_adoption() {
-	local repo="$1"
-	local journal="$2"
-	local new_name="$3"
-	local old_path="$4"
-	local new_path="$5"
-
-	patch_workspace_path "$repo" "$new_name" "$new_path" "$old_path" || return 1
-	if [[ -d "$new_path" && ! -e "$old_path" ]]; then
-		mv "$new_path" "$old_path" || return 1
-	fi
-	[[ -d "$old_path" && ! -e "$new_path" ]] || return 1
-	update_repo_link "$repo" "$old_path" || return 1
-	if workspace_exists "$new_name"; then
-		jj -R "$old_path" workspace rename "$PREWARM_NAME" >/dev/null || return 1
-	fi
-	workspace_exists "$PREWARM_NAME" || return 1
-	rm -f "$journal"
-}
-
 function update_prewarm_revision() {
 	local workspace_dir="$1"
 	local revision="$2"
 	local current_parent target
 	local diff_summary
 
+	jj -R "$workspace_dir" workspace update-stale >/dev/null 2>&1 || true
 	jj -R "$workspace_dir" status >/dev/null || return 1
 	diff_summary=$(jj -R "$workspace_dir" diff --summary) || return 1
 	[[ -z "$diff_summary" ]] || return 1
@@ -514,34 +403,48 @@ function remove_prewarm() {
 	rm -f "$removal_journal"
 }
 
+function discard_workspace() {
+	local workspace_name="$1"
+	local workspace_dir="$2"
+
+	jj --ignore-working-copy workspace forget "$workspace_name" >/dev/null 2>&1 || return 1
+	rm -rf -- "$workspace_dir"
+}
+
+function seed_workspace() {
+	local prewarm_dir="$1"
+	local workspace_dir="$2"
+
+	# The destination's .jj directory is authoritative. Copy the warm checkout
+	# contents around it so ignored dependencies and caches survive.
+	rsync -a --exclude '/.jj/' --exclude '/.git/' -- \
+		"${prewarm_dir}/" "${workspace_dir}/" || return 1
+	[[ -z "$(jj -R "$workspace_dir" diff --summary)" ]]
+}
+
+function prepare_final_path() {
+	local workspace_dir="$1"
+
+	if command -v mise >/dev/null 2>&1; then
+		mise trust --yes --all -C "$workspace_dir" >/dev/null 2>&1 \
+			|| print -u2 -- "jj-prewarm: warning: mise trust failed at ${workspace_dir}"
+	fi
+	if command -v zoxide >/dev/null 2>&1; then
+		zoxide add "$workspace_dir" >/dev/null 2>&1 \
+			|| print -u2 -- "jj-prewarm: warning: zoxide add failed for ${workspace_dir}"
+	fi
+}
+
 function prepare_workspace() {
 	local repo="$1"
 	local revision="$2"
 	local requested_path="$3"
 	local new_name="$4"
-	local old_path target_path resolved journal
+	local prewarm_path target_path resolved
 
 	[[ "$new_name" != "$PREWARM_NAME" ]] || die "workspace name is reserved: ${PREWARM_NAME}"
 	[[ "$new_name" != *$'\n'* ]] || die "workspace name cannot contain a newline"
 	workspace_exists "$new_name" && die "workspace already exists: ${new_name}"
-
-	old_path=$(workspace_root "$PREWARM_NAME" 2>/dev/null)
-	if [[ -z "$old_path" ]]; then
-		if [[ -n "$requested_path" ]]; then
-			target_path="${requested_path:A}"
-		else
-			target_path="$(default_workspace_parent)/${new_name//[\/\\]/-}"
-		fi
-		[[ ! -e "$target_path" ]] || die "destination already exists: ${target_path}"
-		mkdir -p "${target_path:h}" || die "could not create destination parent"
-		target_path="${target_path:A}"
-		jj workspace add --name "$new_name" -r "$revision" "$target_path" >/dev/null \
-			|| die "could not create workspace ${new_name}"
-		print -r -- "$target_path"
-		return 0
-	fi
-	validate_owned_prewarm "$repo" "$old_path" \
-		|| die "workspace '${PREWARM_NAME}' is not owned by jj-prewarm"
 
 	if [[ -n "$requested_path" ]]; then
 		target_path="${requested_path:A}"
@@ -551,59 +454,39 @@ function prepare_workspace() {
 	[[ ! -e "$target_path" ]] || die "destination already exists: ${target_path}"
 	mkdir -p "${target_path:h}" || die "could not create destination parent"
 	target_path="${target_path:A}"
-	[[ "$(device_id "$old_path")" == "$(device_id "${target_path:h}")" ]] \
-		|| die "prewarm adoption requires a destination on the same filesystem"
-	update_prewarm_revision "$old_path" "$revision" \
-		|| die "prewarm workspace is not clean or could not be updated"
-
-	journal="${repo}/jj-prewarm-journal"
-	write_journal "$journal" start "$old_path" "$new_name" "$target_path" \
-		|| die "could not write adoption journal"
-
-	if ! jj -R "$old_path" workspace rename "$new_name" >/dev/null; then
-		rm -f "$journal"
-		die "could not rename prewarm workspace"
+	prewarm_path=$(workspace_root "$PREWARM_NAME" 2>/dev/null)
+	if [[ -n "$prewarm_path" ]]; then
+		validate_owned_prewarm "$repo" "$prewarm_path" \
+			|| die "workspace '${PREWARM_NAME}' is not owned by jj-prewarm"
+		update_prewarm_revision "$prewarm_path" "$revision" \
+			|| die "prewarm workspace is not clean or could not be updated"
 	fi
-	write_journal "$journal" renamed "$old_path" "$new_name" "$target_path" \
-		|| die "could not update adoption journal"
 
-	if ! mv "$old_path" "$target_path"; then
-		rollback_adoption "$repo" "$journal" "$new_name" "$old_path" "$target_path" \
-			|| die "move failed and rollback is incomplete; recovery journal retained at ${journal}"
-		die "could not move prewarm workspace to ${target_path}; adoption rolled back"
-	fi
-	if ! update_repo_link "$repo" "$target_path"; then
-		rollback_adoption "$repo" "$journal" "$new_name" "$old_path" "$target_path" \
-			|| die "repo-link update failed and rollback is incomplete; recovery journal retained at ${journal}"
-		die "could not update the adopted workspace repo link; adoption rolled back"
-	fi
-	write_journal "$journal" moved "$old_path" "$new_name" "$target_path" \
-		|| die "could not update adoption journal"
-
-	if patch_workspace_path "$repo" "$new_name" "$old_path" "$target_path"; then
-		:
-	else
-		rollback_adoption "$repo" "$journal" "$new_name" "$old_path" "$target_path" \
-			|| die "metadata update failed and rollback is incomplete; recovery journal retained at ${journal}"
-		die "could not register the adopted workspace path; adoption rolled back"
+	jj workspace add --name "$new_name" -r "$revision" "$target_path" >/dev/null \
+		|| die "could not create workspace ${new_name}"
+	if [[ -n "$prewarm_path" ]] && ! seed_workspace "$prewarm_path" "$target_path"; then
+		discard_workspace "$new_name" "$target_path" \
+			|| die "could not seed workspace ${new_name}; cleanup also failed"
+		die "could not seed workspace ${new_name}"
 	fi
 
 	resolved=$(workspace_root "$new_name") || true
 	if [[ "${resolved:A}" != "${target_path:A}" ]]; then
-		rollback_adoption "$repo" "$journal" "$new_name" "$old_path" "$target_path" \
-			|| die "verification failed and rollback is incomplete; recovery journal retained at ${journal}"
-		die "adopted workspace path verification failed; adoption rolled back"
+		discard_workspace "$new_name" "$target_path" \
+			|| die "workspace verification failed; cleanup also failed"
+		die "workspace path verification failed"
 	fi
 
-	clear_owned_path "$repo"
-	rm -f "$journal"
-	print -u2 -- "jj-prewarm: claimed prewarm -> ${new_name}"
+	prepare_final_path "$target_path"
+	if [[ -n "$prewarm_path" ]]; then
+		print -u2 -- "jj-prewarm: prepared ${new_name} from stationary prewarm"
+	else
+		print -u2 -- "jj-prewarm: prepared ${new_name}"
+	fi
 	print -r -- "$target_path"
-	REPLENISH_PATH="$old_path"
-	REPLENISH_REVISION="$revision"
 }
 
-jj workspace root >/dev/null 2>&1 || die "not inside a jj workspace"
+jj --ignore-working-copy workspace root >/dev/null 2>&1 || die "not inside a jj workspace"
 repo=$(repo_path) || die "could not resolve the shared jj repository path"
 lock="${repo}/jj-prewarm.lock"
 command_name="${1:-ensure}"
@@ -628,7 +511,6 @@ case "$command_name" in
 		[[ $# -eq 0 ]] || die "remove does not accept arguments"
 		acquire_lock_wait "$lock"
 		ACTIVE_LOCK="$lock"
-		recover_journal "$repo"
 		recover_removal "$repo"
 		remove_prewarm "$repo" || {
 			release_lock "$lock"
@@ -643,7 +525,6 @@ case "$command_name" in
 		prewarm_root=$(resolve_prewarm_path "$REQUESTED_PATH") || die "could not resolve prewarm path"
 		acquire_lock_wait "$lock"
 		ACTIVE_LOCK="$lock"
-		recover_journal "$repo"
 		recover_removal "$repo"
 		if [[ "$command_name" == rebuild ]]; then
 			remove_prewarm "$repo" || {
@@ -659,17 +540,10 @@ case "$command_name" in
 		[[ ${#REMAINING_ARGS[@]} -eq 1 ]] || die "prepare requires exactly one workspace name"
 		acquire_lock_wait "$lock"
 		ACTIVE_LOCK="$lock"
-		recover_journal "$repo"
 		recover_removal "$repo"
 		prepare_workspace "$repo" "$REVISION" "$REQUESTED_PATH" "$REMAINING_ARGS[1]"
 		rc=$?
 		release_lock "$lock"
-		if (( rc == 0 )) && [[ -n "$REPLENISH_PATH" && -z "${JJ_PREWARM_NO_REPLENISH:-}" ]]; then
-			(
-				"${0:A}" ensure --revision "$REPLENISH_REVISION" --path "$REPLENISH_PATH" </dev/null >/dev/null 2>&1
-			) &
-			disown 2>/dev/null
-		fi
 		exit $rc
 		;;
 	*)

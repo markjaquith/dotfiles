@@ -10,8 +10,18 @@ workspaces="$test_root/workspaces"
 prewarm_pool="$test_root/prewarm-pool"
 prewarm="$prewarm_pool/prewarm"
 feature="$workspaces/feature-one"
+fake_bin="$test_root/bin"
+export MISE_TRUST_LOG="$test_root/mise-trust.log"
+export ZOXIDE_ADD_LOG="$test_root/zoxide-add.log"
 export JJ_PREWARM_ROOT="$prewarm_pool"
 export JJ_PREWARM_WORKSPACES_ROOT="$workspaces"
+
+mkdir -p "$fake_bin"
+print -rl -- '#!/usr/bin/env zsh' 'print -rl -- "$@" >"$MISE_TRUST_LOG"' >"$fake_bin/mise"
+chmod +x "$fake_bin/mise"
+print -rl -- '#!/usr/bin/env zsh' 'print -rl -- "$@" >"$ZOXIDE_ADD_LOG"' >"$fake_bin/zoxide"
+chmod +x "$fake_bin/zoxide"
+export PATH="$fake_bin:$PATH"
 
 jj git init "$main" >/dev/null
 mkdir -p "$main/cache"
@@ -30,8 +40,7 @@ print -r -- "already installed" >"$prewarm/cache/dependency"
 
 result=$(
 	cd "$main"
-	JJ_PREWARM_NO_REPLENISH=1 \
-		"$repo_root/bin/jj-prewarm" prepare --revision main --path "$feature" feature-one
+	"$repo_root/bin/jj-prewarm" prepare --revision main --path "$feature" feature-one
 )
 
 if [[ "${result:A}" != "${feature:A}" ]]; then
@@ -44,8 +53,8 @@ if [[ ! -d "$feature" || -L "$feature" ]]; then
 	exit 1
 fi
 
-if [[ -e "$prewarm" ]]; then
-	print -ru2 -- "FAIL: old prewarm path remains after adoption"
+if [[ ! -d "$prewarm" ]]; then
+	print -ru2 -- "FAIL: prepare moved or removed the stationary prewarm workspace"
 	exit 1
 fi
 
@@ -70,24 +79,23 @@ if [[ -e "$feature/.jj-prewarm-ready" ]]; then
 	exit 1
 fi
 
-if [[ -e "$main/.jj/repo/jj-prewarm-state" ]]; then
-	print -ru2 -- "FAIL: adopted workspace retained prewarm ownership state"
+if [[ ! -f "$main/.jj/repo/jj-prewarm-state" ]]; then
+	print -ru2 -- "FAIL: prepare removed stationary prewarm ownership state"
 	exit 1
 fi
 
-(
-	cd "$main"
-	"$repo_root/bin/jj-prewarm" ensure --revision main --path "$prewarm" >/dev/null
-)
-
-if [[ ! -d "$prewarm" ]]; then
-	print -ru2 -- "FAIL: ensure did not replenish the prewarm workspace"
+if [[ "$(<"$MISE_TRUST_LOG")" != trust$'\n'--yes$'\n'--all$'\n'-C$'\n'"${feature:A}" ]]; then
+	print -ru2 -- "FAIL: final workspace path was not trusted with mise"
+	exit 1
+fi
+if [[ "$(<"$ZOXIDE_ADD_LOG")" != add$'\n'"${feature:A}" ]]; then
+	print -ru2 -- "FAIL: final workspace path was not added to zoxide"
 	exit 1
 fi
 
 IFS= read -r owned_prewarm <"$main/.jj/repo/jj-prewarm-state"
 if [[ "$owned_prewarm" != "${prewarm:A}" ]]; then
-	print -ru2 -- "FAIL: replenished prewarm ownership state is incorrect"
+	print -ru2 -- "FAIL: stationary prewarm ownership state is incorrect"
 	exit 1
 fi
 
@@ -95,6 +103,8 @@ fi
 	cd "$main"
 	"$repo_root/bin/jj-prewarm" rebuild --revision main --path "$prewarm" >/dev/null
 )
+mkdir -p "$prewarm/cache"
+print -r -- "still installed" >"$prewarm/cache/dependency"
 
 quarantine="$workspaces/prewarm.removing.interrupted"
 print -rl -- "$prewarm" "$quarantine" >"$main/.jj/repo/jj-prewarm-remove-journal"
@@ -114,8 +124,7 @@ typeset -a pids
 for name in concurrent-one concurrent-two; do
 	(
 		cd "$main"
-		JJ_PREWARM_NO_REPLENISH=1 \
-			"$repo_root/bin/jj-prewarm" prepare --revision main "$name" >/dev/null
+		"$repo_root/bin/jj-prewarm" prepare --revision main "$name" >/dev/null
 	) &
 	pids+=("$!")
 done
@@ -126,6 +135,11 @@ for pid in "${pids[@]}"; do
 done
 if (( failed )); then
 	print -ru2 -- "FAIL: concurrent prepare command failed"
+	exit 1
+fi
+
+if [[ ! -f "$prewarm/cache/dependency" ]]; then
+	print -ru2 -- "FAIL: concurrent prepares modified the stationary prewarm"
 	exit 1
 fi
 
@@ -178,27 +192,6 @@ print -r -- "999999" >"$adoption_lock/owner"
 )
 if [[ -d "$adoption_lock.reap" || -d "$adoption_lock" ]]; then
 	print -ru2 -- "FAIL: legacy orphaned reaper directory was not recovered"
-	exit 1
-fi
-
-repo_store="${main:A}/.jj/repo"
-index_fixture="$test_root/workspace-index"
-expected_index="$test_root/workspace-index.expected"
-concurrent_root=$(jj -R "$main" workspace root --name concurrent-one)
-metadata_target="${concurrent_root:h}/metadata-target"
-cp "$repo_store/workspace_store/index" "$index_fixture"
-printf '\x38\x2a' >>"$index_fixture"
-cp "$index_fixture" "$expected_index"
-
-flock "$index_fixture.lock" bun "$repo_root/bin/jj-workspace-store-path.ts" \
-	"$index_fixture" "$repo_store" concurrent-one \
-	"$concurrent_root" "$metadata_target"
-flock "$index_fixture.lock" bun "$repo_root/bin/jj-workspace-store-path.ts" \
-	"$index_fixture" "$repo_store" concurrent-one \
-	"$metadata_target" "$concurrent_root"
-
-if ! cmp -s "$index_fixture" "$expected_index"; then
-	print -ru2 -- "FAIL: metadata helper did not preserve unknown protobuf fields"
 	exit 1
 fi
 
