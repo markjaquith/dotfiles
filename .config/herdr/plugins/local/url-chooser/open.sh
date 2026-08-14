@@ -10,7 +10,7 @@ if [[ -n "${HERDR_PLUGIN_CONTEXT_JSON:-}" ]] && command -v jq >/dev/null 2>&1; t
 	cwd=$(jq -r '.focused_pane_cwd // .workspace_cwd // env.HOME' <<<"$HERDR_PLUGIN_CONTEXT_JSON")
 fi
 
-args=(plugin pane open --plugin "$HERDR_PLUGIN_ID" --entrypoint picker --placement overlay --cwd "$cwd" --focus)
+args=(plugin pane open --plugin "$HERDR_PLUGIN_ID" --entrypoint picker --placement popup --cwd "$cwd" --focus)
 
 if [[ -n "$target" ]]; then
 	args+=(--env "HERDR_URL_CHOOSER_TARGET_PANE=$target")

@@ -1,7 +1,7 @@
 id = "url-chooser"
 name = "URL Chooser"
 version = "0.1.0"
-min_herdr_version = "0.7.0"
+min_herdr_version = "0.7.4"
 description = "Choose and open URLs from the focused Herdr pane"
 platforms = ["macos"]
 
@@ -14,5 +14,6 @@ command = ["bash", "open.sh"]
 [[panes]]
 id = "picker"
 title = "URLs"
-placement = "overlay"
+placement = "popup"
+width = "80%"
 command = ["bash", "-c", "exec bash \"$HERDR_PLUGIN_ROOT/picker.sh\""]
