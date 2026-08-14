@@ -31,6 +31,12 @@ If the user says "in a new tab" or "in a new workspace" then unless there is cle
 
 # Agency guidelines
 
+Normal repository PR mechanics do not imply Agency orchestration. When a
+repository-specific skill defines a direct `jj` and `gh` PR sequence, use it.
+If that checkout is already Agency-managed, run `agency sync --json` after the
+PR exists to record and reconcile it; do not replace the direct flow with
+`agency push` or `agency pr create`.
+
 Before applying any Agency launch rule, determine whether this OpenCode process
 is already an Agency-launched worker. If `AGENCY_SESSION_ID` or `AGENCY_TARGET`
 is set, this process is the active worker. Treat generated prompts such as

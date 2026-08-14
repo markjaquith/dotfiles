@@ -39,8 +39,13 @@ func attribute<T>(_ name: String, of element: AXUIElement) -> T? {
 
 func click(_ element: AXUIElement) -> Bool {
 	let isEnabled: Bool = attribute(kAXEnabledAttribute, of: element) ?? false
+	guard isEnabled else { return false }
+
+	if AXUIElementPerformAction(element, kAXPressAction as CFString) == .success {
+		return true
+	}
+
 	guard
-		isEnabled,
 		let positionValue: AXValue = attribute(kAXPositionAttribute, of: element),
 		let sizeValue: AXValue = attribute(kAXSizeAttribute, of: element)
 	else {
@@ -188,6 +193,11 @@ while Date() < joinDeadline {
 		let windows: [AXUIElement] =
 			attribute(kAXWindowsAttribute, of: meetElement) ?? []
 		windows.forEach { window in
+			AXUIElementSetAttributeValue(
+				window,
+				kAXMinimizedAttribute as CFString,
+				kCFBooleanFalse
+			)
 			AXUIElementPerformAction(window, kAXRaiseAction as CFString)
 		}
 

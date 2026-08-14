@@ -21,14 +21,21 @@ the interval up to a 500 ms maximum and stops after 30 seconds. After clicking
 the initial join button, it waits up to 10 seconds for the optional Gemini notes
 dialog and clicks that dialog's `Join now` button.
 
+The router gives the PWA one second to discard controls from the previous page,
+then starts a fresh helper instance. This prevents a stale join control or a
+still-running helper from consuming the new attempt.
+
 ### Automation Boundaries
 
 - Chrome's AppleScript dictionary can navigate a Chrome PWA tab, but executing
   JavaScript requires Chrome's separate "Allow JavaScript from Apple Events"
   setting. The router intentionally does not depend on that setting.
 - Clicking occurs through the Google Meet PWA's native macOS accessibility tree.
-  Running the helper from a terminal is not a valid permission test because the
-  terminal may already have Accessibility access.
+  The helper uses the button's accessibility `Press` action, which works while
+  the PWA is in the background. It unminimizes and raises the window before
+  falling back to a physical click. Running the helper from a terminal is not a
+  valid permission test because the terminal may already have Accessibility
+  access.
 - macOS Accessibility approval is tied to the helper's designated requirement,
   not only its path or bundle identifier. The helper is ad-hoc signed with an
   explicit requirement based on its fixed bundle identifier, so recompiling it
