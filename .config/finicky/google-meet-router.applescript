@@ -39,8 +39,9 @@ on routeMeetTab(meetURL)
 end routeMeetTab
 
 on clickJoinButton()
+  delay 1
   set joinHelper to POSIX path of (path to resource "Google Meet Join Helper.app")
-  do shell script "/usr/bin/open -g " & quoted form of joinHelper
+  do shell script "/usr/bin/open -n -g " & quoted form of joinHelper
 end clickJoinButton
 
 on bringMeetToFront()

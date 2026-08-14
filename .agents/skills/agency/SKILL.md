@@ -119,13 +119,20 @@ implement and intent to reuse an item as separate decisions.
 ### Finish
 
 1. Re-run `agency validate` and repository checks.
-2. Create a PR only when requested: `agency pr create <task> [phase]`.
-3. Record terminal state only when the requested outcome is true. A created PR
+2. Follow repository-specific VCS and PR guidance. When a jj repository has a
+   direct `jj`/`gh` PR workflow, that workflow owns bookmark movement, rebasing,
+   pushing, draft PR creation, labels, and body updates; do not replace those
+   mechanics with `agency push` or `agency pr create`.
+3. After a directly created PR exists, run `agency sync --json` from the managed
+   checkout so Agency records the uniquely matching PR and reconciles durable
+   state. For repositories without a direct workflow, use
+   `agency pr create <task> [phase]` only when the user requested PR creation.
+4. Record terminal state only when the requested outcome is true. A created PR
    alone does not make work `done` if completion requires merge.
-4. If the session has a claim, use revision-guarded `agency finish`; otherwise
+5. If the session has a claim, use revision-guarded `agency finish`; otherwise
    use the task or phase status command. Use `dropped` only for intentionally
    abandoned work.
-5. Report the durable status and PR URL. Do not manually remove the worktree.
+6. Report the durable status and PR URL. Do not manually remove the worktree.
 
 ## Human Launch vs Active Agent
 
