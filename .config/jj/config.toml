@@ -10,6 +10,3 @@ name = "Mark Jaquith"
 
 [ui]
 default-command = "log"
-
-[aliases]
-prewarm = ["util", "exec", "--", "jj-prewarm"]
