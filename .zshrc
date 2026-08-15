@@ -106,7 +106,4 @@ if command -v wt >/dev/null 2>&1; then
 fi
 (( $+functions[_zsh_perf_end] )) && _zsh_perf_end worktrunk-init
 
-# opencode
-export PATH="$HOME/.opencode/bin:$PATH"
-
 (( $+functions[_zsh_perf_install_hooks] )) && _zsh_perf_install_hooks
