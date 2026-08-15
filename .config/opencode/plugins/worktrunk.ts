@@ -7,9 +7,9 @@
 // Installed globally via: wt config plugins opencode install
 // Or manually: copy to ~/.config/opencode/plugins/worktrunk.ts
 
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
 
-export default (async ({ $ }) => {
+export const WorktrunkPlugin: Plugin = async ({ $ }) => {
 	return {
 		event: async ({ event }) => {
 			switch (event.type) {
@@ -25,4 +25,9 @@ export default (async ({ $ }) => {
 			}
 		},
 	}
-}) satisfies Plugin
+}
+
+export default {
+	id: "worktrunk",
+	server: WorktrunkPlugin,
+} satisfies PluginModule
