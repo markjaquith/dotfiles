@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
 
 const COMPLETION_SOUND = "/System/Library/Sounds/Glass.aiff"
 const ATTENTION_SOUND = "/System/Library/Sounds/Ping.aiff"
@@ -77,3 +77,8 @@ export const Ding: Plugin = async ({ $, client }) => {
 		},
 	}
 }
+
+export default {
+	id: "ding",
+	server: Ding,
+} satisfies PluginModule
