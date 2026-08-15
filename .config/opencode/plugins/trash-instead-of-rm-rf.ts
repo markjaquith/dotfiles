@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
 
 const trashCommandPattern = /^\s*trash\s+(.+)$/s
 
@@ -68,3 +68,8 @@ export const TrashInsteadOfRmRfPlugin: Plugin = async ({ client }) => {
 		},
 	}
 }
+
+export default {
+	id: "trash-instead-of-rm-rf",
+	server: TrashInsteadOfRmRfPlugin,
+} satisfies PluginModule
