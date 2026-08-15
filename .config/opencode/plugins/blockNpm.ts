@@ -1,4 +1,6 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
+
+export const BlockNpm: Plugin = async () => ({})
 
 // export const BlockNpm: Plugin = async ({ client }) => {
 // 	return {
@@ -18,3 +20,8 @@ import type { Plugin } from "@opencode-ai/plugin"
 // 		},
 // 	}
 // }
+
+export default {
+	id: "block-npm",
+	server: BlockNpm,
+} satisfies PluginModule
