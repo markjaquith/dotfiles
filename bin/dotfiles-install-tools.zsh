@@ -2,9 +2,7 @@
 # Manual tool installs
 
 # OpenCode
-if ! command -v opencode &>/dev/null && [[ ! -x "$HOME/.opencode/bin/opencode" ]]; then
-	curl -fsSL https://opencode.ai/install | bash
-fi
+bun install -g --trust @opencode-ai/cli@next
 
 # GitHub CLI extensions
 if command -v gh &>/dev/null; then
