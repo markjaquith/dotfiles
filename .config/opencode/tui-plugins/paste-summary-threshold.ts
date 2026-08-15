@@ -1,4 +1,4 @@
-import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
+import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/v1/tui"
 
 const MAX_INLINE_CHARACTERS = 2048
 const SUMMARY_LINE_THRESHOLD = 10
