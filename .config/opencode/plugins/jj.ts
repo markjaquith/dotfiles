@@ -1,4 +1,4 @@
-import type { Plugin, PluginModule } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
 import { execFileSync } from "child_process"
 import { resolve } from "path"
 import { rewriteGhCommands } from "./lib/jj-shell"
