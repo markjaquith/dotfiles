@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
 
 const COMMAND_NAME = "keep-going"
 const KEEP_GOING_PROMPT =
@@ -155,3 +155,8 @@ export const KeepGoingPlugin: Plugin = async ({ client }) => {
 		},
 	}
 }
+
+export default {
+	id: "keep-going",
+	server: KeepGoingPlugin,
+} satisfies PluginModule
