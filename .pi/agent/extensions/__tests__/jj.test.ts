@@ -5,7 +5,7 @@ mock.module("@earendil-works/pi-coding-agent", () => ({
 }))
 
 const { evaluateBashCommand, getJjSystemInstruction, rewriteBashCommand } =
-	await import("./jj")
+	await import("../jj")
 
 describe("Pi jj extension", () => {
 	test("instructs the model to prefer jj", () => {
@@ -51,9 +51,7 @@ describe("Pi jj extension", () => {
 	test("rewrites gh commands in a jj workspace", () => {
 		expect(
 			rewriteBashCommand("echo ok && gh pr view", "/workspace/example"),
-		).toBe(
-			"echo ok && GIT_DIR=$(jj git root --ignore-working-copy) gh pr view",
-		)
+		).toBe("echo ok && GIT_DIR=$(jj git root --ignore-working-copy) gh pr view")
 	})
 
 	test("leaves gh commands unchanged outside a jj workspace", () => {
