@@ -16,7 +16,7 @@ plannotator review [optional-pr-url]
 
 Behavior:
 
-1. Launch the command with Bash.
+1. Launch the command with Bash with a 60m timeout.
 2. Wait for it to finish.
 3. If it returns feedback or annotations, address them in the same conversation.
 4. If it returns an approval/LGTM-style message, acknowledge that review passed and continue.
