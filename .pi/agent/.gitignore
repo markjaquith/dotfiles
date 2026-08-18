@@ -8,6 +8,3 @@
 /git
 /npm
 
-# Generated integration extensions
-/extensions/agency.ts
-/extensions/herdr-agent-state.ts
