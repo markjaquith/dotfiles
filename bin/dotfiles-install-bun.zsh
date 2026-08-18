@@ -12,5 +12,6 @@ bun i -g --no-summary \
 		bash-language-server@latest \
 		diffity@latest \
 		btca@latest \
+		@markjaquith/agency@latest \
 		@kitlangton/stack@latest \
 		sideshow@latest

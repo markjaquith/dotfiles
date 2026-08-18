@@ -13,6 +13,15 @@ git config --global --unset pager.log 2>/dev/null
 # Remove legacy delta theme include if present
 git config --global --unset-all include.path "~/.config/delta/themes/catppuccin-macchiato" 2>/dev/null
 
+# Agency-managed agent integrations
+if command -v agency &>/dev/null && command -v jq &>/dev/null; then
+	agency workbase list --json |
+		jq -r '.result.workbases[].path' |
+		while IFS= read -r workbase; do
+			agency --workbase "$workbase" integration sync
+		done
+fi
+
 # Git aliases
 git config --global alias.fixup 'commit --all --amend --no-edit --no-verify'
 git config --global alias.recent '!git reflog | grep "checkout: moving" | awk "!seen[\$NF]++ {print \$NF}"'
