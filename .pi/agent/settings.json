@@ -1,0 +1,15 @@
+{
+	"lastChangelogVersion": "0.84.2",
+	"theme": "catppuccin-macchiato",
+	"defaultProvider": "openai-codex",
+	"defaultModel": "gpt-5.6-sol",
+	"steeringMode": "all",
+	"defaultThinkingLevel": "high",
+	"enabledModels": [
+		"openai-codex/gpt-5.6-sol",
+		"openai-codex/gpt-5.6-terra",
+		"amazon-bedrock/anthropic.claude-opus-4-8"
+	],
+	"hideThinkingBlock": true,
+	"packages": ["npm:@plannotator/pi-extension"]
+}
