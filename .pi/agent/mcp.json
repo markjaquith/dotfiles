@@ -1,0 +1,67 @@
+{
+  "mcpServers": {
+    "axogustoprod": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/1452cf41-fa16-48c4-b6fd-8f8318845e77/mcp",
+      "auth": "oauth"
+    },
+    "datadoggusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/3baa605c-a111-4bb8-9083-5485799e1ec2/mcp",
+      "auth": "oauth"
+    },
+    "gcalgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/782f35b5-800a-480e-80e3-82c04ef041b1/mcp",
+      "auth": "oauth"
+    },
+    "gdocsgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/301b0edd-4be9-445c-b372-b0bc95c3972b/mcp",
+      "auth": "oauth"
+    },
+    "gdrivegusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/eb61d550-9562-4a2c-bb8f-f32ce5e59f37/mcp",
+      "auth": "oauth"
+    },
+    "gmailgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/cb9bacf6-95bb-464f-a7d7-c1a6925208ad/mcp",
+      "auth": "oauth"
+    },
+    "gleangusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/e950e154-99ac-4b33-a67e-b7a2473ac6d8/mcp",
+      "auth": "oauth"
+    },
+    "githubgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/79f29b16-6650-4529-91f8-2c94c00c641c/mcp",
+      "auth": "oauth"
+    },
+    "gsheetsgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/67c072b8-017b-4ef2-96ac-e5c1b3c5a0be/mcp",
+      "auth": "oauth"
+    },
+    "jiraconfluencegusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/c681d665-2603-41c1-8896-9ef211728453/mcp",
+      "auth": "oauth",
+      "directTools": true
+    },
+    "notiongusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/a976e363-ddb1-4e67-8b2b-fef79f01c361/mcp",
+      "auth": "oauth"
+    },
+    "pagerdutygusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/1435ee2a-d33f-4e9e-904f-ef2d31adf16c/mcp",
+      "auth": "oauth"
+    },
+    "slackgustoofficialmcp": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/1ceccfb7-3fea-4c7d-a82f-673dac326434/mcp",
+      "auth": "oauth"
+    },
+    "sharesomehtmlgusto": {
+      "url": "https://gusto.runlayer.com/api/v1/proxy/29dde765-e885-4092-94cc-4ef18285ec47/mcp",
+      "auth": "oauth"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
+}

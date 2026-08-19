@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "entries": {
+    "[\"npx\",\"@playwright/mcp@latest\",\"\"]": {
+      "resolvedBin": "/Users/mark.jaquith/.npm/_npx/9833c18b2d85bc59/node_modules/@playwright/mcp/cli.js",
+      "resolvedAt": 1787153351259,
+      "packageVersion": "0.0.79",
+      "isJs": true
+    }
+  }
+}
