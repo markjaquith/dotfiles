@@ -77,8 +77,8 @@ function rename_terminal_tab_for_ticket() {
 
 	ticket=$(ticket_from_branch_name "$branch_name") || return 0
 
-	if [[ -n "${HERDR_WORKSPACE_ID:-}" ]] && command -v herdr >/dev/null 2>&1; then
-		herdr workspace rename "$HERDR_WORKSPACE_ID" " ${ticket}" >/dev/null 2>&1 || true
+	if [[ -n "${HERDR_TAB_ID:-}" ]] && command -v herdr >/dev/null 2>&1; then
+		herdr tab rename "$HERDR_TAB_ID" " ${ticket}" >/dev/null 2>&1 || true
 	fi
 
 	[[ -n "${TMUX:-}" ]] || return 0

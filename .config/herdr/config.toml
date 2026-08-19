@@ -68,6 +68,18 @@ command = "vim-herdr-navigation.right"
 description = "navigate right (vim/herdr)"
 
 [[keys.command]]
+key = "prefix+space"
+type = "plugin_action"
+command = "herdr-layout-cycle.cycle-layout"
+description = "cycle layout"
+
+[[keys.command]]
+key = "prefix+shift+space"
+type = "plugin_action"
+command = "herdr-layout-cycle.cycle-layout-back"
+description = "cycle layout (back)"
+
+[[keys.command]]
 key = "prefix+c"
 type = "plugin_action"
 command = "new-tab-cwd.current"

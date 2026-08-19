@@ -8,7 +8,13 @@
 // from the command palette or from `Zed` application menu.
 {
 	// Theme and key bindings.
-	"features": {
+	"outline_panel": {
+  "dock": "left"
+ },
+ "git_panel": {
+  "dock": "left"
+ },
+ "features": {
 		"edit_prediction_provider": "copilot"
 	},
 	"vim_mode": true,
@@ -37,10 +43,12 @@
 
 	// Disable three buttons I do not use.
 	"agent": {
-		"button": false
+		"dock": "right",
+  "button": false
 	},
 	"collaboration_panel": {
-		"button": false
+		"dock": "left",
+  "button": false
 	},
 	"chat_panel": {
 		"button": "never"

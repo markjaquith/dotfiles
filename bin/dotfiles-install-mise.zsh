@@ -17,6 +17,7 @@ mise use pkl@latest > /dev/null
 
 herdr_plugins=(
 	paulbkim-dev/vim-herdr-navigation
+	amiramay/herdr-layout-cycle
 	devashish2203/herdr-worktrunk
 )
 
