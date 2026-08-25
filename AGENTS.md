@@ -10,7 +10,7 @@ A frequent user request you will get is to install a package. When the user says
 ## Repository Layout
 
 - `bin/` contains executable install/sync scripts.
-- `.zsh/` contains shell startup fragments and helper functions.
+- `home/.zsh/` contains shell startup fragments and helper functions.
 - `hk.pkl` defines the repo's hook-driven check/fix workflow.
 - `.stowrc` controls what is and is not synced into `$HOME`.
 
@@ -44,15 +44,15 @@ A frequent user request you will get is to install a package. When the user says
 ### Type checking
 
 - `bunx tsc --noEmit -p tsconfig.json` - root TS typecheck.
-- `bunx tsc --noEmit -p .config/opencode/tsconfig.json` - typecheck the OpenCode TS subproject.
+- `bunx tsc --noEmit -p home/.config/opencode/tsconfig.json` - typecheck the OpenCode TS subproject.
 
 ## Single-Test Equivalents
 
 When asked to run a single test, use the narrowest relevant check for the file being changed:
 
-- TypeScript file in `.config/opencode/`: `bunx tsc --noEmit -p .config/opencode/tsconfig.json`
-- Specific TS file formatting: `oxfmt --check .config/opencode/plugin/block-git-push.ts`
-- Specific TS file secret scan: `bunx secretlint .config/opencode/plugin/block-git-push.ts`
+- TypeScript file in `home/.config/opencode/`: `bunx tsc --noEmit -p home/.config/opencode/tsconfig.json`
+- Specific TS file formatting: `oxfmt --check home/.config/opencode/plugin/block-git-push.ts`
+- Specific TS file secret scan: `bunx secretlint home/.config/opencode/plugin/block-git-push.ts`
 - zsh syntax check: `zsh -n bin/dotfiles-install-overlay.zsh`
 - Pkl syntax check: `pkl eval hk.pkl >/dev/null`
 
@@ -78,8 +78,8 @@ If a change spans multiple file types, run the smallest set of relevant checks r
 - Prefer `import type` for type-only imports.
 - Keep `const` as the default; use `let` only when reassignment is required.
 - The repo uses strict TypeScript; do not weaken compiler settings.
-- Avoid `any`; `.config/opencode/eslint.config.js` only permits it as a warning.
-- Do not leave unused variables or imports in `.config/opencode/`.
+- Avoid `any`; `home/.config/opencode/eslint.config.js` only permits it as a warning.
+- Do not leave unused variables or imports in `home/.config/opencode/`.
 - Prefer early returns over nested conditionals.
 - Match neighboring files on whether import paths include extensions.
 
@@ -99,7 +99,7 @@ If a change spans multiple file types, run the smallest set of relevant checks r
 - TS locals and functions use `camelCase`.
 - Shell env vars use `UPPER_SNAKE_CASE`.
 - Shell helper/function names typically use lowercase with underscores.
-- Numbered files in `.zsh/` reflect load order; preserve that ordering scheme.
+- Numbered files in `home/.zsh/` reflect load order; preserve that ordering scheme.
 
 ## Error Handling
 
@@ -124,7 +124,7 @@ If a change spans multiple file types, run the smallest set of relevant checks r
 
 - For formatting-only edits: `oxfmt --check <changed-files>`
 - For shell edits: `zsh -n <changed-script>`
-- For OpenCode TS edits: `bunx tsc --noEmit -p .config/opencode/tsconfig.json`
+- For OpenCode TS edits: `bunx tsc --noEmit -p home/.config/opencode/tsconfig.json`
 - For hook/config edits: `pkl eval hk.pkl >/dev/null`
 - For anything broad or cross-cutting: `hk run check`
 

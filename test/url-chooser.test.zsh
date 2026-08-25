@@ -2,7 +2,7 @@
 set -eo pipefail
 
 URL_CHOOSER_FUNCTIONS_ONLY=1
-source .config/herdr/plugins/local/url-chooser/picker.sh
+source home/.config/herdr/plugins/local/url-chooser/picker.sh
 unset URL_CHOOSER_FUNCTIONS_ONLY
 
 set -u
@@ -135,7 +135,7 @@ HERDR_BIN_PATH="$mock_herdr" \
 	HERDR_PLUGIN_ID="url-chooser" \
 	URL_CHOOSER_ARGS_FILE="$args_file" \
 	HERDR_PLUGIN_CONTEXT_JSON='{"focused_pane_id":"w1:p2","focused_pane_cwd":"/tmp/url chooser"}' \
-	bash .config/herdr/plugins/local/url-chooser/open.sh
+	bash home/.config/herdr/plugins/local/url-chooser/open.sh
 
 assert_arg() {
 	local expected="$1"
@@ -218,7 +218,7 @@ PATH="$tmp_dir:$PATH" \
 	URL_CHOOSER_OPENED_FILE="$opened_file" \
 	URL_CHOOSER_FZF_INPUT_FILE="$fzf_input_file" \
 	URL_CHOOSER_FZF_ARGS_FILE="$fzf_args_file" \
-	bash .config/herdr/plugins/local/url-chooser/picker.sh || true
+	bash home/.config/herdr/plugins/local/url-chooser/picker.sh || true
 
 if [[ -e "$opened_file" ]]; then
 	print -ru2 -- "FAIL: reconstructed URL opened without confirmation"
@@ -240,7 +240,7 @@ URL_CHOOSER_MOCK_UNRELATED=1 \
 	URL_CHOOSER_OPENED_FILE="$opened_file" \
 	URL_CHOOSER_FZF_INPUT_FILE="$fzf_input_file" \
 	URL_CHOOSER_FZF_ARGS_FILE="$fzf_args_file" \
-	bash .config/herdr/plugins/local/url-chooser/picker.sh || true
+	bash home/.config/herdr/plugins/local/url-chooser/picker.sh || true
 
 if [[ -e "$opened_file" ]]; then
 	print -ru2 -- "FAIL: URL joined to unrelated session line opened"
@@ -258,7 +258,7 @@ URL_CHOOSER_MOCK_SESSION="$session_file" \
 	HERDR_BIN_PATH="$mock_herdr" \
 	HERDR_URL_CHOOSER_TARGET_PANE="w1:p2" \
 	URL_CHOOSER_OPENED_FILE="$opened_file" \
-	bash .config/herdr/plugins/local/url-chooser/picker.sh
+	bash home/.config/herdr/plugins/local/url-chooser/picker.sh
 
 grep -Fxq -- "https://example.com/abcdefghijklmnopqrstuvwxyz?x=1" "$opened_file"
 
@@ -267,11 +267,11 @@ URL_CHOOSER_MOCK_PLAIN=1 \
 	HERDR_BIN_PATH="$mock_herdr" \
 	HERDR_URL_CHOOSER_TARGET_PANE="w1:p2" \
 	URL_CHOOSER_OPENED_FILE="$opened_file" \
-	bash .config/herdr/plugins/local/url-chooser/picker.sh
+	bash home/.config/herdr/plugins/local/url-chooser/picker.sh
 
 grep -Fxq -- "https://plain.example/path" "$opened_file"
 
-grep -Fxq -- 'placement = "popup"' .config/herdr/plugins/local/url-chooser/herdr-plugin.toml
-grep -Fxq -- 'width = "80%"' .config/herdr/plugins/local/url-chooser/herdr-plugin.toml
+grep -Fxq -- 'placement = "popup"' home/.config/herdr/plugins/local/url-chooser/herdr-plugin.toml
+grep -Fxq -- 'width = "80%"' home/.config/herdr/plugins/local/url-chooser/herdr-plugin.toml
 
 print -r -- "url-chooser tests passed"

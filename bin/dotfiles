@@ -27,18 +27,40 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-gum style --foreground 212 "Copying dotfiles…"
-(
-  cd ~/dotfiles
-  stow --ignore='^AGENTS\.md$' .
-  stow --ignore='^\.gitkeep$' --no-folding HOME
-)
-
 DOTFILES_DIR="$HOME/dotfiles"
+DOTFILES_HOME_DIR="$DOTFILES_DIR/home"
 LOCAL_DOTFILES_DIR="$HOME/.local-dotfiles"
 
-if [[ -f "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" ]]; then
-  source "$HOME/dotfiles/bin/dotfiles-install-overlay.zsh" || exit 1
+gum style --foreground 212 "Copying dotfiles…"
+
+if [[ -f "$DOTFILES_DIR/bin/dotfiles-migrate-home-layout.zsh" ]]; then
+  source "$DOTFILES_DIR/bin/dotfiles-migrate-home-layout.zsh" || exit 1
+fi
+
+if [[ ! -d "$DOTFILES_HOME_DIR" ]]; then
+  print -u2 "Error: Dotfiles home package does not exist: $DOTFILES_HOME_DIR"
+  exit 1
+fi
+
+typeset REQUESTED_DOTFILES_PURE="$DOTFILES_PURE"
+
+# Stow must see regular package files, not overlay symlinks. Temporarily restore
+# the base package before restowing, then reapply overlays unless pure mode was
+# explicitly requested.
+if [[ -f "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" ]]; then
+  DOTFILES_PURE=1
+  source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" || exit 1
+fi
+
+(
+  cd "$DOTFILES_DIR"
+  stow --restow home
+) || exit 1
+
+DOTFILES_PURE="$REQUESTED_DOTFILES_PURE"
+if [[ "$DOTFILES_PURE" != "1" && \
+    -f "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" ]]; then
+  source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" || exit 1
 fi
 
 if [[ "$DOTFILES_PURE" == "1" ]]; then

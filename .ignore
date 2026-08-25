@@ -1,8 +1,10 @@
-!.config
-!.zsh
-!.zshrc
-!.stowrc
-!.githooks
-!.github
+!home
+!home/.config
+!home/.zsh
+!home/.zshrc
+!home/.stowrc
+!home/.githooks
+!home/.github
+!home/.agents
+!home/.pi
 !.agents
-!.pi

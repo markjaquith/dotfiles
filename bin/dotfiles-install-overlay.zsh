@@ -8,10 +8,12 @@ typeset overlay_script_dir="${${(%):-%N}:A:h}"
 source "$overlay_script_dir/dotfiles-overlay-common.zsh" || return 1
 
 if ! command -v fd >/dev/null 2>&1; then
-  print -u2 "Warning: fd is required for dotfiles overlays; skipping"
-  return 0
+  print -u2 "Error: fd is required for dotfiles overlays"
+  return 1
 fi
 
+typeset dotfiles_home_dir="${DOTFILES_HOME_DIR:-$DOTFILES_DIR/home}"
+typeset dotfiles_target_dir="${DOTFILES_TARGET_DIR:-$HOME}"
 typeset -a overlay_dirs
 typeset -a overlay_roots
 
@@ -51,8 +53,17 @@ typeset overlay_dir
 for overlay_dir in "${overlay_dirs[@]}"; do
   [[ ! -d "$overlay_dir" ]] && continue
 
-  typeset overlay_root="${overlay_dir:A}"
-  overlay_roots+=("$overlay_root")
+  typeset overlay_repo_root="${overlay_dir:A}"
+  typeset overlay_payload_dir="$overlay_dir/home"
+  typeset legacy_layout=0
+  if [[ ! -d "$overlay_payload_dir" ]]; then
+    overlay_payload_dir="$overlay_dir"
+    legacy_layout=1
+    print -u2 "Warning: Using legacy overlay layout: $overlay_dir"
+  fi
+
+  typeset overlay_root="${overlay_payload_dir:A}"
+  overlay_roots+=("$overlay_repo_root" "$overlay_root")
 
   # In pure mode, skip file discovery so the desired set stays empty.
   [[ "$dotfiles_pure" == "1" ]] && continue
@@ -60,16 +71,19 @@ for overlay_dir in "${overlay_dirs[@]}"; do
   typeset overlay_abs
   while IFS= read -r overlay_abs; do
     [[ -z "$overlay_abs" ]] && continue
-    [[ "$overlay_abs" != "$overlay_dir"/* ]] && continue
+    [[ "$overlay_abs" != "$overlay_payload_dir"/* ]] && continue
 
-    rel="${overlay_abs#$overlay_dir/}"
+    rel="${overlay_abs#$overlay_payload_dir/}"
     [[ "$rel" == .git/* || "$rel" == .jj/* ]] && continue
-    [[ "$rel" == .ignore ]] && continue
-    [[ "$rel" == .gitignore ]] && continue
-    [[ "$rel" == local-init.zsh ]] && continue
+    if [[ "$legacy_layout" == "1" ]]; then
+      [[ "$rel" == bin/* || "$rel" == docs/* || "$rel" == tests/* ]] && continue
+      [[ "$rel" == .ignore || "$rel" == .gitignore ]] && continue
+      [[ "$rel" == local-init.zsh ]] && continue
+    fi
 
-    print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
-  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_dir")
+    typeset main_rel="home/$rel"
+    print -r -- "$main_rel	$overlay_root/$rel" >> "$desired_raw"
+  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_payload_dir")
 done
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
@@ -140,6 +154,27 @@ if command -v jj >/dev/null 2>&1 && [[ -d "$DOTFILES_DIR/.jj" ]]; then
   fi
 fi
 
+overlay_live_path() {
+  typeset rel="$1"
+  [[ "$rel" == home/* ]] || return 1
+  print -r -- "$dotfiles_target_dir/${rel#home/}"
+}
+
+overlay_link_points_to() {
+  typeset link_path="$1"
+  typeset expected_path="$2"
+  [[ -L "$link_path" ]] || return 1
+
+  typeset link_target candidate
+  link_target=$(readlink "$link_path" 2>/dev/null) || return 1
+  if [[ "$link_target" == /* ]]; then
+    candidate="$link_target"
+  else
+    candidate="${link_path:h}/$link_target"
+  fi
+  [[ "${candidate:a}" == "${expected_path:a}" ]]
+}
+
 typeset exclude_file="$DOTFILES_DIR/.git/info/exclude"
 typeset exclude_tmp="$tmp_dir/exclude.tmp"
 typeset overlay_exclude_start="# BEGIN DOTFILES OVERLAY"
@@ -173,6 +208,11 @@ while IFS= read -r rel; do
   [[ -z "$rel" ]] && continue
 
   typeset main_path="$DOTFILES_DIR/$rel"
+  typeset live_path=""
+  live_path=$(overlay_live_path "$rel" 2>/dev/null) || live_path=""
+  if [[ -n "$live_path" ]] && overlay_link_points_to "$live_path" "$main_path"; then
+    rm -f "$live_path"
+  fi
   [[ -L "$main_path" ]] && rm -f "$main_path"
 
   git -C "$DOTFILES_DIR" update-index --no-skip-worktree -- "$rel" >/dev/null 2>&1 || true
@@ -224,6 +264,14 @@ apply_override() {
   mkdir -p "${main_path:h}"
   rm -f "$main_path"
   ln -s "$target" "$main_path"
+
+  typeset live_path=""
+  live_path=$(overlay_live_path "$rel" 2>/dev/null) || live_path=""
+  if [[ -n "$live_path" && ! -e "$live_path" && ! -L "$live_path" ]]; then
+    mkdir -p "${live_path:h}"
+    ln -s "$main_path" "$live_path"
+  fi
+
   if git -C "$DOTFILES_DIR" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
     git -C "$DOTFILES_DIR" update-index --skip-worktree -- "$rel" >/dev/null 2>&1 || true
   fi

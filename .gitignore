@@ -1,9 +1,9 @@
 .DS_Store
-/.config/karabiner/automatic_backups
+/home/.config/karabiner/automatic_backups
 .env
 /node_modules
-.config/zed/prompts
-.config/gh/hosts.yml
-/.config/opencode/service.json
-/.config/jj/repos/
+/home/.config/zed/prompts
+/home/.config/gh/hosts.yml
+/home/.config/opencode/service.json
+/home/.config/jj/repos/
 /.jj/

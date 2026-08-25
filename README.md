@@ -7,8 +7,8 @@ They will change drastically over time, often suddenly, and without warning.
 ## Philosophy
 
 - Dotfiles should be stored in `~/dotfiles`
-- Dotfiles should mirror the home directory ([GNU stow][stow] handles symlinks)
-- Dotfiles should be extensible with one or more local overlay repos (e.g. `~/.local-dotfiles`) that can override specific files
+- Files under `~/dotfiles/home` should mirror the home directory ([GNU stow][stow] handles symlinks)
+- Dotfiles should be extensible with one or more local overlay repos (e.g. `~/.local-dotfiles`) whose `home/` directories override specific files
 - Embrace Git and do not keep things that are no longer being used
 - Operations should be idempotent
 - Dotfiles should install with minimum fussiness (i.e. don't rewrite into Rust because that would introduce dependencies for spinning them up on a new machine)
@@ -35,11 +35,11 @@ The main things I run are `dotfiles` and `dotfiles-install`.
 
 ### Syncing dotfiles
 
-The `dotfiles` command uses [GNU stow][stow] to symlink things from `~/` to their mapped location in `~/dotfiles`
+The `dotfiles` command uses [GNU stow][stow] to symlink files from `~/dotfiles/home` into `~/`.
 
-This allows me to not have `~/` be a Git checkout.
+Repository-only files such as `bin/`, `.fonts/`, tests, and local agent instructions remain at the repository root and are not stowed. This allows me to keep `~/dotfiles/bin` directly on `PATH` without making `~/` a Git checkout.
 
-Local zsh bootstrap lives in `~/.local-dotfiles/local-init.zsh` and is sourced from `~/.zshrc`, rather than being overlaid into the main dotfiles repo.
+Local zsh bootstrap lives in `~/.local-dotfiles/local-init.zsh` and is sourced from `~/.zshrc`. Deployable local overrides live under `~/.local-dotfiles/home` and are overlaid into `~/dotfiles/home`.
 
 ### Installing
 

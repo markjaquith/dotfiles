@@ -1,3 +1,10 @@
-.config/opencode/package.json
-.config/opencode/package-lock.json
-.config/opencode/plugins/herdr-agent-state.js
+home/.agents
+home/.claude
+home/.config/opencode/package.json
+home/.config/opencode/package-lock.json
+home/.config/opencode/plugins/__tests__/jj.test.ts
+home/.config/opencode/plugins/herdr-agent-state.js
+home/.config/zed/settings.json
+home/.pi/agent/mcp-cache.json
+home/.pi/agent/mcp-npx-cache.json
+home/.pi/agent/settings.json

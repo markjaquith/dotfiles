@@ -9,6 +9,7 @@ source "$overlay_script_dir/dotfiles-overlay-common.zsh" || exit 1
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 LOCAL_DOTFILES_DIR="${LOCAL_DOTFILES_DIR:-$HOME/.local-dotfiles}"
 
+typeset dotfiles_home_dir="${DOTFILES_HOME_DIR:-$DOTFILES_DIR/home}"
 typeset -a overlay_dirs
 typeset -a overlay_roots
 
@@ -59,22 +60,34 @@ typeset overlay_dir
 for overlay_dir in "${overlay_dirs[@]}"; do
   [[ ! -d "$overlay_dir" ]] && continue
 
-  overlay_root="${overlay_dir:A}"
-  overlay_roots+=("$overlay_root")
+  typeset overlay_repo_root="${overlay_dir:A}"
+  typeset overlay_payload_dir="$overlay_dir/home"
+  typeset legacy_layout=0
+  if [[ ! -d "$overlay_payload_dir" ]]; then
+    overlay_payload_dir="$overlay_dir"
+    legacy_layout=1
+    print -u2 "Warning: Using legacy overlay layout: $overlay_dir"
+  fi
+
+  overlay_root="${overlay_payload_dir:A}"
+  overlay_roots+=("$overlay_repo_root" "$overlay_root")
 
   typeset overlay_abs
   while IFS= read -r overlay_abs; do
     [[ -z "$overlay_abs" ]] && continue
-    [[ "$overlay_abs" != "$overlay_dir"/* ]] && continue
+    [[ "$overlay_abs" != "$overlay_payload_dir"/* ]] && continue
 
-    rel="${overlay_abs#$overlay_dir/}"
+    rel="${overlay_abs#$overlay_payload_dir/}"
     [[ "$rel" == .git/* || "$rel" == .jj/* ]] && continue
-    [[ "$rel" == .ignore ]] && continue
-    [[ "$rel" == .gitignore ]] && continue
-    [[ "$rel" == local-init.zsh ]] && continue
+    if [[ "$legacy_layout" == "1" ]]; then
+      [[ "$rel" == bin/* || "$rel" == docs/* || "$rel" == tests/* ]] && continue
+      [[ "$rel" == .ignore || "$rel" == .gitignore ]] && continue
+      [[ "$rel" == local-init.zsh ]] && continue
+    fi
 
-    print -r -- "$rel	$overlay_root/$rel" >> "$desired_raw"
-  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_dir")
+    typeset main_rel="home/$rel"
+    print -r -- "$main_rel	$overlay_root/$rel" >> "$desired_raw"
+  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_payload_dir")
 done
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
