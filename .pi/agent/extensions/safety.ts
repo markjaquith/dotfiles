@@ -1,7 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent"
 
-const GH_PR_MERGE_ALLOWLIST = new Set(["markjaquith/agency"])
+const GH_PR_MERGE_ALLOWLIST = new Set([
+	"markjaquith/agency",
+	"markjaquith/topo",
+])
 
 const destructiveRmPatterns = [
 	/^\s*rm\s+-[a-zA-Z]*r[a-zA-Z]*f\s+(.+)$/s,

@@ -20,11 +20,14 @@ describe("block-gh-pr-merge", () => {
 		expect(BlockGhPrMergePluginModule.server).toBe(BlockGhPrMergePlugin)
 	})
 
-	test("allows merges in an allowlisted current repository", () => {
-		expect(
-			evaluateToolCall(bash("gh pr merge 123 --squash"), "markjaquith/agency"),
-		).toEqual({ blocked: false })
-	})
+	test.each(["markjaquith/agency", "markjaquith/topo"])(
+		"allows merges in allowlisted current repository %s",
+		(repository) => {
+			expect(
+				evaluateToolCall(bash("gh pr merge 123 --squash"), repository),
+			).toEqual({ blocked: false })
+		},
+	)
 
 	test("blocks merges in other repositories", () => {
 		expect(evaluateToolCall(bash("gh pr merge 123"), "example/other")).toEqual({
@@ -55,14 +58,17 @@ describe("block-gh-pr-merge", () => {
 		).toBe(true)
 	})
 
-	test("an explicit allowlisted PR URL is allowed", () => {
-		expect(
-			evaluateToolCall(
-				bash("gh pr merge https://github.com/markjaquith/agency/pull/123"),
-				"example/other",
-			),
-		).toEqual({ blocked: false })
-	})
+	test.each(["markjaquith/agency", "markjaquith/topo"])(
+		"allows an explicit PR URL for %s",
+		(repository) => {
+			expect(
+				evaluateToolCall(
+					bash(`gh pr merge https://github.com/${repository}/pull/123`),
+					"example/other",
+				),
+			).toEqual({ blocked: false })
+		},
+	)
 
 	test("GH_REPO overrides the current repository", () => {
 		expect(

@@ -1,7 +1,10 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin"
 import { execFileSync } from "child_process"
 
-const GH_PR_MERGE_ALLOWLIST = new Set(["markjaquith/agency"])
+const GH_PR_MERGE_ALLOWLIST = new Set([
+	"markjaquith/agency",
+	"markjaquith/topo",
+])
 
 export interface ToolCall {
 	tool: string
