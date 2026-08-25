@@ -87,6 +87,18 @@ assert_wrapped_urls \
 	"https://example.com/abcdefghijklmnopqrstuvwxyz?x=1"
 
 assert_wrapped_urls \
+	"OpenCode diff gutter and parenthesized URL" \
+	98 \
+	$'  ┃    33 + Draft PR [Gusto/zenpayroll#369675](https://github.com/Gusto/zenpayroll/pull/\n  ┃         369675) contains four commits at head `572676269f99`.' \
+	"https://github.com/Gusto/zenpayroll/pull/369675"
+
+assert_wrapped_urls \
+	"OpenCode prose indentation and parenthesized URL" \
+	98 \
+	$'     Created draft PR: Gusto/zenpayroll#369675 (https://github.com/Gusto/zenpayroll/pull/\n     369675)' \
+	"https://github.com/Gusto/zenpayroll/pull/369675"
+
+assert_wrapped_urls \
 	"ordinary hard newline remains a boundary" \
 	40 \
 	$'https://example.com/path\nnext-line' \

@@ -27,19 +27,22 @@ join_wrapped_urls() {
 	local pane_width="${1:-0}"
 	local min_width line line_length pending continuation
 
-	if [[ ! "$pane_width" =~ ^[0-9]+$ ]] || ((pane_width <= 4)); then
+	if [[ ! "$pane_width" =~ ^[0-9]+$ ]] || ((pane_width <= 10)); then
 		cat
 		return
 	fi
 
-	# Herdr's pane rectangle includes a small amount of surrounding chrome. Pi
-	# hard-wraps transcript text just inside that boundary, while ordinary
-	# terminal soft wraps have already been joined by recent-unwrapped.
-	min_width=$((pane_width - 4))
+	# Herdr's pane rectangle includes surrounding chrome. Pi hard-wraps transcript
+	# text inside that boundary, while terminal soft wraps have already been joined.
+	min_width=$((pane_width - 10))
 	pending=""
 	while IFS= read -r line || [[ -n "$line" ]]; do
 		if [[ -n "$pending" ]]; then
-			continuation="${line#"${line%%[![:space:]]*}"}"
+			continuation="$line"
+			if [[ "$continuation" =~ ^[[:space:]]*┃ ]]; then
+				continuation="${continuation#*┃}"
+			fi
+			continuation="${continuation#"${continuation%%[![:space:]]*}"}"
 			if [[ -n "$continuation" ]] \
 				&& ! [[ "$continuation" =~ ^https?:// ]] \
 				&& grep -qE '^[^[:space:]<>"'"'"'`{}\\*]' <<<"$continuation"; then
