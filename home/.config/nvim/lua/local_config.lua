@@ -1,6 +1,6 @@
 local M = {}
 
-local LOCAL_CONFIG_BASE_PATH = vim.fn.expand('~/.local-dotfiles/.config/nvim/lua/local/')
+local LOCAL_CONFIG_BASE_PATH = vim.fn.expand('~/.local-dotfiles/home/.config/nvim/lua/local/')
 
 --- Safely loads a Lua table from a file within the local config base path.
 --- Returns the loaded table or nil if loading fails or file doesn't exist.
