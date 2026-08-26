@@ -36,9 +36,9 @@ is already an Agency-launched worker. If `AGENCY_SESSION_ID` or `AGENCY_TARGET`
 is set, this process is the active worker. Treat generated prompts such as
 "Start the task", "Continue the task", "Work on the task", or "Work on the
 epic" as instructions to perform the assigned work: start with
-`agency context . --json`, and do not call `agency work`, delegate to `@agency`,
-or open another Herdr tab unless the user explicitly asks to launch a separate
-nested or replacement agent. The launch rules below apply only when neither
+`agency context . --json`, and do not call `agency work` or open another Herdr
+tab unless the user explicitly asks to launch a separate nested or replacement
+agent. The launch rules below apply only when neither
 variable is set.
 
 Use labeled output when checking the launch environment:
@@ -48,8 +48,6 @@ printf 'AGENCY_SESSION_ID=%s\nAGENCY_TARGET=%s\n' \
   "${AGENCY_SESSION_ID:-}" "${AGENCY_TARGET:-}"
 ```
 
-If the user explicitly addresses `@agency`, delegate the complete Agency request to the `@agency` subagent. Do not reproduce the Agency workflow with CLI calls in the main agent unless delegation fails.
-
 Treat explicit new-item language as an Agency item boundary. Phrases such as
 "the investigation is complete" followed by "new", "separate", or "follow-up
 coding task" mean create a distinct item for implementation rather than reuse
@@ -57,22 +55,74 @@ the investigation item. This explicit boundary overrides reuse even when the
 current task permits implementation; implementation permission does not imply
 that later work belongs to the same item.
 
-If the user says to "open" or "view" or "materialize" an agency item (task, phase, epic), then by default that means to open it in a new Herdr tab in the same workspace as the request. Always pass `--workspace "$HERDR_WORKSPACE_ID"`; never rely on the UI-focused workspace. Before launching execution work, run `agency worktree prepare <task> --dry-run --json` and stop if it fails or reports an `Unable to resolve reference` workspace warning. Then, after naming the tab appropriately, you should `cd` to the item and run `agency work .` with no `--auto` flag. Then, in that same tab, open a new side-by-side split, and open the work item's plan document in neovim, i.e. `nvim TASK.md` or `nvim PHASE.md` or `nvim EPIC.md`.
+If the user says to "open", "view", "materialize", "create", "work",
+"launch", "start", or "kick off" an Agency item (task, phase, or epic), dispatch
+the complete operation to a temporary setup agent in a new Herdr tab. The
+initiating agent must not create the Agency item, prepare its workspace, or build
+the final pane layout itself.
 
-If the user says to "create" an agency item, then by default you should create it in the @agency subagent, and then "open" the item in a new tab, as outlined above.
+The initiating agent must:
 
-If, however, the user says to "work", "launch", "start", or "kick off" an agency item, then do all of the above, but pass the `--auto` flag so agency starts working on the item.
+1. Create an unfocused Herdr tab in the request's current workspace, always
+   passing `--workspace "$HERDR_WORKSPACE_ID"` rather than relying on the
+   UI-focused workspace. Use the current working directory and a useful
+   provisional tab name.
+2. Start a temporary setup agent in the new tab's root pane. Prefer the fastest
+   suitable model and low reasoning effort when the selected agent supports
+   those controls; this role executes a deterministic protocol.
+3. Prompt it with the user's complete request, the intended Agency action, and
+   the setup-agent protocol below. Submit the prompt without waiting for the
+   work to settle.
+4. After Herdr accepts the prompt, return immediately. Do not poll, inspect,
+   verify, or babysit the setup agent unless the user explicitly requests it.
 
-Compose these intents directly. "Create and open" means create the item and open
-it without `--auto`. "Create and work" or "kick off a new coding task" means
-create the item, open it in a new Herdr tab in the same workspace, and launch it
-with `--auto`.
+The temporary setup agent owns the rest of the launch transaction. This is a
+prescribed fast path, not an investigation. It must not search for subagent
+support, inspect Agency or Pi/OpenCode implementation files, read example tasks,
+or run broad help or discovery commands when the direct Agency command is known.
+If syntax is genuinely missing, inspect only the narrow relevant command help.
 
-After launching or opening an Agency item, perform exactly one
-`agency context <document-path> --json` verification. If it succeeds, stop
-immediately. Do not inspect, read, poll, monitor, or otherwise babysit the Herdr
-pane or launched agent unless the user explicitly requests it. Only investigate
-the pane when that verification fails.
+1. Create the Agency item directly with the appropriate noninteractive Agency
+   CLI mutation and `--json`, or resolve the existing item when creation was not
+   requested. Capture the exact item ID, document path, item directory, and plan
+   filename (`TASK.md`, `PHASE.md`, or `EPIC.md`) from that output. Do not launch
+   work as part of the create command.
+2. Immediately rename the Herdr tab once the durable item ID is known so that
+   preparation progress is visible under the final name.
+3. Run `agency work prepare <item-directory> --dry-run --json`. Stop if it fails,
+   validation fails, or any workspace warning contains `Unable to resolve
+reference`. If preflight succeeds, run
+   `agency work prepare <item-directory> --json` to materialize the workspace.
+4. Split its own pane downward, with the new bottom pane's cwd set directly to
+   the item directory. Keep focus unchanged.
+5. In the bottom pane, run `agency work .`; add `--auto` only when the user's
+   intent is to work, launch, start, or kick off the item.
+6. Targeting the explicit worker pane ID, use Herdr's agent wait commands rather
+   than shell polling loops. Wait only until Herdr recognizes the worker and it
+   reaches an expected initial state: idle/done for an open-only request, or
+   working/done for an auto-start request. Do not wait for the task itself to
+   finish.
+7. Split the worker pane to the right, set the editor pane's cwd to the item
+   directory, and run Neovim on the plan filename. The resulting bottom subtree
+   must be worker-left and plan-right.
+8. Perform exactly one `agency context <document-path> --json` verification.
+9. Only after worker detection and context verification succeed, close its own
+   temporary top pane using its explicit `$HERDR_PANE_ID`. The bottom subtree
+   then expands to become the tab's final side-by-side layout.
+
+Batch independent or immediately sequential shell operations into as few tool
+turns as practical, while still parsing every returned Herdr pane ID instead of
+predicting it. Do not pause between successful protocol steps for narration or
+additional planning.
+
+The setup agent must not close its pane after any creation, preparation, launch,
+worker-detection, editor-layout, or context-verification failure. It should leave
+the failure visible in that pane for recovery. It must not focus the new tab or
+any new pane.
+
+Compose intents directly. "Create and open" means create the item and launch
+`agency work .` without `--auto`. "Create and work" or "kick off a new coding
+task" means create the item and launch `agency work . --auto`.
 
 ## Examples
 
