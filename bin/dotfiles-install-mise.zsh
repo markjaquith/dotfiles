@@ -30,9 +30,9 @@ for plugin in "${herdr_plugins[@]}"; do
 done
 
 local_herdr_plugins=(
-	"${SCRIPT_DIR}/../.config/herdr/plugins/local/agent-chooser"
-	"${SCRIPT_DIR}/../.config/herdr/plugins/local/url-chooser"
-	"${SCRIPT_DIR}/../.config/herdr/plugins/local/new-tab-cwd"
+	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/agent-chooser"
+	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/url-chooser"
+	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/new-tab-cwd"
 )
 
 for plugin in "${local_herdr_plugins[@]}"; do
