@@ -3,6 +3,11 @@
 
 brew tap modem-dev/tap 2>/dev/null
 
+# Reserve the fx command for the fx.sh harness.
+if brew list --formula fx &>/dev/null; then
+	brew uninstall --quiet fx
+fi
+
 brew install --quiet \
     tlrc \
     bat \
@@ -48,7 +53,6 @@ brew install --quiet \
     eza \
     gleam \
     erlang \
-    fx \
     fzf \
     fd \
     rg \
