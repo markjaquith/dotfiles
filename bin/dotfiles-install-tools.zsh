@@ -6,6 +6,11 @@ if ! command -v opencode &>/dev/null && [[ ! -x "$HOME/.opencode/bin/opencode" ]
 	curl -fsSL https://opencode.ai/install | bash
 fi
 
+# Pi
+if ! command -v pi &>/dev/null; then
+	curl -fsSL https://pi.dev/install.sh | sh
+fi
+
 # GitHub CLI extensions
 if command -v gh &>/dev/null; then
 	gh extension install dlvhdr/gh-dash --force
