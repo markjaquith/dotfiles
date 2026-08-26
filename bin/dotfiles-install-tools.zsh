@@ -11,6 +11,11 @@ if ! command -v pi &>/dev/null; then
 	curl -fsSL https://pi.dev/install.sh | sh
 fi
 
+# fx
+if ! command -v fx &>/dev/null; then
+	curl -fsSL https://fx.sh/setup.sh | bash
+fi
+
 # GitHub CLI extensions
 if command -v gh &>/dev/null; then
 	gh extension install dlvhdr/gh-dash --force
