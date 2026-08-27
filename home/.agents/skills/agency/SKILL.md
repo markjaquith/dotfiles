@@ -31,18 +31,19 @@ At the workbase root, context cannot infer one entity from `.`. Use
 with explicit `--epic`, `--task`, and `--phase` selectors or its returned document
 path. Do not pass a graph node key as a positional context target.
 
-For broader orchestration, load the graph and discover available capabilities:
+For broader orchestration, load the graph and validate the workbase:
 
 ```bash
 agency graph --json
 agency doctor --json
-agency --help
-agency <command> --help
 ```
 
-Use `agency next --json` when choosing ready execution work. Read
-[`references/contracts.md`](references/contracts.md) when consuming machine
-output or editing documents.
+When a known workflow's exact syntax is missing, inspect only
+`agency <command> --help`. Do not run broad help or discovery for a prescribed
+fast path.
+
+Use `agency next --json` when choosing ready execution work. Treat JSON output
+and the returned document paths as authoritative; do not infer missing fields.
 
 ## Mental Model
 
@@ -82,6 +83,12 @@ reuse. For example, "the investigation is complete" followed by a request for a
 item even if the investigation task permits implementation. Treat permission to
 implement and intent to reuse an item as separate decisions.
 
+Keep action semantics distinct: **create** mutates durable state only,
+**materialize** runs `agency work prepare` only, **open** starts `agency work`
+without `--auto`, and **launch/work/start** starts it with `--auto`. Do not turn a
+create-only or materialize-only request into an agent launch or UI operation.
+More-specific workbase instructions remain authoritative for managed fast paths.
+
 ## Safety Invariants
 
 - Keep task-wide decisions in `TASK.md` and phase delivery details in `PHASE.md`.
@@ -119,13 +126,20 @@ implement and intent to reuse an item as separate decisions.
 ### Finish
 
 1. Re-run `agency validate` and repository checks.
-2. Create a PR only when requested: `agency pr create <task> [phase]`.
-3. Record terminal state only when the requested outcome is true. A created PR
+2. Create a PR only when requested. Before mutation, require the execution unit
+   to declare a base and stop if a user-requested base differs from it. Create
+   through `agency pr create <task> [phase]`, never a parallel provider command.
+3. Read the created PR back from the provider and require its actual base and
+   head to match the Agency-declared base and branch. For GitHub, use
+   `gh pr view` with explicit repository and branch selectors. Report the
+   requested base, Agency-declared base, and actual base; treat any mismatch as
+   a failed publication instead of silently retargeting it.
+4. Record terminal state only when the requested outcome is true. A created PR
    alone does not make work `done` if completion requires merge.
-4. If the session has a claim, use revision-guarded `agency finish`; otherwise
+5. If the session has a claim, use revision-guarded `agency finish`; otherwise
    use the task or phase status command. Use `dropped` only for intentionally
    abandoned work.
-5. Report the durable status and PR URL. Do not manually remove the worktree.
+6. Report the durable status and PR URL. Do not manually remove the worktree.
 
 ## Human Launch vs Active Agent
 
@@ -135,22 +149,22 @@ it materializes managed checkouts, claims the unit, marks it working, and starts
 the selected built-in or configured runner. Epic and multi-phase task launches
 start in orchestration context without materializing or claiming execution work.
 
-Before launching execution work, preflight worktree preparation and inspect the
+Before launching execution work, preflight workspace preparation and inspect the
 JSON result:
 
 ```bash
-agency worktree prepare <task> --dry-run --json
+agency work prepare <item-directory> --dry-run --json
 ```
 
-Do not launch if the command fails or reports an `Unable to resolve reference`
-workspace warning. Resolve the repository reference first.
+Do not launch if the command fails, validation fails, or it reports an
+`Unable to resolve reference` workspace warning. Resolve the repository
+reference first, then run `agency work prepare <item-directory> --json` before
+launch. Do not use the legacy `agency worktree prepare` path.
 
 An agent already running in an Agency checkout must not call `agency work` to
 start itself again. It should inspect context, perform the assigned work, and
 finish or release its existing claim. Launch a nested or replacement agent only
 when the user explicitly asks.
 
-Use [`references/recipes.md`](references/recipes.md) for human setup, agent
-execution, claim, PR, conversion, and recovery workflows. Use
-[`references/commands.md`](references/commands.md) only when exact command syntax
-is needed.
+For recovery or an unfamiliar mutation, inspect only the narrow relevant
+`agency <command> --help` after reading current context.

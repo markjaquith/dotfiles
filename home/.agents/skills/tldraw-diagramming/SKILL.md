@@ -1,11 +1,18 @@
 ---
 name: tldraw-diagramming
-description: Use this skill whenever diagrams are requested by the user. Create, inspect, and iteratively refine diagrams in tldraw via the local Canvas API at localhost:7236.
+description: >-
+  Use when the user requests tldraw or an editable, persistent diagram canvas.
+  For diagrams embedded in a Sideshow report or code review, use Sideshow
+  instead.
 ---
 
 # tldraw diagramming
 
-Use this skill whenever the user asks for a diagram, flowchart, architecture picture, sequence view, or canvas edit.
+Use this skill when the user asks for tldraw, a canvas edit, or a diagram they
+can continue editing as a persistent canvas. Use Sideshow instead when the
+requested diagram is part of an embedded report, explainer, or code review.
+When the destination is ambiguous, prefer tldraw for editability and Sideshow
+for presentation.
 
 ## Purpose
 

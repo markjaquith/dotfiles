@@ -25,6 +25,13 @@ If this surface is a deployed instance that requires a token, also set
 `SIDESHOW_TOKEN` in your environment before using the CLI. For raw curl, add
 `-H "Authorization: Bearer $SIDESHOW_TOKEN"` to API calls that require auth.
 
+# Skill loading guidelines
+
+Load each skill at most once per conversation. Reuse its already-loaded
+instructions unless the skill file changed or the user explicitly asks to reload
+it. Do not re-read an unchanged skill merely because the task entered a new
+phase or another related skill was loaded.
+
 # Herdr guidelines
 
 If the user says "in a new tab" or "in a new workspace" then unless there is clear evidence showing they mean something else, assume that they mean "in a new Herdr tab (same workspace)" and "in a new Herdr workspace". Use the `herdr` skill. NEVER auto-focus a newly created Herdr tab or Herdr workspace.
@@ -55,11 +62,32 @@ the investigation item. This explicit boundary overrides reuse even when the
 current task permits implementation; implementation permission does not imply
 that later work belongs to the same item.
 
-If the user says to "open", "view", "materialize", "create", "work",
-"launch", "start", or "kick off" an Agency item (task, phase, or epic), dispatch
-the complete operation to a temporary setup agent in a new Herdr tab. The
-initiating agent must not create the Agency item, prepare its workspace, or build
-the final pane layout itself.
+Interpret Agency action verbs as separate intents:
+
+- **Create** (`create`, `make`, or `add`) mutates the durable Agency item only.
+  Do not prepare a checkout, open Herdr UI, or run `agency work` unless the same
+  request explicitly asks for one of those actions.
+- **Materialize** (`materialize` or `prepare`) runs
+  `agency work prepare <item-directory> --dry-run --json` and, after a clean
+  preflight, `agency work prepare <item-directory> --json`. It does not open
+  Herdr UI or run `agency work`.
+- **Open** (`open` or `view`) constructs the Herdr worker/editor layout and runs
+  `agency work .` without `--auto`.
+- **Launch** (`work`, `launch`, `start`, or `kick off`) constructs that layout
+  and runs `agency work . --auto`.
+
+Combined requests compose these intents. For create-only requests, use the
+appropriate noninteractive Agency mutation with `--json`, capture the returned
+item ID and document path, and perform exactly one
+`agency context <document-path> --json` verification. For materialize-only
+requests, resolve the item directory from Agency output, stop on validation
+failure or any `Unable to resolve reference` warning, and perform exactly one
+context verification after preparation. Neither flow creates a Herdr tab.
+
+Only requests that include an **open** or **launch** intent are dispatched to a
+temporary setup agent in a new Herdr tab. The initiating agent must not create
+the Agency item, prepare its workspace, or build the final pane layout itself
+for those UI flows.
 
 The initiating agent must:
 
@@ -126,12 +154,14 @@ task" means create the item and launch `agency work . --auto`.
 
 ## Examples
 
-- Prompt: `make this task` Outcome: create, open and work without `--auto`
-- Prompt: `launch this task` Outcome: open and work with `--auto`
+- Prompt: `make this task` Outcome: create the durable item only
+- Prompt: `materialize this task` Outcome: prepare its workspace only
+- Prompt: `open this task` Outcome: open it in Herdr without `--auto`
+- Prompt: `launch this task` Outcome: open it in Herdr with `--auto`
 - Prompt: `kick off a new task` Outcome: create, open, and work with `--auto`
 - Prompt: `create and work this phase` Outcome: create, open, and work with `--auto`
 - Prompt: `the investigation is complete; create a follow-up coding task`
-  Outcome: create a distinct item and open it without `--auto`
+  Outcome: create a distinct durable item only
 - Prompt: `the investigation is complete; kick off a new coding task`
   Outcome: create a distinct item, open it in a new Herdr tab in the current
   workspace, and launch with `--auto`; do not focus or babysit it
