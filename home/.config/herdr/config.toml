@@ -110,6 +110,7 @@ mouse_capture = true
 agent_panel_sort = "spaces"
 prompt_new_tab_name = false
 sidebar_collapsed_mode = "hidden"
+pane_gaps = false
 
 [ui.toast]
 delivery = "herdr"
