@@ -18,7 +18,7 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["zsh-tests"] {
-		check = "for test_file in test/*.test.zsh; do zsh \"$test_file\"; done"
+		check = "zsh test/url-chooser.test.zsh"
 	}
 }
 

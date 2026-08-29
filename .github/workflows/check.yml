@@ -17,5 +17,11 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      - run: brew install fd jj worktrunk
       - run: bun install
       - run: hk run check
+      - name: Zsh integration tests
+        run: |
+          for test_file in test/dotfiles-overlay.test.zsh test/wt-*.test.zsh; do
+            zsh "$test_file"
+          done
