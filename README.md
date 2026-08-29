@@ -53,6 +53,24 @@ The `dotfiles` command handles Stow syncing and local overlay reconciliation for
 
 `dotfiles --pure` temporarily removes all overlay overrides, restoring the base dotfiles checkout so you can edit files that are normally shadowed by overlay symlinks. Running `dotfiles` again (without `--pure`) re-applies overlays.
 
+### Installing the HEIC to JPG Folder Action
+
+Install the workflow in the macOS Folder Actions directory:
+
+```zsh
+mkdir -p "$HOME/Library/Workflows/Applications/Folder Actions"
+ditto "$HOME/dotfiles/bin/HEIC to JPG.workflow" "$HOME/Library/Workflows/Applications/Folder Actions/HEIC to JPG.workflow"
+```
+
+Then attach it to a folder:
+
+1. In Finder, right-click the folder to watch, such as `Downloads`.
+2. Select **Services** → **Folder Actions Setup…**.
+3. Enable Folder Actions.
+4. Attach `HEIC to JPG.workflow`.
+
+The workflow converts incoming `.heic` images to `.jpg` and deletes the original `.heic` files after conversion.
+
 [mj]: https://github.com/markjaquith
 [ghostty]: https://ghostty.io/
 [zsh]: https://www.zsh.org/
