@@ -31,6 +31,7 @@ brew install --quiet \
 		terminal-notifier \
 		switchaudio-osx \
 		mole \
+		aerc \
 		trash
 
 brew install --quiet --cask espanso
