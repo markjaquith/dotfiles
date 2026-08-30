@@ -64,6 +64,7 @@ brew install --quiet \
     libyaml \
 		terminal-notifier \
 		switchaudio-osx \
+		mole \
 		trash
 
 # Older Hunk builds can retain a broken OpenTUI preload.
