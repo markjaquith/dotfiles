@@ -1,19 +1,19 @@
 {
-  "lastChangelogVersion": "0.85.1",
-  "theme": "catppuccin-macchiato",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
-  "steeringMode": "all",
-  "defaultThinkingLevel": "high",
-  "enabledModels": [
-    "openai-codex/gpt-5.6-sol",
-    "openai-codex/gpt-5.6-terra",
-    "amazon-bedrock/anthropic.claude-opus-4-8"
-  ],
-  "hideThinkingBlock": true,
-  "packages": [
-    "npm:@plannotator/pi-extension",
-    "npm:pi-mcp-adapter",
-    "npm:pi-web-access"
-  ]
+	"lastChangelogVersion": "0.85.1",
+	"theme": "catppuccin-macchiato",
+	"defaultProvider": "openai-codex",
+	"defaultModel": "gpt-5.6-sol",
+	"steeringMode": "all",
+	"defaultThinkingLevel": "high",
+	"enabledModels": [
+		"openai-codex/gpt-5.6-sol",
+		"openai-codex/gpt-5.6-terra",
+		"amazon-bedrock/anthropic.claude-opus-4-8"
+	],
+	"hideThinkingBlock": true,
+	"packages": [
+		"npm:@plannotator/pi-extension",
+		"npm:pi-mcp-adapter",
+		"npm:pi-web-access"
+	]
 }
