@@ -33,7 +33,7 @@ kc() {
 	local encoded hex
 	encoded="$(security find-generic-password -a "$USER" -s "$service" -w 2>/dev/null)" || return 1
 	hex="${encoded#0x}"
-	if [[ "$encoded" != 0x* || -z "$hex" || ! "$hex" =~ '^[0-9A-Fa-f]+$' || $(( ${#hex} % 2 )) -ne 0 ]]; then
+	if [[ -z "$hex" || ! "$hex" =~ '^[0-9A-Fa-f]+$' || $(( ${#hex} % 2 )) -ne 0 ]]; then
 		print -u2 -- "kc: Keychain value is not valid hexadecimal output"
 		return 1
 	fi

@@ -13,6 +13,11 @@ cat > "$test_root/security" <<'MOCK_SECURITY'
 #!/usr/bin/env zsh
 
 if [[ "$*" == *"-s multiline-service"* ]]; then
+	xxd -p "$KC_TEST_PEM" | tr -d '\n'
+	return 0
+fi
+
+if [[ "$*" == *"-s prefixed-service"* ]]; then
 	print -rn -- "0x"
 	xxd -p "$KC_TEST_PEM" | tr -d '\n'
 	return 0
@@ -22,6 +27,10 @@ if [[ "$*" == *"-s normal-service"* ]]; then
 	print -rn -- "ordinary-secret"
 	return 0
 fi
+
+[[ "$*" == *"-s empty-service"* ]] && return 0
+[[ "$*" == *"-s odd-service"* ]] && print -rn -- "abc" && return 0
+[[ "$*" == *"-s nonhex-service"* ]] && print -rn -- "not-hex" && return 0
 
 return 1
 MOCK_SECURITY
@@ -43,9 +52,22 @@ if [[ "$(kc --decode-hex multiline-service)" != $'-----BEGIN CERTIFICATE-----\ns
 	exit 1
 fi
 
+kc --decode-hex prefixed-service > "$actual_pem"
+if ! cmp -s "$expected_pem" "$actual_pem"; then
+	print -ru2 -- "FAIL: prefixed Keychain value did not round-trip"
+	exit 1
+fi
+
 if [[ "$(kc normal-service)" != "ordinary-secret" ]]; then
 	print -ru2 -- "FAIL: normal Keychain value changed"
 	exit 1
 fi
+
+for service in empty-service odd-service nonhex-service; do
+	if kc --decode-hex "$service" >/dev/null 2>&1; then
+		print -ru2 -- "FAIL: invalid Keychain value was accepted"
+		exit 1
+	fi
+done
 
 print -r -- "keychain secret tests passed"
