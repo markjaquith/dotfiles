@@ -118,22 +118,30 @@ If syntax is genuinely missing, inspect only the narrow relevant command help.
    work as part of the create command.
 2. Immediately rename the Herdr tab once the durable item ID is known so that
    preparation progress is visible under the final name.
-3. Run `agency work prepare <item-directory> --dry-run --json`. Stop if it fails,
-   validation fails, or any workspace warning contains `Unable to resolve
-reference`. If preflight succeeds, run
-   `agency work prepare <item-directory> --json` to materialize the workspace.
+3. Run `agency work prepare <item-directory> --dry-run --json`. If it is blocked
+   only because declared dependencies are `working`, retry the preflight with
+   `--force`; this is the expected chained-phase workflow. If that forced
+   preflight is clean, use `--force` on both the applying `agency work prepare`
+   command and the later `agency work` command. Never force through validation
+   failures, unresolved-reference warnings, dirty-worktree failures, unexpected
+   write authority, or any other blocker. If preparation remains unsafe, do not
+   materialize or launch, but continue constructing the recovery layout.
 4. Split its own pane downward, with the new bottom pane's cwd set directly to
-   the item directory. Keep focus unchanged.
-5. In the bottom pane, run `agency work .`; add `--auto` only when the user's
-   intent is to work, launch, start, or kick off the item.
-6. Targeting the explicit worker pane ID, use Herdr's agent wait commands rather
-   than shell polling loops. Wait only until Herdr recognizes the worker and it
-   reaches an expected initial state: idle/done for an open-only request, or
-   working/done for an auto-start request. Do not wait for the task itself to
-   finish.
+   the item directory. Keep focus unchanged. Create this worker pane whenever
+   item creation succeeded, even if preparation failed.
+5. If preparation succeeded, run `agency work .` in the bottom pane; add
+   `--auto` only when the user's intent is to work, launch, start, or kick off
+   the item, and add `--force` when step 3 required the working-dependency
+   override. If preparation failed, leave this pane at its interactive shell.
+6. If work was launched, target the explicit worker pane ID and use Herdr's
+   agent wait commands rather than shell polling loops. Wait only until Herdr
+   recognizes the worker and it reaches an expected initial state: idle/done
+   for an open-only request, or working/done for an auto-start request. Do not
+   wait for the task itself to finish. Skip detection when work was not launched.
 7. Split the worker pane to the right, set the editor pane's cwd to the item
-   directory, and run Neovim on the plan filename. The resulting bottom subtree
-   must be worker-left and plan-right.
+   directory, and run Neovim on the plan filename regardless of preparation or
+   launch outcome. The resulting bottom subtree must be worker-left and
+   plan-right.
 8. Perform exactly one `agency context <document-path> --json` verification.
 9. Only after worker detection and context verification succeed, close its own
    temporary top pane using its explicit `$HERDR_PANE_ID`. The bottom subtree
@@ -144,10 +152,13 @@ turns as practical, while still parsing every returned Herdr pane ID instead of
 predicting it. Do not pause between successful protocol steps for narration or
 additional planning.
 
-The setup agent must not close its pane after any creation, preparation, launch,
-worker-detection, editor-layout, or context-verification failure. It should leave
-the failure visible in that pane for recovery. It must not focus the new tab or
-any new pane.
+A creation failure ends the protocol because there is no reliable item directory
+for the layout. A preparation or launch failure prevents worker launch or
+detection but does not prevent creating the worker/editor recovery layout or
+performing context verification. The setup agent must not close its pane after
+any creation, preparation, launch, worker-detection, editor-layout, or
+context-verification failure; it should leave the failure visible there for
+recovery. It must not focus the new tab or any new pane.
 
 Compose intents directly. "Create and open" means create the item and launch
 `agency work .` without `--auto`. "Create and work" or "kick off a new coding

@@ -100,6 +100,9 @@ More-specific workbase instructions remain authoritative for managed fast paths.
   instead of hand-editing structural frontmatter.
 - Run `agency validate` before worktree or PR operations and after structural edits.
 - Do not bypass dirty-worktree, active-claim, revision, or readiness protections.
+  The one readiness exception is a chained-phase setup explicitly governed by
+  the Herdr setup protocol: it may use `--force` when every blocker is a declared
+  dependency whose status is `working`.
 
 ## Operating Protocol
 
@@ -108,11 +111,14 @@ More-specific workbase instructions remain authoritative for managed fast paths.
 1. Run `agency context . --json`.
 2. Confirm `target`, `graph.readiness`, `authority`, `workspace`, and `validation`.
 3. Read the returned task and phase document paths for prose requirements.
-4. Stop on validation errors, dependency blockers, an unexpected writable
-   repository, a conflicting active owner, or any workspace warning containing
-   `Unable to resolve reference`. For an active agent, a `working` status blocker
-   is expected only when the current session owns the claim. Treat unresolved
-   reference warnings as launch blockers; do not bypass them with `--force`.
+4. Stop on validation errors, an unexpected writable repository, a conflicting
+   active owner, or any workspace warning containing `Unable to resolve
+   reference`. Stop on dependency blockers except during a chained-phase Herdr
+   setup where every blocker is a declared dependency with status `working`; in
+   that narrow case, retry preparation and launch with `--force`. For an active
+   agent, a `working` status blocker is expected only when the current session
+   owns the claim. Never use `--force` for unresolved references or other safety
+   failures.
 
 ### Work
 
@@ -157,9 +163,13 @@ agency work prepare <item-directory> --dry-run --json
 ```
 
 Do not launch if the command fails, validation fails, or it reports an
-`Unable to resolve reference` workspace warning. Resolve the repository
-reference first, then run `agency work prepare <item-directory> --json` before
-launch. Do not use the legacy `agency worktree prepare` path.
+`Unable to resolve reference` workspace warning. During chained-phase Herdr
+setup, a preflight blocked only by declared dependencies in `working` status may
+be retried with `--force`; carry `--force` into the applying preparation and
+launch commands. Do not force any other failure. A failed preparation does not
+prevent the orchestrator from creating an unlaunched worker shell and editor as
+a recovery layout. Resolve repository-reference failures before launch. Do not
+use the legacy `agency worktree prepare` path.
 
 An agent already running in an Agency checkout must not call `agency work` to
 start itself again. It should inspect context, perform the assigned work, and
