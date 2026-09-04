@@ -95,9 +95,10 @@ The initiating agent must:
    passing `--workspace "$HERDR_WORKSPACE_ID"` rather than relying on the
    UI-focused workspace. Use the current working directory and a useful
    provisional tab name.
-2. Start a temporary setup agent in the new tab's root pane. Prefer the fastest
-   suitable model and low reasoning effort when the selected agent supports
-   those controls; this role executes a deterministic protocol.
+2. Start a temporary OpenCode setup agent in the new tab's root pane with
+   `--mini --model openai/gpt-5.6-sol` and low reasoning effort. The mini flag
+   selects the compact interface, not the model; this role executes a
+   deterministic protocol.
 3. Prompt it with the user's complete request, the intended Agency action, and
    the setup-agent protocol below. Submit the prompt without waiting for the
    work to settle.

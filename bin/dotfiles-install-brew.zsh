@@ -67,5 +67,7 @@ brew install --quiet \
 		mole \
 		trash
 
+brew install --quiet --cask espanso
+
 # Older Hunk builds can retain a broken OpenTUI preload.
 brew upgrade --quiet modem-dev/tap/hunk
