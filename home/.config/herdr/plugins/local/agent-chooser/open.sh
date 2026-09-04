@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ensure_tool() {
+	local tool="$1" mise_bin tool_path
+	command -v "$tool" >/dev/null 2>&1 && return
+	mise_bin=$(command -v mise 2>/dev/null) || return
+	tool_path=$("$mise_bin" -C "$HOME" which "$tool" 2>/dev/null) || return
+	export PATH="$(dirname "$tool_path"):$PATH"
+}
+
+ensure_tool jq
+
 herdr="${HERDR_BIN_PATH:-herdr}"
 cwd="${HOME}"
 snapshot_file=""
