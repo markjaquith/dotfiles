@@ -34,4 +34,7 @@ export PATH=/opt/homebrew/bin:$PATH
 if [[ -d "$HOME/.cargo/bin" ]]; then
 	path=("$HOME/.cargo/bin" ${path:#$HOME/.cargo/bin})
 fi
+if [[ -d "$HOME/.local/share/mise/shims" ]]; then
+	path=("$HOME/.local/share/mise/shims" ${path:#$HOME/.local/share/mise/shims})
+fi
 export PATH=$HOME/dotfiles/bin:$PATH
