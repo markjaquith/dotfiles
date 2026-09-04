@@ -2,3 +2,4 @@
 # https://espanso.org/docs/configuration/options/
 
 toggle_key: OFF
+search_shortcut: ALT+SHIFT+SPACE
