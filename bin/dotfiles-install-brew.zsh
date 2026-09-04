@@ -1,66 +1,30 @@
 #!/usr/bin/env zsh
 # Bulk Homebrew install
 
-brew tap modem-dev/tap 2>/dev/null
-
 # Reserve the fx command for the fx.sh harness.
 if brew list --formula fx &>/dev/null; then
 	brew uninstall --quiet fx
 fi
 
 brew install --quiet \
-    tlrc \
-    bat \
-    btop \
     ack \
     asciinema \
-    go \
     gpg \
-    python \
     zinit \
-    lua \
-		stylua \
 		bruno \
-		tokei \
 		bacon \
 		kondo \
-		pandoc \
 		yamlfix \
 		pkl-lsp \
 		fswatch \
 		watchman \
-		tree-sitter-cli \
-    1password-cli \
-    lua-language-server \
-    pkgx \
-    yazi \
-    oven-sh/bun/bun \
-    lazygit \
-    bottom \
     buildkite/buildkite/bk@3 \
-    gum \
     stow \
-    jj \
-    jq \
-    gh \
-    modem-dev/tap/hunk \
-    git-filter-repo \
-    hub \
-    tmux \
     sesh \
-    zoxide \
     httpie \
-    eza \
-    gleam \
-    erlang \
-    fzf \
-    fd \
-    rg \
     ghostscript \
-    neovim \
     openscad \
     swiftbar \
-    atlassian/homebrew-acli/acli \
     libyaml \
 		terminal-notifier \
 		switchaudio-osx \
@@ -68,6 +32,3 @@ brew install --quiet \
 		trash
 
 brew install --quiet --cask espanso
-
-# Older Hunk builds can retain a broken OpenTUI preload.
-brew upgrade --quiet modem-dev/tap/hunk
