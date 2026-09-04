@@ -14,6 +14,7 @@ brew install --quiet \
     zinit \
 		bruno \
 		bacon \
+		jq \
 		kondo \
 		yamlfix \
 		pkl-lsp \

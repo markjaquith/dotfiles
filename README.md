@@ -53,6 +53,35 @@ The `dotfiles` command handles Stow syncing and local overlay reconciliation for
 
 `dotfiles --pure` temporarily removes all overlay overrides, restoring the base dotfiles checkout so you can edit files that are normally shadowed by overlay symlinks. Running `dotfiles` again (without `--pure`) re-applies overlays.
 
+### Managing cron jobs
+
+`crontab-sync` manages one fenced section of the current user's crontab from `~/.config/crontab/jobs.json`. Entries outside that section remain untouched.
+
+```json
+{
+	"jobs": [
+		{
+			"name": "example",
+			"description": "Run an example task every morning",
+			"schedule": "0 8 * * *",
+			"command": "/absolute/path/to/example",
+			"enabled": true
+		}
+	]
+}
+```
+
+Validate and inspect changes before applying them:
+
+```zsh
+crontab-sync check
+crontab-sync render
+crontab-sync diff
+crontab-sync apply
+```
+
+Jobs require `name`, `schedule`, and `command`. `description` and `enabled` are optional. Schedules accept the standard five fields or macros such as `@daily` and `@reboot`.
+
 ### Installing the HEIC to JPG Folder Action
 
 Install the workflow in the macOS Folder Actions directory:
