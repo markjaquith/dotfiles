@@ -38,6 +38,6 @@
 			"specialNotes": "This is the main repo for Worktrunk, a CLI for managing git worktrees, hooks, and commit workflows.",
 		},
 	],
-	"model": "gpt-5.4-mini",
+	"model": "gpt-5.6-luna",
 	"provider": "openai",
 }
