@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ensure_tool() {
+	local tool="$1" mise_bin tool_path
+	command -v "$tool" >/dev/null 2>&1 && return
+	mise_bin=$(command -v mise 2>/dev/null) || return
+	tool_path=$("$mise_bin" -C "$HOME" which "$tool" 2>/dev/null) || return
+	export PATH="$(dirname "$tool_path"):$PATH"
+}
+
+ensure_tool jq
+ensure_tool fzf
+ensure_tool gum
+
 extract_urls() {
 	grep -oE 'https?://(localhost|[[:alnum:]-]+(\.[[:alnum:]-]+)+)(:[0-9]+)?(/[^[:space:]<>"'"'"'`{}\]*)?' | while IFS= read -r url; do
 		while true; do
