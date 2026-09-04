@@ -1,0 +1,192 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail no_unset
+
+readonly jira_glyph=''
+readonly pr_glyph=''
+readonly draft_pr_glyph=''
+readonly merged_pr_glyph=''
+readonly jira_identifier_pattern='[A-Z]{3}-[1-9][0-9]+'
+readonly jira_pattern="$jira_identifier_pattern "
+
+indicators_from_context() {
+	jq -c --arg jira_pattern "$jira_identifier_pattern" '
+		.result as $result
+		| select($result.target.kind == "task" or $result.target.kind == "phase")
+		| {
+			prStatus: (if (
+				($result.target.kind == "task"
+					and $result.documents.task.data.status == "working")
+				or ($result.target.kind == "phase"
+					and $result.documents.phase.data.status == "working")
+			) then
+				if $result.pr.merged == true then "merged"
+				elif $result.pr.draft == true then "draft"
+				elif $result.pr != null then "open"
+				else ""
+				end
+			else ""
+			end),
+			jiraTicket: (
+				$result.documents.task.data.ticketUrl // ""
+				| ([match($jira_pattern).string] | first) // ""
+			)
+		}
+	'
+}
+
+pr_glyph_for_status() {
+	case $1 in
+		open) REPLY=$pr_glyph ;;
+		draft) REPLY=$draft_pr_glyph ;;
+		merged) REPLY=$merged_pr_glyph ;;
+		none|'') REPLY='' ;;
+		*) return 2 ;;
+	esac
+}
+
+format_tab_label() {
+	local new_label=$1
+	local pr_status=${2:-none}
+	local jira_ticket=${3:-}
+	local existing_jira_ticket indicator_removed old_glyph old_jira_indicator
+	local jira_match status_glyph
+	local leading_jira_pattern="^${jira_identifier_pattern}( |$)"
+
+	while true; do
+		indicator_removed=false
+		for old_glyph in "$pr_glyph" "$draft_pr_glyph" "$merged_pr_glyph"; do
+			if [[ $new_label == "$old_glyph "* ]]; then
+				new_label=${new_label#"$old_glyph "}
+				indicator_removed=true
+				break
+			fi
+		done
+		if [[ $indicator_removed == false && $new_label == "$jira_glyph "* ]]; then
+			new_label=${new_label#"$jira_glyph "}
+			if [[ $new_label =~ $leading_jira_pattern ]]; then
+				existing_jira_ticket=${MATCH% }
+				new_label=${new_label#"$MATCH"}
+			fi
+			indicator_removed=true
+		fi
+		[[ $indicator_removed == true ]] || break
+	done
+
+	[[ -n $jira_ticket ]] || jira_ticket=$existing_jira_ticket
+
+	if [[ -n $jira_ticket ]]; then
+		for old_jira_indicator in "$jira_glyph $jira_ticket" "$jira_ticket"; do
+			if [[ $new_label == "$old_jira_indicator" ]]; then
+				new_label=''
+			elif [[ $new_label == "$old_jira_indicator "* ]]; then
+				new_label=${new_label#"$old_jira_indicator "}
+			elif [[ $new_label == *" $old_jira_indicator "* ]]; then
+				new_label=${new_label/" $old_jira_indicator "/ }
+			elif [[ $new_label == *" $old_jira_indicator" ]]; then
+				new_label=${new_label%" $old_jira_indicator"}
+			fi
+		done
+		new_label="$jira_glyph $jira_ticket${new_label:+ $new_label}"
+	elif [[ $new_label =~ $jira_pattern ]]; then
+		jira_match=$MATCH
+		if [[ $new_label != *"$jira_glyph $jira_match"* ]]; then
+			new_label=${new_label/$jira_match/$jira_glyph $jira_match}
+		fi
+	fi
+
+	pr_glyph_for_status "$pr_status" || return $?
+	status_glyph=$REPLY
+	REPLY="${status_glyph:+$status_glyph }$new_label"
+}
+
+agency_context_path() {
+	local directory=${1:A}
+
+	while [[ $directory != / ]]; do
+		if [[ -f $directory/TASK.md || -f $directory/PHASE.md ]]; then
+			REPLY=$directory
+			return 0
+		fi
+		directory=${directory:h}
+	done
+	return 1
+}
+
+if [[ ${HERDR_RENAME_TABS_FUNCTIONS_ONLY:-} == 1 ]]; then
+	return 0
+fi
+
+die() {
+	print -ru2 -- "Error: $*"
+	exit 1
+}
+
+for dependency in agency herdr jq; do
+	command -v "$dependency" >/dev/null 2>&1 || die "$dependency is not available"
+done
+
+[[ ${HERDR_ENV:-} == 1 ]] || die 'herdr-rename-tabs must run inside Herdr'
+
+tabs_json=$(herdr tab list) || exit $?
+panes_json=$(herdr pane list) || exit $?
+
+typeset -A context_cache context_checked
+while IFS= read -r -d $'\0' tab_id \
+	&& IFS= read -r -d $'\0' label \
+	&& IFS= read -r -d $'\0' cwd_count; do
+	pr_status=''
+	jira_ticket=''
+
+	for (( cwd_index = 0; cwd_index < cwd_count; ++cwd_index )); do
+		IFS= read -r -d $'\0' cwd || exit 1
+		[[ -n $cwd && ! ( -n $pr_status && -n $jira_ticket ) ]] || continue
+
+		agency_context_path "$cwd" || continue
+		context_path=$REPLY
+
+		if [[ -z ${context_checked[$context_path]-} ]]; then
+			context_checked[$context_path]=1
+			context_pr_status=''
+			context_jira_ticket=''
+
+			if context_json=$(agency context "$context_path" --json 2>/dev/null) \
+				&& context_indicators=$(indicators_from_context <<< "$context_json") \
+				&& [[ -n $context_indicators ]]; then
+				context_pr_status=${context_indicators#*'"prStatus":"'}
+				context_pr_status=${context_pr_status%%'"'*}
+				context_jira_ticket=${context_indicators#*'"jiraTicket":"'}
+				context_jira_ticket=${context_jira_ticket%%'"'*}
+			fi
+
+			context_cache[$context_path]="$context_pr_status"$'\x1f'"$context_jira_ticket"
+		fi
+
+		cached_context=${context_cache[$context_path]}
+		context_pr_status=${cached_context%%$'\x1f'*}
+		context_jira_ticket=${cached_context#*$'\x1f'}
+		[[ -n $pr_status ]] || pr_status=$context_pr_status
+		[[ -n $jira_ticket ]] || jira_ticket=$context_jira_ticket
+	done
+
+	format_tab_label "$label" "$pr_status" "$jira_ticket" || exit $?
+	new_label=$REPLY
+
+	if [[ $new_label != $label ]]; then
+		herdr tab rename "$tab_id" "$new_label" || exit $?
+		print -r -- "$label -> $new_label"
+	fi
+done < <(jq -jn \
+	--argjson tabs "$tabs_json" \
+	--argjson panes "$panes_json" '
+		$tabs.result.tabs[] as $tab
+		| [$panes.result.panes[]
+			| select(.tab_id == $tab.tab_id)
+			| .cwd]
+		| unique as $cwds
+		| $tab.tab_id, "\u0000",
+			$tab.label, "\u0000",
+			($cwds | length | tostring), "\u0000",
+			($cwds[] | ., "\u0000")
+	')
