@@ -19,3 +19,5 @@ matches:
       applicable, skip them. If any step fails, stop there.
   - trigger: /draftpr
     replace: Commit all changes and create a draft PR.
+  - trigger: /review
+    replace: Plannotator review
