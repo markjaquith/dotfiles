@@ -1,0 +1,17 @@
+# Espanso text expansions
+# https://espanso.org/docs/matches/basics/
+
+matches:
+  - trigger: ":espanso"
+    replace: "Hi there!"
+
+  - trigger: "/areyouproud"
+    replace: |
+      1. Is this the miminal changeset that achieves the requested outcome? If not, fix.
+      2. Would you be proud to show this changeset to your coworkers, line by line? If not, fix.
+
+  - trigger: "/shipit"
+    replace: >-
+      Commit changes, git push, create a PR, wait for it to pass CI, merge it,
+      archive this Agency task, close this Herdr tab. If any steps are not
+      applicable, skip them. If any step fails, stop there.
