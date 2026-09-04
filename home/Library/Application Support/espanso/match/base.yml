@@ -1,17 +1,21 @@
+---
 # Espanso text expansions
 # https://espanso.org/docs/matches/basics/
-
 matches:
-  - trigger: ":espanso"
-    replace: "Hi there!"
+  - trigger: :espanso
+    replace: Hi there!
+  - trigger: /areyouproud
+    replace: >
+      1. Is this the miminal changeset that achieves the requested
+      outcome? If not, fix.
 
-  - trigger: "/areyouproud"
-    replace: |
-      1. Is this the miminal changeset that achieves the requested outcome? If not, fix.
-      2. Would you be proud to show this changeset to your coworkers, line by line? If not, fix.
-
-  - trigger: "/shipit"
+      2. Would you be proud to show this changeset to your coworkers,
+      line by line? If not, fix.
+  - trigger: /shipit
     replace: >-
-      Commit changes, git push, create a PR, wait for it to pass CI, merge it,
-      archive this Agency task, close this Herdr tab. If any steps are not
+      Commit changes; git push; if in a branch, create a PR, wait for it to
+      pass CI, merge it; if using Agency, archive this Agency task; if in a
+      branch and using Agency, close this Herdr tab. If any steps are not
       applicable, skip them. If any step fails, stop there.
+  - trigger: /draftpr
+    replace: Commit all changes and create a draft PR.
