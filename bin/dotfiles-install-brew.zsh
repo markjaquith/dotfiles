@@ -8,6 +8,7 @@ fi
 
 brew install --quiet \
     ack \
+    btop \
     asciinema \
     gpg \
     zinit \
