@@ -49,6 +49,7 @@ source "${SCRIPT_DIR}/dotfiles-install-pip.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-mise.zsh" &
 source "${SCRIPT_DIR}/dotfiles-install-tools.zsh"
 source "${SCRIPT_DIR}/dotfiles-install-configs.zsh"
+"${SCRIPT_DIR}/crontab-sync" apply
 source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh"
  
 # Run custom local dotfiles-install if available
