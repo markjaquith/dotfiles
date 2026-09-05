@@ -268,6 +268,87 @@ run_dotfiles() {
 	' fixture "$dotfiles_dir/bin/dotfiles" "$@"
 }
 
+run_doctor() {
+	DOTFILES_DIR="$dotfiles_dir" LOCAL_DOTFILES_DIR="$overlay_dir" \
+		zsh "$repo_root/bin/dotfiles-overlay-doctor"
+}
+
+for backend in git jj; do
+	new_fixture "$backend-external-sources" "$backend"
+	print -r -- external > "$target_dir/external-file"
+	ln -s missing "$target_dir/external-dangling"
+	rm "$overlay_dir/home/config/"{tracked,base-link,local-only}
+	ln -s "$target_dir/external-file" "$overlay_dir/home/config/tracked"
+	ln -s "$target_dir/external-dangling" "$overlay_dir/home/config/base-link"
+	ln -s "$target_dir/missing" "$overlay_dir/home/config/local-only"
+	run_overlay
+	# Relative checkout links must retain the same ownership as generated links.
+	rm "$dotfiles_dir/home/config/tracked"
+	ln -s ../../../.local-dotfiles/home/config/tracked "$dotfiles_dir/home/config/tracked"
+	run_overlay
+	stow_test_mode=real
+	for attempt in 1 2; do
+		run_dotfiles >"$test_root/stow.out" 2>&1 || fail "external-source dotfiles failed: $(<"$test_root/stow.out")"
+		for name in tracked base-link local-only; do
+			[[ "$(readlink "$dotfiles_dir/home/config/$name")" == "${overlay_dir:A}/home/config/$name" ]] \
+				|| fail "overlay link bypassed its immediate source: $name"
+		done
+		doctor_output=$(run_doctor)
+		[[ "$doctor_output" == *'active overrides:  3'* && "$doctor_output" == *'broken overrides:  2'* ]] \
+			|| fail "doctor misclassified external overlay sources: $doctor_output"
+		[[ "$doctor_output" == *"home/config/tracked -> ${overlay_dir:A}/home/config/tracked"* ]] \
+			|| fail "doctor bypassed the immediate overlay source"
+	done
+	# Failed Stow recovery must also retain the intermediate overlay source links.
+	stow_test_mode=dry-fail
+	if run_dotfiles >"$test_root/stow.out" 2>&1; then
+		fail "Stow failure returned success"
+	fi
+	for name in tracked base-link local-only; do
+		[[ "$(readlink "$dotfiles_dir/home/config/$name")" == "${overlay_dir:A}/home/config/$name" ]] \
+			|| fail "recovery bypassed its immediate source: $name"
+	done
+	stow_test_mode=real
+	run_dotfiles --pure >"$test_root/stow.out" 2>&1 || fail "external-source pure mode failed: $(<"$test_root/stow.out")"
+	[[ ! -L "$dotfiles_dir/home/config/tracked" && "$(<"$dotfiles_dir/home/config/tracked")" == base ]] || fail "pure mode lost base"
+	[[ "$(readlink "$dotfiles_dir/home/config/base-link")" == new-tracked ]] || fail "pure mode lost base symlink"
+	[[ ! -L "$dotfiles_dir/home/config/local-only" && ! -L "$target_dir/config/local-only" ]] || fail "pure mode retained dangling overlay"
+	[[ "$(<"$target_dir/external-file")" == external && "$(readlink "$target_dir/external-dangling")" == missing ]] \
+		|| fail "overlay lifecycle changed external targets"
+	[[ ! -e "$target_dir/missing" && ! -L "$target_dir/missing" ]] || fail "overlay lifecycle created missing external target"
+	[[ "$(readlink "$overlay_dir/home/config/tracked")" == "$target_dir/external-file" \
+		&& "$(readlink "$overlay_dir/home/config/base-link")" == "$target_dir/external-dangling" \
+		&& "$(readlink "$overlay_dir/home/config/local-only")" == "$target_dir/missing" ]] || fail "overlay source links changed"
+	[[ "$(run_doctor)" == *'active overrides:  0'* ]] || fail "doctor retained pure-mode active overlays"
+	[[ -z "$(git -C "$dotfiles_dir" status --short)" ]] || fail "external-source lifecycle dirtied Git"
+	if [[ "$backend" == jj ]]; then
+		[[ "$(jj -R "$dotfiles_dir" --ignore-working-copy sparse list)" == . ]] || fail "pure mode retained sparse exclusions"
+	fi
+
+	for unrelated in direct relay parent-escape; do
+		new_fixture "$backend-unrelated-$unrelated" "$backend"
+		print -r -- external > "$target_dir/external-file"
+		ln -s "$target_dir/external-file" "$overlay_dir/home/config/z-collision"
+		case "$unrelated" in
+			direct) unrelated_target="$target_dir/external-file" ;;
+			relay)
+				ln -s "$overlay_dir/home/config/z-collision" "$target_dir/relay"
+				unrelated_target="$target_dir/relay"
+				;;
+			parent-escape)
+				ln -s "$target_dir" "$overlay_dir/home/escape"
+				unrelated_target="$overlay_dir/home/escape/external-file"
+				;;
+		esac
+		ln -s "$unrelated_target" "$dotfiles_dir/home/config/z-collision"
+		assert_refused "unmanaged overlay collision: home/config/z-collision"
+		[[ "$(run_doctor)" == *'active overrides:  0'* ]] || fail "doctor claimed unrelated symlink"
+		run_overlay 1
+		[[ "$(readlink "$dotfiles_dir/home/config/z-collision")" == "$unrelated_target" \
+			&& "$(<"$target_dir/external-file")" == external ]] || fail "pure mode changed unrelated symlink or target"
+	done
+done
+
 for backend in git jj; do
 	for failure in real dry-fail apply-fail edit-fail; do
 		for requested_mode in normal pure; do

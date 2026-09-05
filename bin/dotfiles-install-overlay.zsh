@@ -108,11 +108,14 @@ while IFS= read -r main_link; do
   [[ -z "$link_target" ]] && continue
 
   if [[ "$link_target" == /* ]]; then
-    resolved_target="${link_target:A}"
+    resolved_target="$link_target"
   else
     resolved_target="${main_link:h}/$link_target"
-    resolved_target="${resolved_target:A}"
   fi
+  # Ownership belongs to the overlay source, not its final symlink target.
+  # Resolve parent aliases/escapes, but do not dereference the source itself.
+  resolved_target="${resolved_target:a}"
+  resolved_target="${resolved_target:h:A}/${resolved_target:t}"
   root=""
   for root in "${overlay_roots[@]}"; do
     if [[ "$resolved_target" == "$root"/* ]]; then
