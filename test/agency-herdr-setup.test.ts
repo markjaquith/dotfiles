@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { main, type Runtime } from "../bin/agency-herdr-setup.ts"
 
 type JsonObject = Record<string, unknown>
@@ -9,6 +12,29 @@ const env = {
 	HERDR_TAB_ID: "w2:t9",
 	HERDR_PANE_ID: "w2:p4",
 }
+const originEnv = {
+	...env,
+	AGENCY_HERDR_ORIGIN_PANE_ID: "w2:pOrigin",
+	AGENCY_HERDR_ORIGIN_TAB_ID: "w2:tOrigin",
+	AGENCY_HERDR_ORIGIN_WORKSPACE_ID: "w2",
+}
+const flag = "--allow-working-dependencies"
+let executableDirectory: string
+let executable: string
+let nonExecutable: string
+beforeAll(() => {
+	executableDirectory = mkdtempSync(join(tmpdir(), "agency-setup-test-"))
+	executable = join(executableDirectory, "owner's $source cli.ts")
+	nonExecutable = join(executableDirectory, "not-executable.ts")
+	for (const file of [executable, nonExecutable])
+		writeFileSync(
+			file,
+			'#!/usr/bin/env bun\nthrow new Error("Must not execute")\n',
+		)
+	chmodSync(executable, 0o755)
+	chmodSync(nonExecutable, 0o644)
+})
+afterAll(() => rmSync(executableDirectory, { recursive: true, force: true }))
 const pane = (id: string) => ({
 	pane_id: id,
 	workspace_id: "w2",
@@ -272,7 +298,13 @@ function harness(context = fixture()) {
 			expect(timeout).toBeGreaterThan(0)
 			const overridden = state.override(argv, calls.length - 1)
 			if (overridden) return overridden
-			if (argv[0] === "agency") {
+			if (argv[0] === "agency" || argv[0] === executable) {
+				if (argv.includes("--help"))
+					return {
+						status: 0,
+						stdout: `Options:\n  ${flag}  Allow working dependencies\n`,
+						stderr: "",
+					}
 				if (argv[1] === "context")
 					return output(ok(contexts++ === 0 ? state.context : state.final))
 				return output(ok(prepare(context, argv.includes("--dry-run"))))
@@ -282,7 +314,17 @@ function harness(context = fixture()) {
 					herdr("tab_info", { tab: { workspace_id: "w2", tab_id: "w2:t9" } }),
 				)
 			if (argv[2] === "get")
-				return output(herdr("pane_info", { pane: pane("w2:p4") }))
+				return output(
+					herdr("pane_info", {
+						pane:
+							argv[3] === originEnv.AGENCY_HERDR_ORIGIN_PANE_ID
+								? {
+										...pane(argv[3]),
+										tab_id: originEnv.AGENCY_HERDR_ORIGIN_TAB_ID,
+									}
+								: pane("w2:p4"),
+					}),
+				)
 			if (argv[2] === "split")
 				return output(
 					herdr("pane_info", {
@@ -299,7 +341,11 @@ function harness(context = fixture()) {
 						},
 					}),
 				)
-			return output(herdr("ok"))
+			if (argv[1] === "notification")
+				return output(
+					herdr("notification_show", { shown: true, reason: "shown" }),
+				)
+			return { status: 0, stdout: "", stderr: "" }
 		},
 	}
 	return state
@@ -328,6 +374,448 @@ const contexts = (h: ReturnType<typeof harness>) =>
 	h.calls.filter(({ argv }) => argv[1] === "context")
 
 describe("agency-herdr-setup", () => {
+	for (const intent of ["open", "launch"])
+		for (const before of [true, false])
+			for (const selected of [true, false])
+				test(`explicit permission and executable: ${intent}, before=${before}, selected=${selected}`, async () => {
+					const h = harness(fixture("phase"))
+					blocked(h.context)
+					h.final = structuredClone(h.context)
+					const options = [
+						flag,
+						...(selected ? ["--agency-executable", executable] : []),
+						"--intent",
+						intent,
+					]
+					const args = before
+						? [...options, h.context.target.path]
+						: [h.context.target.path, ...options]
+					expect(await main(args, h.io, env)).toBe(0)
+					const agency = selected ? executable : "agency"
+					const agencyCalls = h.calls.filter(({ argv }) => argv[0] !== "herdr")
+					expect(agencyCalls.every(({ argv }) => argv[0] === agency)).toBe(true)
+					expect(
+						agencyCalls
+							.filter(({ argv }) => argv.includes("--help"))
+							.map(({ argv }) => argv),
+					).toEqual([
+						[agency, "work", "prepare", "--help"],
+						[agency, "work", "--help"],
+					])
+					const preps = agencyCalls.filter(
+						({ argv }) => argv[2] === "prepare" && !argv.includes("--help"),
+					)
+					expect(
+						preps.map(({ argv }) => argv.filter((arg) => arg === flag)),
+					).toEqual([[flag], [flag]])
+					expect(JSON.parse(preps[1]!.argv.at(-1)!)).toEqual(
+						prepare(h.context, true).validationEvidence.evidence,
+					)
+					const launch = h.calls.find(
+						({ argv }) => argv[2] === "run" && argv[3] === "w2:p20",
+					)!.argv[4]!
+					const expected = [
+						agency,
+						"work",
+						".",
+						...(intent === "launch" ? ["--auto"] : []),
+						flag,
+					]
+					// Parse shell words without invoking the executable or any live CLI.
+					const parsed = spawnSync(
+						"/bin/sh",
+						["-c", `set -- ${launch}; printf '%s\\n' "$@"`],
+						{ encoding: "utf8" },
+					)
+					expect(parsed.status).toBe(0)
+					expect(parsed.stdout.trimEnd().split("\n")).toEqual(expected)
+					if (selected)
+						expect(
+							launch.startsWith(
+								`'${executable.replaceAll("'", "'\\''")}' work .`,
+							),
+						).toBe(true)
+					expect(
+						h.calls.some(({ argv }) =>
+							argv.some((arg) => arg.includes("--force")),
+						),
+					).toBe(false)
+					expect(contexts(h).every(({ argv }) => !argv.includes(flag))).toBe(
+						true,
+					)
+				})
+
+	for (const selected of [false, true])
+		test(`default permission never runs capability probes, selected=${selected}`, async () => {
+			const h = harness()
+			expect(
+				await run(
+					h,
+					"open",
+					selected ? ["--agency-executable", executable] : [],
+				),
+			).toBe(0)
+			expect(
+				h.calls.some(
+					({ argv }) => argv.includes("--help") || argv.includes(flag),
+				),
+			).toBe(false)
+			expect(
+				h.calls
+					.filter(({ argv }) => argv[0] !== "herdr")
+					.every(({ argv }) => argv[0] === (selected ? executable : "agency")),
+			).toBe(true)
+		})
+
+	for (const badHelp of [
+		"Options:\n  --force  Override readiness",
+		`Options:\n  ${flag}-unsafe  Unsupported lookalike`,
+		`Options:\n  ${flag}=true`,
+		`Do not use ${flag}; unsupported`,
+		`Options:\n  --no${flag}  Another lookalike`,
+	])
+		for (const unsupported of ["prepare", "work"])
+			test(`exact option advertisement required: ${unsupported} ${badHelp}`, async () => {
+				const h = harness()
+				h.override = (argv) =>
+					argv.includes("--help") &&
+					(argv[2] === "prepare" ? "prepare" : "work") === unsupported
+						? { status: 0, stdout: badHelp, stderr: "" }
+						: undefined
+				expect(await run(h, "launch", [flag])).toBe(1)
+				expect(
+					h.calls.filter(({ argv }) => argv.includes("--help")),
+				).toHaveLength(2)
+				expect(
+					h.calls.some(
+						({ argv }) => argv[2] === "prepare" && !argv.includes("--help"),
+					),
+				).toBe(false)
+				expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
+				expect(commands(h).some((c) => c.includes("nvim --"))).toBe(true)
+				expect(JSON.stringify(h.events)).toContain(`${unsupported} --help`)
+				expect(JSON.stringify(h.events)).toContain("is not advertised")
+				const firstMutation = h.calls.findIndex(({ argv }) => argv[1] === "tab")
+				expect(
+					h.calls.findLastIndex(({ argv }) => argv.includes("--help")),
+				).toBeLessThan(firstMutation)
+				expect(contexts(h)).toHaveLength(2)
+				noClose(h)
+			})
+	for (const status of [1, null])
+		test(`failed capability command is not support: ${status}`, async () => {
+			const h = harness()
+			h.override = (argv) =>
+				argv.includes("--help")
+					? { status, stdout: `  ${flag}  Permit`, stderr: "failed" }
+					: undefined
+			expect(await run(h, "launch", [flag])).toBe(1)
+			expect(
+				h.calls.filter(({ argv }) => argv.includes("--help")),
+			).toHaveLength(2)
+			expect(
+				h.calls.some(
+					({ argv }) => argv[2] === "prepare" && !argv.includes("--help"),
+				),
+			).toBe(false)
+			noClose(h)
+		})
+	for (const permitted of [false, true])
+		test(`evidence and contract suggestions never grant permission: explicit=${permitted}`, async () => {
+			const h = harness()
+			const evidence = {
+				...prepare(h.context, true).validationEvidence.evidence,
+				allowWorkingDependencies: true,
+			}
+			h.override = (argv) => {
+				if (argv[2] !== "prepare" || argv.includes("--help")) return
+				const result = prepare(h.context, argv.includes("--dry-run"))
+				result.validationEvidence.evidence = evidence
+				Object.assign(result.execution, {
+					commands: { work: { argv: ["agency", "work", ".", "--auto", flag] } },
+				})
+				return output(ok(result))
+			}
+			expect(await run(h, "launch", permitted ? [flag] : [])).toBe(0)
+			const applied = h.calls.find(({ argv }) =>
+				argv.includes("--evidence"),
+			)!.argv
+			expect(JSON.parse(applied.at(-1)!)).toEqual(evidence)
+			expect(applied.includes(flag)).toBe(permitted)
+			const launch = h.calls.find(
+				({ argv }) => argv[2] === "run" && argv[3] === "w2:p20",
+			)!.argv[4]!
+			expect(launch.includes(flag)).toBe(permitted)
+		})
+	for (const args of [
+		["--agency-executable"],
+		["--agency-executable", "--intent", "open"],
+		["--agency-executable", "relative/cli.ts"],
+		["--agency-executable", "/tmp/../cli.ts"],
+		["--agency-executable", "/tmp/cli.ts\n"],
+		["--agency-executable", "/tmp/cli.ts\0"],
+		["--agency-executable", "-option"],
+		["--agency-executable", "/bin/sh", "--agency-executable", "/bin/sh"],
+		[flag, flag],
+		[flag, "true"],
+		[flag, "false"],
+		[`${flag}=true`],
+	])
+		for (const before of [false, true])
+			test(`reject invalid new options ${JSON.stringify(args)} before=${before}`, async () => {
+				const h = harness()
+				const base = [h.context.target.path, "--intent", "open"]
+				expect(
+					await main(
+						before ? [...args, ...base] : [...base, ...args],
+						h.io,
+						env,
+					),
+				).toBe(1)
+				expect(h.calls).toHaveLength(0)
+			})
+	test("executable must exist, be a file and have actual execute permission before any CLI invocation", async () => {
+		for (const path of [
+			nonExecutable,
+			executableDirectory,
+			join(executableDirectory, "missing"),
+		]) {
+			const h = harness()
+			expect(await run(h, "open", ["--agency-executable", path, flag])).toBe(1)
+			expect(h.calls).toHaveLength(0)
+			expect(JSON.stringify(h.events)).toContain("Invalid --agency-executable")
+		}
+	})
+
+	for (const stage of [
+		"args",
+		"env",
+		"initial",
+		"prepare",
+		"final",
+		"close",
+		"multiple",
+	])
+		test(`one origin notification after ${stage} failure without input or focus`, async () => {
+			const h = harness()
+			if (stage === "final" || stage === "multiple")
+				h.final.validation.valid = false
+			h.override = (argv, index) =>
+				(stage === "initial" && index === 0) ||
+				((stage === "prepare" || stage === "multiple") &&
+					argv[2] === "prepare") ||
+				(stage === "close" && argv[2] === "close")
+					? argv[0] === "herdr"
+						? agentFailure("ORIGINAL_FAILURE")
+						: failure("ORIGINAL_FAILURE")
+					: undefined
+			expect(
+				await main(
+					stage === "args" ? [] : [h.context.target.path, "--intent", "open"],
+					h.io,
+					{ ...originEnv, ...(stage === "env" ? { HERDR_ENV: "0" } : {}) },
+				),
+			).toBe(1)
+			const notifications = h.calls.filter(
+				({ argv }) => argv[1] === "notification",
+			)
+			expect(notifications).toHaveLength(1)
+			const argv = notifications[0]!.argv
+			expect(argv.slice(0, 5)).toEqual([
+				"herdr",
+				"notification",
+				"show",
+				"Agency setup failed",
+				"--body",
+			])
+			expect(argv.slice(6)).toEqual(["--sound", "request"])
+			expect(argv[5]).toContain(originEnv.AGENCY_HERDR_ORIGIN_PANE_ID)
+			for (const id of Object.values(env).slice(1))
+				expect(argv[5]).toContain(id)
+			expect(argv[5]!.length).toBeLessThan(600)
+			if (stage === "initial" || stage === "prepare" || stage === "close")
+				expect(argv[5]).toContain("ORIGINAL_FAILURE")
+			expect(h.calls.at(-2)!.argv).toEqual([
+				"herdr",
+				"pane",
+				"get",
+				originEnv.AGENCY_HERDR_ORIGIN_PANE_ID,
+			])
+			expect(
+				h.events.filter((e) => e.event === "error").length,
+			).toBeGreaterThan(0)
+			expect(
+				h.events.filter((e) => e.event === "failure-notification"),
+			).toHaveLength(1)
+			expect(
+				h.calls.some(({ argv }) =>
+					["focus", "prompt", "input", "send-text", "send-keys"].includes(
+						argv[2]!,
+					),
+				),
+			).toBe(false)
+			expect(
+				h.calls.filter(({ argv }) =>
+					argv.includes(originEnv.AGENCY_HERDR_ORIGIN_PANE_ID),
+				),
+			).toHaveLength(1)
+		})
+	for (const defect of [
+		"missing",
+		"empty",
+		"option",
+		"control",
+		"wrong workspace",
+		"wrong tab",
+		"wrong pane",
+		"same pane",
+		"gone",
+		"malformed",
+	])
+		test(`no notification to unverified origin: ${defect}`, async () => {
+			const h = harness()
+			const origin: NodeJS.ProcessEnv = { ...originEnv }
+			if (defect === "missing") delete origin.AGENCY_HERDR_ORIGIN_TAB_ID
+			if (defect === "empty") origin.AGENCY_HERDR_ORIGIN_PANE_ID = ""
+			if (defect === "option") origin.AGENCY_HERDR_ORIGIN_PANE_ID = "--current"
+			if (defect === "control") origin.AGENCY_HERDR_ORIGIN_PANE_ID += "\n"
+			if (defect === "same pane")
+				origin.AGENCY_HERDR_ORIGIN_PANE_ID = env.HERDR_PANE_ID
+			h.override = (argv) => {
+				if (argv[2] !== "get") return
+				if (defect === "gone") return agentFailure("pane_not_found")
+				if (defect === "malformed") return output({})
+				const info = {
+					...pane(originEnv.AGENCY_HERDR_ORIGIN_PANE_ID),
+					tab_id: originEnv.AGENCY_HERDR_ORIGIN_TAB_ID,
+				}
+				if (defect === "wrong workspace") info.workspace_id = "wOther"
+				if (defect === "wrong tab") info.tab_id = "w2:tOther"
+				if (defect === "wrong pane") info.pane_id = "w2:pOther"
+				return output(herdr("pane_info", { pane: info }))
+			}
+			expect(await main([], h.io, origin)).toBe(1)
+			expect(h.calls.some(({ argv }) => argv[1] === "notification")).toBe(false)
+			expect(
+				h.calls.every(({ argv }) => argv[1] === "pane" && argv[2] === "get"),
+			).toBe(true)
+			expect(h.events.at(-1)?.message).toContain(
+				"Failure notification not delivered",
+			)
+		})
+	for (const failureMode of [
+		"exit",
+		"json",
+		"throw",
+		"disabled",
+		"rate_limited",
+		"no_foreground_client",
+		"busy",
+	])
+		test(`notification ${failureMode} failure preserves original error`, async () => {
+			const h = harness()
+			h.override = (argv) => {
+				if (argv[1] !== "notification") return
+				if (failureMode === "throw") throw new Error("transport failed")
+				if (!["exit", "json"].includes(failureMode))
+					return output(
+						herdr("notification_show", { shown: false, reason: failureMode }),
+					)
+				return failureMode === "exit"
+					? agentFailure("notification_failed")
+					: { status: 0, stdout: "not-json", stderr: "" }
+			}
+			expect(await main([], h.io, originEnv)).toBe(1)
+			expect(
+				h.calls.filter(({ argv }) => argv[1] === "notification"),
+			).toHaveLength(1)
+			expect(h.events.filter((e) => e.event === "error")).toEqual([
+				{
+					event: "error",
+					message: "Absolute document path is required",
+					workspaceId: "w2",
+					tabId: "w2:t9",
+					setupId: "w2:p4",
+				},
+			])
+			expect(h.events.at(-1)?.message).toContain(
+				"Failure notification not delivered",
+			)
+		})
+	for (const badEnv of [
+		{ HERDR_WORKSPACE_ID: "" },
+		{ HERDR_PANE_ID: "" },
+		{ HERDR_TAB_ID: "" },
+		{ AGENCY_SESSION_ID: "active" },
+	])
+		test(`early environment failure still verifies origin: ${JSON.stringify(badEnv)}`, async () => {
+			const h = harness()
+			expect(await main([], h.io, { ...originEnv, ...badEnv })).toBe(1)
+			expect(h.calls.map(({ argv }) => argv.slice(1, 3))).toEqual([
+				["pane", "get"],
+				["notification", "show"],
+			])
+			expect(h.events.filter((e) => e.event === "error")).toHaveLength(1)
+		})
+	test("no origin calls on success or default direct failure", async () => {
+		const h = harness()
+		expect(
+			await main(
+				[h.context.target.path, "--intent", "launch"],
+				h.io,
+				originEnv,
+			),
+		).toBe(0)
+		expect(
+			h.calls.some(
+				({ argv }) =>
+					argv[1] === "notification" ||
+					argv.includes(originEnv.AGENCY_HERDR_ORIGIN_PANE_ID),
+			),
+		).toBe(false)
+		const failed = harness()
+		expect(await main([], failed.io, env)).toBe(1)
+		expect(failed.calls).toHaveLength(0)
+	})
+	test.skipIf(process.env.AGENCY_HERDR_LIVE_CONTRACT !== "1")(
+		"installed Agency help remains fail-closed without advertised support (read-only)",
+		async () => {
+			const help = new Map(
+				["prepare", "work"].map((kind) => {
+					const result = spawnSync(
+						"agency",
+						["work", ...(kind === "prepare" ? ["prepare"] : []), "--help"],
+						{ encoding: "utf8", timeout: 15_000 },
+					)
+					return [
+						kind,
+						{
+							status: result.status,
+							stdout: result.stdout ?? "",
+							stderr: result.stderr ?? "",
+						},
+					]
+				}),
+			)
+			const h = harness()
+			h.override = (argv) =>
+				argv.includes("--help")
+					? help.get(argv[2] === "prepare" ? "prepare" : "work")
+					: undefined
+			const supported = [...help.values()].every(
+				(result) =>
+					result.status === 0 &&
+					/^\s*--allow-working-dependencies(?=\s|$)/m.test(result.stdout),
+			)
+			expect(await run(h, "launch", [flag])).toBe(supported ? 0 : 1)
+			expect(
+				h.calls.some(
+					({ argv }) => argv[2] === "prepare" && !argv.includes("--help"),
+				),
+			).toBe(supported)
+		},
+	)
+
 	for (const [kind, container] of [
 		["task", false],
 		["phase", false],
@@ -441,10 +929,12 @@ describe("agency-herdr-setup", () => {
 			)
 			return {
 				...result,
-				stdout: JSON.stringify(
-					JSON.parse(result.stdout),
-					(_key, value) => ids.get(value) ?? value,
-				),
+				stdout: result.stdout
+					? JSON.stringify(
+							JSON.parse(result.stdout),
+							(_key, value) => ids.get(value) ?? value,
+						)
+					: "",
 			}
 		}
 		expect(
@@ -719,7 +1209,13 @@ describe("agency-herdr-setup", () => {
 			process.execPath,
 			[new URL("../bin/agency-herdr-setup", import.meta.url).pathname],
 			{
-				env: { ...process.env, HERDR_ENV: "0" },
+				env: {
+					...process.env,
+					HERDR_ENV: "0",
+					AGENCY_HERDR_ORIGIN_PANE_ID: undefined,
+					AGENCY_HERDR_ORIGIN_TAB_ID: undefined,
+					AGENCY_HERDR_ORIGIN_WORKSPACE_ID: undefined,
+				},
 				encoding: "utf8",
 				timeout: 5000,
 			},

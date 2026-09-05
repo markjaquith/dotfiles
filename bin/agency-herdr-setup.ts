@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { writeSync } from "node:fs"
+import { accessSync, constants, statSync, writeSync } from "node:fs"
 import { basename, dirname, isAbsolute, join, resolve } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 
@@ -349,6 +349,92 @@ function prepared(
 	return evidence
 }
 
+async function notifyFailure(
+	io: Runtime,
+	env: NodeJS.ProcessEnv,
+	ids: ObjectValue,
+	message: string,
+) {
+	const origin = [
+		env.AGENCY_HERDR_ORIGIN_PANE_ID,
+		env.AGENCY_HERDR_ORIGIN_TAB_ID,
+		env.AGENCY_HERDR_ORIGIN_WORKSPACE_ID,
+	]
+	if (origin.every((value) => value === undefined)) return
+	try {
+		const [originPaneId, originTabId, originWorkspaceId] = origin.map(text)
+		requireValue(
+			!originPaneId!.startsWith("-") &&
+				originPaneId !== env.HERDR_PANE_ID &&
+				originTabId !== env.HERDR_TAB_ID &&
+				(!env.HERDR_WORKSPACE_ID ||
+					originWorkspaceId === env.HERDR_WORKSPACE_ID),
+			"Invalid notification origin",
+		)
+		// Inherit this process's Herdr session; never target the UI-focused session.
+		const call = async (args: string[], type: string) => {
+			const output = await io.run(["herdr", ...args], process.cwd(), 15_000)
+			const envelope = object(
+				JSON.parse(output.stdout.trim() || output.stderr.trim()),
+			)
+			const result = object(envelope.result)
+			requireValue(
+				output.status === 0 &&
+					envelope.error === undefined &&
+					envelope.ok !== false &&
+					text(envelope.id) &&
+					result.type === type,
+				`herdr ${args.slice(0, 2).join(" ")} failed`,
+			)
+			return result
+		}
+		const info = object(
+			(await call(["pane", "get", originPaneId!], "pane_info")).pane,
+		)
+		requireValue(
+			info.pane_id === originPaneId &&
+				info.tab_id === originTabId &&
+				info.workspace_id === originWorkspaceId,
+			"Notification origin no longer matches live pane metadata",
+		)
+		// Keep raw command/context diagnostics in the setup pane, not the toast.
+		const summary = message.split(/[\r\n{\[]/, 1)[0]!.slice(0, 200)
+		const setup = [env.HERDR_PANE_ID, env.HERDR_TAB_ID, env.HERDR_WORKSPACE_ID]
+			.map((value) => value?.replace(/[\x00-\x1f\x7f]/g, " ") || "unknown")
+			.join(" / ")
+		const body = `Origin ${originPaneId} (${originTabId}, ${originWorkspaceId}); failed setup ${setup}. ${summary} See setup diagnostics; do not rerun blindly.`
+		const notification = await call(
+			[
+				"notification",
+				"show",
+				"Agency setup failed",
+				"--body",
+				body,
+				"--sound",
+				"request",
+			],
+			"notification_show",
+		)
+		requireValue(
+			notification.shown === true && notification.reason === "shown",
+			`Herdr did not show notification: ${text(notification.reason)}`,
+		)
+		io.emit({
+			event: "failure-notification",
+			originPaneId,
+			originTabId,
+			originWorkspaceId,
+			...ids,
+		})
+	} catch (error) {
+		io.emit({
+			event: "diagnostic",
+			message: `Failure notification not delivered: ${error instanceof Error ? error.message : String(error)}`,
+			...ids,
+		})
+	}
+}
+
 export async function main(
 	args: string[],
 	io: Runtime = runtime,
@@ -372,21 +458,45 @@ export async function main(
 		const setupId = text(env.HERDR_PANE_ID)
 		// Herdr IDs are opaque; verify their relationships against live metadata below.
 		Object.assign(ids, { workspaceId, tabId, setupId })
-		const documentPath = absolute(args[0])
+		let documentPath: string | undefined
 		let intent: string | undefined
 		let timeout = 60_000
+		let agency = "agency"
+		let allowWorkingDependencies = false
 		const seen = new Set<string>()
-		for (let i = 1; i < args.length; i += 2) {
-			const option = args[i]!
+		for (let i = 0; i < args.length; i++) {
+			const option = text(args[i])
+			if (!option.startsWith("-")) {
+				requireValue(documentPath === undefined, "Expected one document path")
+				documentPath = absolute(option)
+				continue
+			}
 			requireValue(!seen.has(option), `Duplicate option: ${option}`)
 			seen.add(option)
-			const value = text(args[i + 1])
+			if (option === "--allow-working-dependencies") {
+				allowWorkingDependencies = true
+				continue
+			}
+			requireValue(
+				["--intent", "--timeout-ms", "--agency-executable"].includes(option),
+				`Unknown option: ${option}`,
+			)
+			const value = args[++i]
+			requireValue(
+				value !== undefined && !value.startsWith("-"),
+				`Missing value for ${option}`,
+			)
+			text(value)
 			if (option === "--intent") intent = value
 			else if (option === "--timeout-ms") {
 				requireValue(/^\d+$/.test(value), "Timeout must be an integer")
 				timeout = Number(value)
-			} else throw new Error(`Unknown option: ${option}`)
+			} else agency = absolute(value)
 		}
+		requireValue(
+			documentPath !== undefined,
+			"Absolute document path is required",
+		)
 		requireValue(
 			intent === "open" || intent === "launch",
 			"Explicit --intent open|launch is required",
@@ -395,6 +505,19 @@ export async function main(
 			timeout >= 1_000 && timeout <= 300_000,
 			"--timeout-ms range is 1000..300000",
 		)
+		if (agency !== "agency") {
+			try {
+				requireValue(statSync(agency).isFile(), "Not a regular file")
+				accessSync(agency, constants.X_OK)
+			} catch (error) {
+				throw new Error(
+					`Invalid --agency-executable ${agency}: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+		const permission = allowWorkingDependencies
+			? ["--allow-working-dependencies"]
+			: []
 		const cwd = dirname(documentPath)
 		const call = async (argv: string[], limit = 120_000) => {
 			io.emit({
@@ -407,6 +530,18 @@ export async function main(
 				...ids,
 			})
 			const output = await io.run(argv, cwd, limit)
+			// Herdr's send_ok_request commands deliberately print nothing on success.
+			if (
+				argv[0] === "herdr" &&
+				argv[1] === "pane" &&
+				["run", "close"].includes(argv[2]!) &&
+				output.status === 0 &&
+				!output.stdout.trim() &&
+				!output.stderr.trim()
+			) {
+				const result: ObjectValue = { type: "ok" }
+				return { failed: false as const, result, envelope: { result }, output }
+			}
 			let envelope: ObjectValue
 			try {
 				envelope = object(
@@ -428,7 +563,7 @@ export async function main(
 				!(envelope.result !== undefined && envelope.error !== undefined),
 				"Ambiguous success/error envelope",
 			)
-			if (argv[0] === "agency")
+			if (argv[0] === agency)
 				requireValue(
 					envelope.version === 1 && typeof envelope.ok === "boolean",
 					"Invalid Agency envelope",
@@ -449,10 +584,16 @@ export async function main(
 			}
 		}
 		const success = (response: Awaited<ReturnType<typeof call>>) => {
-			requireValue(
-				!response.failed,
-				`Command failed: ${JSON.stringify(response.output)}`,
-			)
+			if (response.failed) {
+				const error = response.envelope.error
+				const code =
+					error && typeof error === "object" && "code" in error
+						? String(error.code)
+						: "unknown"
+				throw new Error(
+					`Command failed (${code}): ${JSON.stringify(response.output)}`,
+				)
+			}
 			return response.result
 		}
 		const herdr = async (args: string[], type: string) => {
@@ -475,7 +616,7 @@ export async function main(
 			return id
 		}
 		const initial = inspect(
-			success(await call(["agency", "context", documentPath, "--json"])),
+			success(await call([agency, "context", documentPath, "--json"])),
 			documentPath,
 		)
 		ids.targetId =
@@ -486,6 +627,27 @@ export async function main(
 		let deadline = 0
 		try {
 			pane((await herdr(["pane", "get", setupId], "pane_info")).pane, setupId)
+			if (allowWorkingDependencies) {
+				try {
+					const unsupported: string[] = []
+					for (const command of [["work", "prepare"], ["work"]]) {
+						const argv = [agency, ...command, "--help"]
+						io.emit({ event: "command", argv, ...ids })
+						const help = await io.run(argv, cwd, 15_000)
+						if (
+							help.status !== 0 ||
+							!/^\s*--allow-working-dependencies(?=\s|$)/m.test(help.stdout)
+						)
+							unsupported.push(command.join(" "))
+					}
+					requireValue(
+						unsupported.length === 0,
+						`${agency}: --allow-working-dependencies is not advertised by ${unsupported.map((command) => `${command} --help`).join(" and ")}. Use a verified supporting Agency executable; preparation and worker launch were not attempted.`,
+					)
+				} catch (error) {
+					record(error)
+				}
+			}
 			const renamed = object(
 				(
 					await herdr(
@@ -498,50 +660,53 @@ export async function main(
 				renamed.tab_id === tabId && renamed.workspace_id === workspaceId,
 				"Tab rename identity mismatch",
 			)
-			try {
-				clean(initial, true)
-				requireValue(
-					initial.readiness.terminal === false,
-					"Terminal work is not launchable",
-				)
-				if (initial.execution) {
-					const preview = await call([
-						"agency",
-						"work",
-						"prepare",
-						initial.directory,
-						"--dry-run",
-						"--json",
-					])
-					if (
-						preview.failed &&
-						object(preview.envelope.error).code === "EXECUTION_BLOCKED"
-					) {
-						throw new Error(
-							`Preparation blocked: ${JSON.stringify(preview.output)}. ${readinessOverrideWarning}`,
-						)
-					}
-					const evidence = prepared(success(preview), initial, true)
-					const applied = success(
-						await call([
-							"agency",
+			if (errors.length === 0)
+				try {
+					clean(initial, true)
+					requireValue(
+						initial.readiness.terminal === false,
+						"Terminal work is not launchable",
+					)
+					if (initial.execution) {
+						const preview = await call([
+							agency,
 							"work",
 							"prepare",
 							initial.directory,
+							"--dry-run",
 							"--json",
-							"--evidence",
-							JSON.stringify(evidence),
-						]),
-					)
-					prepared(applied, initial, false, evidence)
-				} else
-					requireValue(
-						initial.readiness.ready === true || initial.status === "working",
-						`Orchestration target not ready or resumable: ${JSON.stringify(initial.readiness)}. ${readinessOverrideWarning}`,
-					)
-			} catch (error) {
-				record(error)
-			}
+							...permission,
+						])
+						if (
+							preview.failed &&
+							object(preview.envelope.error).code === "EXECUTION_BLOCKED"
+						) {
+							throw new Error(
+								`Preparation blocked: ${JSON.stringify(preview.output)}. ${readinessOverrideWarning}`,
+							)
+						}
+						const evidence = prepared(success(preview), initial, true)
+						const applied = success(
+							await call([
+								agency,
+								"work",
+								"prepare",
+								initial.directory,
+								"--json",
+								...permission,
+								"--evidence",
+								JSON.stringify(evidence),
+							]),
+						)
+						prepared(applied, initial, false, evidence)
+					} else
+						requireValue(
+							initial.readiness.ready === true || initial.status === "working",
+							`Orchestration target not ready or resumable: ${JSON.stringify(initial.readiness)}. ${readinessOverrideWarning}`,
+						)
+				} catch (error) {
+					record(error)
+				}
 			worker = pane(
 				(
 					await herdr(
@@ -569,7 +734,7 @@ export async function main(
 							"pane",
 							"run",
 							worker,
-							`agency work .${intent === "launch" ? " --auto" : ""}`,
+							`${agency === "agency" ? agency : `'${agency.replaceAll("'", "'\\''")}'`} work .${intent === "launch" ? " --auto" : ""}${allowWorkingDependencies ? " --allow-working-dependencies" : ""}`,
 						],
 						"ok",
 					)
@@ -661,7 +826,7 @@ export async function main(
 		}
 		try {
 			const final = inspect(
-				success(await call(["agency", "context", documentPath, "--json"])),
+				success(await call([agency, "context", documentPath, "--json"])),
 				documentPath,
 			)
 			clean(final)
@@ -695,5 +860,7 @@ export async function main(
 	} catch (error) {
 		record(error)
 		return 1
+	} finally {
+		if (errors.length) await notifyFailure(io, env, ids, errors[0]!)
 	}
 }
