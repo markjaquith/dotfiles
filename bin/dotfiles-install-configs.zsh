@@ -2,8 +2,8 @@
 # Lazygit config symlink
 
 mkdir -p "$HOME/Library/Application Support/lazygit"
-unlink "$HOME/Library/Application Support/lazygit/config.yml" 2>/dev/null
-ln -s "$HOME/.config/lazygit/config.yml" "$HOME/Library/Application Support/lazygit/config.yml" 2>/dev/null
+rm -f "$HOME/Library/Application Support/lazygit/config.yml"
+ln -s "$HOME/.config/lazygit/config.yml" "$HOME/Library/Application Support/lazygit/config.yml"
 
 # Plannotator identity
 if command -v jq &>/dev/null; then
@@ -17,12 +17,20 @@ if command -v jq &>/dev/null; then
 fi
 
 # Hunk as git pager (replaces delta)
+remove_git_config_values() {
+	git config --global --unset-all "$@" || {
+		local result=$?
+		# With --unset-all, exit 5 means there were no matching values.
+		(( result == 5 )) || return "$result"
+	}
+}
+
 git config --global core.pager "hunk pager"
-git config --global --unset pager.diff 2>/dev/null
-git config --global --unset pager.show 2>/dev/null
-git config --global --unset pager.log 2>/dev/null
+remove_git_config_values pager.diff
+remove_git_config_values pager.show
+remove_git_config_values pager.log
 # Remove legacy delta theme include if present
-git config --global --unset-all include.path "~/.config/delta/themes/catppuccin-macchiato" 2>/dev/null
+remove_git_config_values --fixed-value include.path "~/.config/delta/themes/catppuccin-macchiato"
 
 # Agency-managed agent integrations
 if command -v agency &>/dev/null && command -v jq &>/dev/null; then
@@ -36,4 +44,3 @@ fi
 # Git aliases
 git config --global alias.fixup 'commit --all --amend --no-edit --no-verify'
 git config --global alias.recent '!git reflog | grep "checkout: moving" | awk "!seen[\$NF]++ {print \$NF}"'
-

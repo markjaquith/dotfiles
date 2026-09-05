@@ -38,28 +38,90 @@ if (( $# > 0 )); then
 	esac
 fi
 
-source "${SCRIPT_DIR}/dotfiles-install-prereqs.zsh"
+# Also report explicit exits from a sourced installer, which bypass ZERR.
+trap '
+	install_status=$?
+	if (( install_status )); then
+		print -u2 -- "dotfiles-install: installation failed (exit ${install_status})"
+	fi
+' EXIT
 
-# Install in parallel
-source "${SCRIPT_DIR}/dotfiles-install-brew.zsh" &
-source "${SCRIPT_DIR}/dotfiles-install-bun.zsh" &
-wait
+run_stage() {
+	setopt localoptions localtraps errexit pipefail
+	local stage_name=$1
+	shift
+	# Preserve a diagnostic stream even when the failing command hides stderr.
+	trap '
+		stage_status=$?
+		print -u3 -- "dotfiles-install: ${stage_name} failed (exit ${stage_status})"
+		exit "$stage_status"
+	' ZERR
+	"$@"
+} 3>&2
 
-source "${SCRIPT_DIR}/dotfiles-install-pip.zsh"
-source "${SCRIPT_DIR}/dotfiles-install-mise.zsh" &
-source "${SCRIPT_DIR}/dotfiles-install-tools.zsh"
-source "${SCRIPT_DIR}/dotfiles-install-configs.zsh"
-"${SCRIPT_DIR}/crontab-sync" apply
-source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh"
- 
+# Call stages unconditionally: an if/|| around a sourced function disables
+# errexit inside it, allowing a later successful command to mask a failure.
+# Prerequisites stay in this shell to retain their variables and exports.
+run_stage prereqs source "${SCRIPT_DIR}/dotfiles-install-prereqs.zsh"
+
+(run_stage brew source "${SCRIPT_DIR}/dotfiles-install-brew.zsh") &
+brew_pid=$!
+(run_stage bun source "${SCRIPT_DIR}/dotfiles-install-bun.zsh") &
+bun_pid=$!
+wait "$brew_pid"
+brew_status=$?
+wait "$bun_pid"
+bun_status=$?
+if (( brew_status || bun_status )); then
+	print -u2 -- "dotfiles-install: package stages failed (brew=${brew_status}, bun=${bun_status}); stopping"
+	exit 1
+fi
+
+(run_stage pip source "${SCRIPT_DIR}/dotfiles-install-pip.zsh")
+pip_status=$?
+(( pip_status == 0 )) || exit "$pip_status"
+
+(run_stage mise source "${SCRIPT_DIR}/dotfiles-install-mise.zsh") &
+mise_pid=$!
+(run_stage tools source "${SCRIPT_DIR}/dotfiles-install-tools.zsh")
+tools_status=$?
+# Always reap mise, even when tools failed, before exiting or using its tools.
+wait "$mise_pid"
+mise_status=$?
+if (( mise_status || tools_status )); then
+	print -u2 -- "dotfiles-install: tool stages failed (mise=${mise_status}, tools=${tools_status}); stopping"
+	exit 1
+fi
+
+(run_stage configs source "${SCRIPT_DIR}/dotfiles-install-configs.zsh")
+configs_status=$?
+(( configs_status == 0 )) || exit "$configs_status"
+
+(run_stage crontab-sync "${SCRIPT_DIR}/crontab-sync" apply)
+crontab_status=$?
+(( crontab_status == 0 )) || exit "$crontab_status"
+(run_stage fonts source "${SCRIPT_DIR}/dotfiles-install-fonts.zsh")
+fonts_status=$?
+(( fonts_status == 0 )) || exit "$fonts_status"
+
 # Run custom local dotfiles-install if available
 if [[ -f "${HOME}/.local-dotfiles/bin/dotfiles-install" ]]; then
-  source "${HOME}/.local-dotfiles/bin/dotfiles-install"
+	# Source in this shell so local PATH, functions, and exports still reach
+	# the dependency and hook installs below, without leaking strict options.
+	run_stage local source "${HOME}/.local-dotfiles/bin/dotfiles-install"
 fi
-if command -v bun >/dev/null 2>&1; then
-  (cd "${SCRIPT_DIR}/.." && bun i > /dev/null 2>&1)
-fi
+(
+	install_dependencies() {
+		cd "${SCRIPT_DIR}/.."
+		bun i
+	}
+	run_stage dependencies install_dependencies
+)
+dependencies_status=$?
+(( dependencies_status == 0 )) || exit "$dependencies_status"
 
-source "${SCRIPT_DIR}/dotfiles-install-git-hooks.zsh"
+(run_stage git-hooks source "${SCRIPT_DIR}/dotfiles-install-git-hooks.zsh")
+hooks_status=$?
+(( hooks_status == 0 )) || exit "$hooks_status"
 
 echo "\033[32m✔\033[0m  Done!"
