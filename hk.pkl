@@ -22,7 +22,7 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["agent-tests"] {
-		check = "bun test test/agency-herdr-setup.test.ts test/agency-pi.test.ts"
+		check = "bun test test/agency-herdr-setup.test.ts test/agency-herdr-dispatch.test.ts test/agency-pi.test.ts"
 	}
 }
 

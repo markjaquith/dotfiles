@@ -27,9 +27,10 @@ readiness, write authority, checkout state, PR state, and validation warnings.
 Use its paths and IDs instead of inferring them from the process cwd.
 
 At the workbase root, context cannot infer one entity from `.`. Use
-`agency next --json` or `agency graph --json` to choose a target, then inspect it
-with explicit `--epic`, `--task`, and `--phase` selectors or its returned document
-path. Do not pass a graph node key as a positional context target.
+`agency next --json` or `agency graph --json` to choose a target, then inspect its
+returned document path. For a known phase, use `agency phase show <task> <phase>
+--json` to obtain its path and branch, then `agency context <document-path> --json`.
+Do not pass a graph node key or two positional arguments to `agency context`.
 
 For broader orchestration, load the graph and validate the workbase:
 
@@ -167,11 +168,26 @@ prevent the orchestrator from creating an unlaunched worker shell and editor as
 a recovery layout. Resolve repository-reference failures before launch. Do not
 use the legacy `agency worktree prepare` path.
 
-For the dotfiles-managed temporary Herdr setup flow, invoke
+For the dotfiles-managed initiating-agent flow, invoke
+`agency-herdr-dispatch --intent open|launch --request '<complete user request>'`
+after required bootstrap. Do not investigate branches, model settings, or pane
+layout before dispatch; the generated setup protocol owns narrow item lookup.
+Branch ancestry is not a completion dependency: never infer `--depends-on` solely
+from the requested base branch, and preserve existing explicit gates.
+
+Only the temporary setup agent invokes
 `agency-herdr-setup <absolute-document-path> --intent open|launch` once instead
 of executing the mechanical steps individually. It performs execution-only
 preparation, preserves an unfocused recovery layout, and bounds worker startup.
 Epics and multi-phase task orchestration do not use execution preparation.
+The helper closes the temporary setup pane itself on success; quiet successful
+Herdr pane run/close commands do not require JSON output.
+
+An explicitly authorized start despite working dependencies may use the dedicated
+`--allow-working-dependencies` flag when the selected CLI supports it. This is
+invocation-scoped permission, not an instruction to remove dependencies or enable
+`--force`. A verified managed development CLI can be selected for that invocation
+with `--agency-executable`; do not change the global installation as a workaround.
 
 An agent already running in an Agency checkout must not call `agency work` to
 start itself again. It should inspect context, perform the assigned work, and
