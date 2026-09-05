@@ -1,3 +1,10 @@
 {
-	"jobs": []
+	"jobs": [
+		{
+			"name": "rename-herdr-tabs",
+			"description": "Refresh Herdr tab labels from Agency context",
+			"schedule": "*/2 * * * *",
+			"command": "PATH=\"$HOME/dotfiles/bin:$HOME/.bun/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin\" HERDR_ENV=1 $HOME/dotfiles/bin/herdr-rename-tabs"
+		}
+	]
 }
