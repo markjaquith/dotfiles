@@ -121,11 +121,14 @@ assert_label "wrong PR and duplicate Jira prefixes" \
 	"    CAN-1975 EFT Integration" open CAN-1975 \
 	"  CAN-1975 EFT Integration"
 
+assert_indicators "working task without PR" \
+	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"url":null,"state":"none"}}}' \
+	'{"prStatus":"","jiraTicket":""}'
 assert_indicators "draft PR without ticket URL" \
-	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"draft":true,"merged":false}}}' \
+	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"url":"https://github.com/example/repo/pull/1","state":"open","draft":true,"merged":false}}}' \
 	'{"prStatus":"draft","jiraTicket":""}'
 assert_indicators "open PR and Jira URL" \
-	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/CAN-1979"}}},"pr":{"draft":false,"merged":false}}}' \
+	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/CAN-1979"}}},"pr":{"url":"https://github.com/example/repo/pull/1","state":"open","draft":false,"merged":false}}}' \
 	'{"prStatus":"open","jiraTicket":"CAN-1979"}'
 assert_indicators "merged takes precedence over draft" \
 	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"draft":true,"merged":true}}}' \

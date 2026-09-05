@@ -23,7 +23,7 @@ indicators_from_context() {
 			) then
 				if $result.pr.merged == true then "merged"
 				elif $result.pr.draft == true then "draft"
-				elif $result.pr != null then "open"
+				elif $result.pr.url != null then "open"
 				else ""
 				end
 			else ""
