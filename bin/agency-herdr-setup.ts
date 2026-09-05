@@ -370,12 +370,7 @@ export async function main(
 		const workspaceId = text(env.HERDR_WORKSPACE_ID)
 		const tabId = text(env.HERDR_TAB_ID)
 		const setupId = text(env.HERDR_PANE_ID)
-		requireValue(
-			/^w[1-9]\d*$/.test(workspaceId) &&
-				new RegExp(`^${workspaceId}:t[1-9]\\d*$`).test(tabId) &&
-				new RegExp(`^${workspaceId}:p[1-9]\\d*$`).test(setupId),
-			"Explicit matching caller workspace/tab/pane IDs are required",
-		)
+		// Herdr IDs are opaque; verify their relationships against live metadata below.
 		Object.assign(ids, { workspaceId, tabId, setupId })
 		const documentPath = absolute(args[0])
 		let intent: string | undefined
@@ -472,8 +467,7 @@ export async function main(
 			const info = object(value)
 			const id = text(info.pane_id)
 			requireValue(
-				new RegExp(`^${workspaceId}:p[1-9]\\d*$`).test(id) &&
-					info.workspace_id === workspaceId &&
+				info.workspace_id === workspaceId &&
 					info.tab_id === tabId &&
 					(!expected || id === expected),
 				"Unexpected pane identity or location",

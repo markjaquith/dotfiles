@@ -384,9 +384,6 @@ describe("agency-herdr-setup", () => {
 	for (const bad of [
 		{ HERDR_ENV: "0" },
 		{ HERDR_WORKSPACE_ID: "" },
-		{ HERDR_TAB_ID: "w3:t9" },
-		{ HERDR_PANE_ID: "focused" },
-		{ HERDR_PANE_ID: "w2:p4;oops" },
 		{ AGENCY_SESSION_ID: "session" },
 		{ AGENCY_TARGET: "target" },
 		{ AGENCY_SESSION_ID: "" },
@@ -402,6 +399,97 @@ describe("agency-herdr-setup", () => {
 			).toBe(1)
 			expect(h.calls).toHaveLength(0)
 		})
+	for (const bad of [
+		{ HERDR_TAB_ID: "w3:t9" },
+		{ HERDR_PANE_ID: "focused" },
+		{ HERDR_PANE_ID: "w2:p4;oops" },
+	])
+		test(`reject caller metadata mismatch ${JSON.stringify(bad)}`, async () => {
+			const h = harness()
+			expect(
+				await main([h.context.target.path, "--intent", "open"], h.io, {
+					...env,
+					...bad,
+				}),
+			).toBe(1)
+			expect(
+				h.calls
+					.filter(({ argv }) => argv[0] === "herdr")
+					.map(({ argv }) => argv[2]),
+			).toEqual(["get"])
+		})
+
+	test("accepts opaque IDs from the round-5 live Herdr contract", async () => {
+		const h = harness()
+		const ids = new Map([
+			["w2", "w3S"],
+			["w2:t9", "w3S:t21"],
+			["w2:p4", "w3S:p48"],
+			["w2:p20", "w3S:p4A"],
+			["w2:p25", "w3S:p4B"],
+		])
+		const baseRun = h.io.run
+		const liveCalls: string[][] = []
+		h.io.run = async (argv, cwd, timeout) => {
+			liveCalls.push(argv)
+			const result = await baseRun(
+				argv.map(
+					(arg) => [...ids].find(([, value]) => value === arg)?.[0] ?? arg,
+				),
+				cwd,
+				timeout,
+			)
+			return {
+				...result,
+				stdout: JSON.stringify(
+					JSON.parse(result.stdout),
+					(_key, value) => ids.get(value) ?? value,
+				),
+			}
+		}
+		expect(
+			await main([h.context.target.path, "--intent", "launch"], h.io, {
+				HERDR_ENV: "1",
+				HERDR_WORKSPACE_ID: "w3S",
+				HERDR_TAB_ID: "w3S:t21",
+				HERDR_PANE_ID: "w3S:p48",
+			}),
+		).toBe(0)
+		expect(liveCalls.at(-1)).toEqual(["herdr", "pane", "close", "w3S:p48"])
+		expect(
+			liveCalls.some((argv) => argv[2] === "run" && argv[3] === "w3S:p4A"),
+		).toBe(true)
+	})
+	test.skipIf(process.env.AGENCY_HERDR_LIVE_CONTRACT !== "1")(
+		"accepts the installed Herdr caller metadata (read-only smoke test)",
+		async () => {
+			expect(process.env.HERDR_ENV).toBe("1")
+			const actual = spawnSync(
+				"herdr",
+				["pane", "get", process.env.HERDR_PANE_ID!],
+				{ encoding: "utf8" },
+			)
+			expect(actual.status).toBe(0)
+			const h = harness()
+			h.override = (argv) => {
+				if (argv[0] !== "herdr") return undefined
+				if (argv[1] === "pane" && argv[2] === "get")
+					return { status: 0, stdout: actual.stdout, stderr: "" }
+				// All mutations remain simulated; reaching rename proves caller verification passed.
+				return agentFailure("smoke_test_stop")
+			}
+			expect(
+				await main(
+					[h.context.target.path, "--intent", "open"],
+					h.io,
+					process.env,
+				),
+			).toBe(1)
+			expect(
+				h.calls.some(({ argv }) => argv[1] === "tab" && argv[2] === "rename"),
+			).toBe(true)
+		},
+	)
 	for (const args of [
 		[],
 		["--intent", "create"],
@@ -580,7 +668,7 @@ describe("agency-herdr-setup", () => {
 			expect(await run(h)).toBe(1)
 			expect(h.calls).toHaveLength(1)
 		})
-	for (const id of ["w3:p20", "w2:p4", "w2:p0", "w2:p20\n", "w2:p20;bad"])
+	for (const id of ["", "w2:p4", "w2:p20\n"])
 		test(`reject split ID ${JSON.stringify(id)}`, async () => {
 			const h = harness()
 			h.override = (argv) =>
@@ -591,6 +679,21 @@ describe("agency-herdr-setup", () => {
 			expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
 			noClose(h)
 		})
+	test("rejects split panes belonging to a different workspace or tab", async () => {
+		for (const foreign of [
+			{ workspace_id: "w3S", tab_id: "w3S:t21", pane_id: "w3S:p48" },
+			{ workspace_id: "w2", tab_id: "w2:tOther", pane_id: "w2:pOther" },
+		]) {
+			const h = harness()
+			h.override = (argv) =>
+				argv[2] === "split"
+					? output(herdr("pane_info", { pane: foreign }))
+					: undefined
+			expect(await run(h)).toBe(1)
+			expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
+			noClose(h)
+		}
+	})
 	test("changed evidence after apply prevents launch and builds recovery", async () => {
 		const h = harness()
 		h.override = (argv) => {
