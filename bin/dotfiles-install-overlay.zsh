@@ -2,7 +2,7 @@
 # Apply local overlay file overrides into main dotfiles checkout.
 
 emulate -L zsh
-setopt typeset_silent
+setopt typeset_silent pipefail
 
 typeset overlay_script_dir="${${(%):-%N}:A:h}"
 source "$overlay_script_dir/dotfiles-overlay-common.zsh" || return 1
@@ -68,6 +68,7 @@ for overlay_dir in "${overlay_dirs[@]}"; do
   # In pure mode, skip file discovery so the desired set stays empty.
   [[ "$dotfiles_pure" == "1" ]] && continue
 
+  fd -HI -t f -t l -E .git -E .jj . "$overlay_payload_dir" > "$tmp_dir/overlay.files" || return 1
   typeset overlay_abs
   while IFS= read -r overlay_abs; do
     [[ -z "$overlay_abs" ]] && continue
@@ -83,12 +84,17 @@ for overlay_dir in "${overlay_dirs[@]}"; do
 
     typeset main_rel="home/$rel"
     print -r -- "$main_rel	$overlay_root/$rel" >> "$desired_raw"
-  done < <(fd -HI -t f -t l -E .git -E .jj . "$overlay_payload_dir")
+  done < "$tmp_dir/overlay.files"
 done
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$desired_raw" > "$desired_map"
+# Recovery uses only the previously active set, never newly discovered overlays.
+if [[ -n "${DOTFILES_OVERLAY_RESTORE_MAP:-}" ]]; then
+  cp "$DOTFILES_OVERLAY_RESTORE_MAP" "$desired_map" || return 1
+fi
 awk -F '\t' 'NF > 0 { print $1 }' "$desired_map" | sort > "$desired_rel"
 
+fd -HI -t l -E .git -E .jj . "$DOTFILES_DIR" > "$tmp_dir/main.links" || return 1
 main_link=""
 while IFS= read -r main_link; do
   [[ -z "$main_link" ]] && continue
@@ -110,11 +116,13 @@ while IFS= read -r main_link; do
   root=""
   for root in "${overlay_roots[@]}"; do
     if [[ "$resolved_target" == "$root"/* ]]; then
-      print -r -- "$rel	$resolved_target" >> "$actual_map"
+      # Preserve the immediate target, including dangling overlay symlinks.
+      [[ "$link_target" == /* ]] || link_target="${main_link:h}/$link_target"
+      print -r -- "$rel	${link_target:a}" >> "$actual_map"
       break
     fi
   done
-done < <(fd -HI -t l -E .git -E .jj . "$DOTFILES_DIR")
+done < "$tmp_dir/main.links"
 
 awk -F '\t' '{ map[$1] = $2 } END { for (k in map) print k "\t" map[k] }' "$actual_map" > "$actual_map.tmp"
 mv "$actual_map.tmp" "$actual_map"
@@ -174,6 +182,77 @@ overlay_link_points_to() {
   fi
   [[ "${candidate:a}" == "${expected_path:a}" ]]
 }
+
+# Compare against a clean, disposable index: skip-worktree and assume-unchanged
+# in the real index must not hide edits, and preflight must not change its flags.
+typeset base_revision=HEAD
+if [[ "$jj_enabled" == "1" ]]; then
+  base_revision=$(jj -R "$DOTFILES_DIR" --ignore-working-copy log -r @ --no-graph -T 'commit_id') || return 1
+fi
+GIT_INDEX_FILE="$tmp_dir/index" git -C "$DOTFILES_DIR" -c core.sparseCheckout=false read-tree "$base_revision" || return 1
+cat "$desired_rel" "$actual_rel" | sort -u > "$tmp_dir/preflight.rel"
+while IFS= read -r rel; do
+  [[ -z "$rel" ]] && continue
+  typeset main_path="$DOTFILES_DIR/$rel"
+  typeset parent="${main_path:h}"
+  while [[ "$parent" != "$DOTFILES_DIR" ]]; do
+    if [[ -L "$parent" || ( -e "$parent" && ! -d "$parent" ) ]] \
+        || grep -Fqx -- "${parent#$DOTFILES_DIR/}" "$desired_rel"; then
+      print -u2 "Error: Refusing overlay parent collision: $parent"
+      return 1
+    fi
+    parent="${parent:h}"
+  done
+
+  if ! git -C "$DOTFILES_DIR" diff --cached --quiet --no-ext-diff HEAD -- ":(literal)$rel"; then
+    print -u2 "Error: Refusing overlay replacement of staged base: $rel"
+    return 1
+  fi
+
+  # An active overlay is owned by the reconciler; every other replacement must
+  # be an unchanged tracked base file or an absent, untracked destination.
+  if ! grep -Fqx -- "$rel" "$actual_rel"; then
+    if [[ -d "$main_path" && ! -L "$main_path" ]]; then
+      print -u2 "Error: Refusing overlay directory collision: $rel"
+      return 1
+    fi
+    if GIT_INDEX_FILE="$tmp_dir/index" git -C "$DOTFILES_DIR" ls-files --error-unmatch -- ":(literal)$rel" >/dev/null 2>&1; then
+      if ! GIT_INDEX_FILE="$tmp_dir/index" git -C "$DOTFILES_DIR" diff --quiet --no-ext-diff -- ":(literal)$rel"; then
+        print -u2 "Error: Refusing overlay replacement of dirty base: $rel"
+        return 1
+      fi
+    elif [[ -e "$main_path" || -L "$main_path" ]]; then
+      print -u2 "Error: Refusing unmanaged overlay collision: $rel"
+      return 1
+    fi
+  fi
+
+  if grep -Fqx -- "$rel" "$desired_rel"; then
+    typeset live_path=""
+    live_path=$(overlay_live_path "$rel" 2>/dev/null) || live_path=""
+    if [[ -n "$live_path" ]]; then
+      if [[ ( -e "$live_path" || -L "$live_path" ) \
+          && "${live_path:A}" != "${main_path:A}" ]] \
+          && ! overlay_link_points_to "$live_path" "$main_path"; then
+        print -u2 "Error: Refusing unmanaged home collision: $live_path"
+        return 1
+      fi
+      parent="${live_path:h}"
+      while [[ "$parent" != / ]]; do
+        if [[ ( -e "$parent" || -L "$parent" ) && ! -d "$parent" ]]; then
+          print -u2 "Error: Refusing overlay home parent collision: $parent"
+          return 1
+        fi
+        parent="${parent:h}"
+      done
+    fi
+  fi
+done < "$tmp_dir/preflight.rel"
+
+if [[ -n "${DOTFILES_OVERLAY_SNAPSHOT:-}" ]]; then
+  cp "$actual_map" "$DOTFILES_OVERLAY_SNAPSHOT" || return 1
+fi
+[[ "${DOTFILES_OVERLAY_PREFLIGHT:-0}" == "1" ]] && return 0
 
 typeset exclude_file="$DOTFILES_DIR/.git/info/exclude"
 typeset exclude_tmp="$tmp_dir/exclude.tmp"
@@ -254,22 +333,22 @@ apply_override() {
   typeset main_path="$DOTFILES_DIR/$rel"
 
   [[ -z "$rel" || -z "$target" ]] && return 0
-  [[ ! -e "$target" && ! -L "$target" ]] && return 0
+  [[ ! -e "$target" && ! -L "$target" && -z "${DOTFILES_OVERLAY_RESTORE_MAP:-}" ]] && return 0
 
   if [[ -d "$main_path" && ! -L "$main_path" ]]; then
-    print -u2 "Warning: Cannot override directory path: $main_path"
-    return 0
+    print -u2 "Error: Cannot override directory path: $main_path"
+    return 1
   fi
 
-  mkdir -p "${main_path:h}"
-  rm -f "$main_path"
-  ln -s "$target" "$main_path"
+  mkdir -p "${main_path:h}" || return 1
+  rm -f "$main_path" || return 1
+  ln -s "$target" "$main_path" || return 1
 
   typeset live_path=""
   live_path=$(overlay_live_path "$rel" 2>/dev/null) || live_path=""
   if [[ -n "$live_path" && ! -e "$live_path" && ! -L "$live_path" ]]; then
-    mkdir -p "${live_path:h}"
-    ln -s "$main_path" "$live_path"
+    mkdir -p "${live_path:h}" || return 1
+    ln -s "$main_path" "$live_path" || return 1
   fi
 
   if git -C "$DOTFILES_DIR" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
@@ -281,5 +360,5 @@ while IFS= read -r rel; do
   [[ -z "$rel" ]] && continue
   target=""
   target=$(awk -F '\t' -v key="$rel" '$1 == key { print $2; exit }' "$desired_map")
-  apply_override "$rel" "$target"
+  apply_override "$rel" "$target" || return 1
 done < "$desired_rel"

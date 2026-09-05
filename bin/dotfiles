@@ -43,24 +43,46 @@ if [[ ! -d "$DOTFILES_HOME_DIR" ]]; then
 fi
 
 typeset REQUESTED_DOTFILES_PURE="$DOTFILES_PURE"
+typeset overlay_snapshot=""
+if [[ -f "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" ]]; then
+  overlay_snapshot=$(mktemp "${TMPDIR:-/tmp}/dotfiles-overlays.XXXXXX") || exit 1
+  trap 'rm -f "$overlay_snapshot"' EXIT
+  (
+    DOTFILES_OVERLAY_PREFLIGHT=1
+    DOTFILES_OVERLAY_SNAPSHOT="$overlay_snapshot"
+    source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh"
+  ) || exit 1
+fi
+
+restore_previous_overlays() {
+  [[ -n "$overlay_snapshot" ]] || return 0
+  (
+    DOTFILES_PURE=0
+    DOTFILES_OVERLAY_RESTORE_MAP="$overlay_snapshot"
+    source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh"
+  ) || print -u2 "Error: Could not restore previous overlays safely; base edits were left intact"
+}
 
 # Stow must see regular package files, not overlay symlinks. Temporarily restore
 # the base package before restowing, then reapply overlays unless pure mode was
 # explicitly requested.
 if [[ -f "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" ]]; then
-  DOTFILES_PURE=1
-  source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" || exit 1
+  (
+    DOTFILES_PURE=1
+    source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh"
+  ) || { restore_previous_overlays; exit 1; }
 fi
 
 (
-  cd "$DOTFILES_DIR"
+  cd "$DOTFILES_DIR" || exit 1
+  stow --simulate --restow home || exit 1
   stow --restow home
-) || exit 1
+) || { restore_previous_overlays; exit 1; }
 
 DOTFILES_PURE="$REQUESTED_DOTFILES_PURE"
 if [[ "$DOTFILES_PURE" != "1" && \
     -f "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" ]]; then
-  source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh" || exit 1
+  (source "$DOTFILES_DIR/bin/dotfiles-install-overlay.zsh") || exit 1
 fi
 
 if [[ "$DOTFILES_PURE" == "1" ]]; then

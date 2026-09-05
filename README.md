@@ -53,6 +53,8 @@ The `dotfiles` command handles Stow syncing and local overlay reconciliation for
 
 `dotfiles --pure` temporarily removes all overlay overrides, restoring the base dotfiles checkout so you can edit files that are normally shadowed by overlay symlinks. Running `dotfiles` again (without `--pure`) re-applies overlays.
 
+Overlay reconciliation refuses to replace modified or staged base files and unmanaged collisions. Commit base edits before reapplying overlays. If Stow fails, `dotfiles` attempts to restore only the previously active overlays, without overwriting edits made during the operation.
+
 ### Managing cron jobs
 
 `crontab-sync` manages fenced sections of the current user's crontab from JSON. By default, it manages the existing unnamed section from `~/.config/crontab/jobs.json`. Entries outside the selected section remain untouched.
