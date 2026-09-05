@@ -20,6 +20,10 @@ local linters = new Mapping<String, Step> {
 	["zsh-tests"] {
 		check = "zsh test/url-chooser.test.zsh && zsh test/keychain-secret.test.zsh && zsh test/herdr-rename-tabs.test.zsh && zsh test/dotfiles-install.test.zsh"
 	}
+
+	["agent-tests"] {
+		check = "bun test test/agency-herdr-setup.test.ts"
+	}
 }
 
 hooks {

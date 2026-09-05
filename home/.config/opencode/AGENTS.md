@@ -97,8 +97,8 @@ The initiating agent must:
    provisional tab name.
 2. Start a temporary OpenCode setup agent in the new tab's root pane with
    `--mini --model openai/gpt-5.6-sol` and low reasoning effort. The mini flag
-   selects the compact interface, not the model; this role executes a
-   deterministic protocol.
+   selects the compact interface, not the model. This agent interprets the item
+   specification; a tested helper performs the mechanical setup.
 3. Prompt it with the user's complete request, the intended Agency action, and
    the setup-agent protocol below. Submit the prompt without waiting for the
    work to settle.
@@ -113,52 +113,26 @@ If syntax is genuinely missing, inspect only the narrow relevant command help.
 
 1. Create the Agency item directly with the appropriate noninteractive Agency
    CLI mutation and `--json`, or resolve the existing item when creation was not
-   requested. Capture the exact item ID, document path, item directory, and plan
-   filename (`TASK.md`, `PHASE.md`, or `EPIC.md`) from that output. Do not launch
-   work as part of the create command.
-2. Immediately rename the Herdr tab once the durable item ID is known so that
-   preparation progress is visible under the final name.
-3. Run `agency work prepare <item-directory> --dry-run --json`. If it is blocked
-   only because declared dependencies are `working`, retry the preflight with
-   `--force`; this is the expected chained-phase workflow. If that forced
-   preflight is clean, use `--force` on both the applying `agency work prepare`
-   command and the later `agency work` command. Never force through validation
-   failures, unresolved-reference warnings, dirty-worktree failures, unexpected
-   write authority, or any other blocker. If preparation remains unsafe, do not
-   materialize or launch, but continue constructing the recovery layout.
-4. Split its own pane downward, with the new bottom pane's cwd set directly to
-   the item directory. Keep focus unchanged. Create this worker pane whenever
-   item creation succeeded, even if preparation failed.
-5. If preparation succeeded, run `agency work .` in the bottom pane; add
-   `--auto` only when the user's intent is to work, launch, start, or kick off
-   the item, and add `--force` when step 3 required the working-dependency
-   override. If preparation failed, leave this pane at its interactive shell.
-6. If work was launched, target the explicit worker pane ID and use Herdr's
-   agent wait commands rather than shell polling loops. Wait only until Herdr
-   recognizes the worker and it reaches an expected initial state: idle/done
-   for an open-only request, or working/done for an auto-start request. Do not
-   wait for the task itself to finish. Skip detection when work was not launched.
-7. Split the worker pane to the right, set the editor pane's cwd to the item
-   directory, and run Neovim on the plan filename regardless of preparation or
-   launch outcome. The resulting bottom subtree must be worker-left and
-   plan-right.
-8. Perform exactly one `agency context <document-path> --json` verification.
-9. Only after worker detection and context verification succeed, close its own
-   temporary top pane using its explicit `$HERDR_PANE_ID`. The bottom subtree
-   then expands to become the tab's final side-by-side layout.
+   requested. Capture its exact absolute document path from that output. Do not
+   launch work as part of creation. A creation failure ends the protocol.
+2. Invoke `agency-herdr-setup <document-path> --intent open` for open/view, or
+   `agency-herdr-setup <document-path> --intent launch` for work/launch/start/kick
+   off. Quote the path. Run the helper once, in the temporary setup pane with
+   its inherited Herdr environment; do not override caller IDs.
 
-Batch independent or immediately sequential shell operations into as few tool
-turns as practical, while still parsing every returned Herdr pane ID instead of
-predicting it. Do not pause between successful protocol steps for narration or
-additional planning.
+The helper owns context inspection, tab naming, preparation, the unfocused
+worker-left/editor-right layout, launch, a bounded startup wait (60 seconds by
+default), one final context verification, and closing the setup pane on success.
+It prepares only execution tasks/phases, not epic or multi-phase orchestration.
+It creates the editor before waiting for the worker and preserves recovery panes
+on failure. Do not duplicate its commands, append extra context verification,
+or rerun it after partial failure: use its emitted pane IDs for recovery.
 
-A creation failure ends the protocol because there is no reliable item directory
-for the layout. A preparation or launch failure prevents worker launch or
-detection but does not prevent creating the worker/editor recovery layout or
-performing context verification. The setup agent must not close its pane after
-any creation, preparation, launch, worker-detection, editor-layout, or
-context-verification failure; it should leave the failure visible there for
-recovery. It must not focus the new tab or any new pane.
+Do not automatically use `--force` for blocked dependencies. The installed
+Agency contract also overrides active worktree locks; it is not a readiness-only
+override. Preserve the visible blocked layout instead. If the helper is missing
+or fails, leave the setup pane open and report the error rather than improvising
+the transaction. See `~/dotfiles/docs/agency-herdr-setup.md` for recovery details.
 
 Compose intents directly. "Create and open" means create the item and launch
 `agency work .` without `--auto`. "Create and work" or "kick off a new coding
