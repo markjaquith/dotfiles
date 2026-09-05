@@ -55,7 +55,7 @@ The `dotfiles` command handles Stow syncing and local overlay reconciliation for
 
 ### Managing cron jobs
 
-`crontab-sync` manages one fenced section of the current user's crontab from `~/.config/crontab/jobs.json`. Entries outside that section remain untouched.
+`crontab-sync` manages fenced sections of the current user's crontab from JSON. By default, it manages the existing unnamed section from `~/.config/crontab/jobs.json`. Entries outside the selected section remain untouched.
 
 ```json
 {
@@ -79,6 +79,14 @@ crontab-sync render
 crontab-sync diff
 crontab-sync apply
 ```
+
+Use `--name` to manage additional sections independently. Names may contain ASCII letters, digits, underscores, and hyphens. Named calls preserve the unnamed section, differently named sections, and unmanaged entries:
+
+```zsh
+crontab-sync apply --name local -f ~/.local-dotfiles/home/.config/crontab/jobs.json
+```
+
+This produces fences such as `# BEGIN crontab-sync managed section: local` and `# END crontab-sync managed section: local`. Calls without `--name` continue to use the original unnamed fences.
 
 Jobs require `name`, `schedule`, and `command`. `description` and `enabled` are optional. Schedules accept the standard five fields or macros such as `@daily` and `@reboot`.
 

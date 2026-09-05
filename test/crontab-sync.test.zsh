@@ -98,6 +98,60 @@ assert_contains "adds managed job" "$first_apply" "0 2 * * * /usr/local/bin/back
 second_apply=$(<"$CRONTAB_STORE")
 assert_equal "apply is idempotent" "$first_apply" "$second_apply"
 
+cat >| "$temp_dir/local.json" <<'EOF'
+{
+	"jobs": [
+		{"name": "local", "schedule": "0 3 * * *", "command": "local-v1"}
+	]
+}
+EOF
+cat >| "$temp_dir/work.json" <<'EOF'
+{
+	"jobs": [
+		{"name": "work", "schedule": "0 4 * * *", "command": "work-v1"}
+	]
+}
+EOF
+
+"$script" apply --name local -f "$temp_dir/local.json" >/dev/null
+"$script" apply --name work -f "$temp_dir/work.json" >/dev/null
+named_apply=$(<"$CRONTAB_STORE")
+assert_contains "named section preserves unmanaged entry" "$named_apply" "5 * * * * /usr/local/bin/manual"
+assert_contains "named section preserves unnamed section" "$named_apply" "0 2 * * * /usr/local/bin/backup"
+assert_contains "adds local named fence" "$named_apply" "# BEGIN crontab-sync managed section: local"
+assert_contains "adds local named end fence" "$named_apply" "# END crontab-sync managed section: local"
+assert_contains "adds local named job" "$named_apply" "0 3 * * * local-v1"
+assert_contains "adds work named fence" "$named_apply" "# BEGIN crontab-sync managed section: work"
+assert_contains "adds work named job" "$named_apply" "0 4 * * * work-v1"
+
+cat >| "$temp_dir/local.json" <<'EOF'
+{
+	"jobs": [
+		{"name": "local", "schedule": "0 5 * * *", "command": "local-v2"}
+	]
+}
+EOF
+"$script" apply --name local -f "$temp_dir/local.json" >/dev/null
+named_update=$(<"$CRONTAB_STORE")
+assert_contains "updates only selected named section" "$named_update" "0 5 * * * local-v2"
+assert_contains "named update preserves other named section" "$named_update" "0 4 * * * work-v1"
+assert_contains "named update preserves unnamed section" "$named_update" "0 2 * * * /usr/local/bin/backup"
+assert_contains "named update preserves unmanaged entry" "$named_update" "5 * * * * /usr/local/bin/manual"
+if [[ "$named_update" == *"local-v1"* ]]; then
+	fail "named update retained previous contents"
+fi
+
+"$script" apply -f "$temp_dir/jobs.json" >/dev/null
+unnamed_update=$(<"$CRONTAB_STORE")
+assert_contains "unnamed update preserves local section" "$unnamed_update" "0 5 * * * local-v2"
+assert_contains "unnamed update preserves work section" "$unnamed_update" "0 4 * * * work-v1"
+assert_contains "unnamed update preserves unmanaged entry" "$unnamed_update" "5 * * * * /usr/local/bin/manual"
+
+if output=$("$script" check --name 'not valid' -f "$temp_dir/local.json" 2>&1); then
+	fail "invalid section name accepted"
+fi
+assert_contains "rejects invalid section name" "$output" "expected [A-Za-z0-9_-]+"
+
 write_config <<'EOF'
 {
 	"jobs": [
@@ -106,10 +160,10 @@ write_config <<'EOF'
 	]
 }
 EOF
-if "$script" check -f "$temp_dir/jobs.json" >| "$temp_dir/output" 2>&1; then
+if output=$("$script" check -f "$temp_dir/jobs.json" 2>&1); then
 	fail "duplicate names accepted"
 fi
-assert_contains "rejects duplicate names" "$(<"$temp_dir/output")" "job names must be unique"
+assert_contains "rejects duplicate names" "$output" "job names must be unique"
 
 write_config <<'EOF'
 {
@@ -118,15 +172,15 @@ write_config <<'EOF'
 	]
 }
 EOF
-if "$script" check -f "$temp_dir/jobs.json" >| "$temp_dir/output" 2>&1; then
+if output=$("$script" check -f "$temp_dir/jobs.json" 2>&1); then
 	fail "invalid schedule accepted"
 fi
-assert_contains "rejects invalid schedule" "$(<"$temp_dir/output")" "five cron fields or a supported macro"
+assert_contains "rejects invalid schedule" "$output" "five cron fields or a supported macro"
 
 printf '%s\n' "manual" "# BEGIN crontab-sync managed section" >| "$CRONTAB_STORE"
-if "$script" diff -f "$repo_root/home/.config/crontab/jobs.json" >| "$temp_dir/output" 2>&1; then
+if output=$("$script" diff -f "$repo_root/home/.config/crontab/jobs.json" 2>&1); then
 	fail "incomplete fences accepted"
 fi
-assert_contains "rejects incomplete fences" "$(<"$temp_dir/output")" "exactly one complete managed section"
+assert_contains "rejects incomplete fences" "$output" "exactly one complete managed section"
 
 print -r -- "$test_count crontab-sync tests passed"
