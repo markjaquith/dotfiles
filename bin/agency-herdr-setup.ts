@@ -461,6 +461,7 @@ export async function main(
 		let documentPath: string | undefined
 		let intent: string | undefined
 		let timeout = 60_000
+		let prepareTimeout = 300_000
 		let agency = "agency"
 		let allowWorkingDependencies = false
 		const seen = new Set<string>()
@@ -478,7 +479,12 @@ export async function main(
 				continue
 			}
 			requireValue(
-				["--intent", "--timeout-ms", "--agency-executable"].includes(option),
+				[
+					"--intent",
+					"--timeout-ms",
+					"--prepare-timeout-ms",
+					"--agency-executable",
+				].includes(option),
 				`Unknown option: ${option}`,
 			)
 			const value = args[++i]
@@ -488,9 +494,10 @@ export async function main(
 			)
 			text(value)
 			if (option === "--intent") intent = value
-			else if (option === "--timeout-ms") {
+			else if (option === "--timeout-ms" || option === "--prepare-timeout-ms") {
 				requireValue(/^\d+$/.test(value), "Timeout must be an integer")
-				timeout = Number(value)
+				if (option === "--timeout-ms") timeout = Number(value)
+				else prepareTimeout = Number(value)
 			} else agency = absolute(value)
 		}
 		requireValue(
@@ -504,6 +511,10 @@ export async function main(
 		requireValue(
 			timeout >= 1_000 && timeout <= 300_000,
 			"--timeout-ms range is 1000..300000",
+		)
+		requireValue(
+			prepareTimeout >= 1_000 && prepareTimeout <= 600_000,
+			"--prepare-timeout-ms range is 1000..600000",
 		)
 		if (agency !== "agency") {
 			try {
@@ -687,16 +698,19 @@ export async function main(
 						}
 						const evidence = prepared(success(preview), initial, true)
 						const applied = success(
-							await call([
-								agency,
-								"work",
-								"prepare",
-								initial.directory,
-								"--json",
-								...permission,
-								"--evidence",
-								JSON.stringify(evidence),
-							]),
+							await call(
+								[
+									agency,
+									"work",
+									"prepare",
+									initial.directory,
+									"--json",
+									...permission,
+									"--evidence",
+									JSON.stringify(evidence),
+								],
+								prepareTimeout,
+							),
 						)
 						prepared(applied, initial, false, evidence)
 					} else

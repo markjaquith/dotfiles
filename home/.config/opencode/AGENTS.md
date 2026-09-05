@@ -127,6 +127,10 @@ It prepares only execution tasks/phases, not epic or multi-phase orchestration.
 It creates the editor before waiting for the worker and preserves recovery panes
 on failure. Do not duplicate its commands, append extra context verification,
 or rerun it after partial failure: use its emitted pane IDs for recovery.
+When invoking the helper through a Bash tool, set its enclosing timeout to
+1200000ms, not the default 120000ms. The budget must cover preparation, startup,
+verification, and cleanup; it is a maximum, not a delay. Keep earlier item
+creation and metadata updates in separate tool calls.
 
 Branch ancestry is not a completion gate: "based on round 4's branch" sets the
 base, not `--depends-on round-4`. Add a gate only when requested; never remove an
@@ -138,6 +142,10 @@ The selected Agency CLI must support that readiness-only flag. Never fall back
 to `--force`, which can bypass unrelated safeguards. For an explicitly approved
 development CLI, `--agency-executable <absolute-path>` selects it for that run
 without modifying the global installation.
+Carry the explicit start-now approval into the durable item's decisions before
+launch. An active worker with that documented or directly supplied approval
+should not ask again about the same preserved working dependency; all other
+safety checks remain in force, and later invocations need their own approval.
 
 On success the helper closes the temporary setup pane itself, leaving only the
 worker/editor layout. A successful, silent `herdr pane run` or `pane close` is

@@ -113,7 +113,10 @@ More-specific workbase instructions remain authoritative for managed fast paths.
 3. Read the returned task and phase document paths for prose requirements.
 4. Stop on validation errors, an unexpected writable repository, a conflicting
    active owner, or any workspace warning containing `Unable to resolve
-   reference`. Stop on dependency blockers. For an active
+   reference`. Stop on dependency blockers unless this active worker's launch
+   was explicitly authorized despite those same working dependencies and that
+   approval is in its task/phase decisions or current user prompt. Do not ask
+   again about an already-authorized gate; do stop on new safety failures. For an active
    agent, a `working` status blocker is expected only when the current session
    owns the claim. Never use `--force` for unresolved references or other safety
    failures.

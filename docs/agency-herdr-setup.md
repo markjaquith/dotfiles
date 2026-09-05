@@ -15,6 +15,9 @@ required; there is no default. Options may precede or follow the one document
 path. Duplicate options, missing values, and extra positional arguments fail.
 An optional `--timeout-ms` sets the worker-detection deadline, default 60000,
 range 1000 through 300000. There is no public or automatic `--force` option.
+An optional `--prepare-timeout-ms` sets only the applying preparation subprocess
+limit, default 300000, range 1000 through 600000. Context and preparation dry-run
+retain their fixed 120000ms limits. Timeout values must be decimal integers.
 Tab labels come from the inspected Agency ID, or `taskId/phaseId` for a phase.
 
 Two opt-in options support a single recovery invocation:
@@ -106,12 +109,12 @@ recovery.
 
 Automatic force is disabled under the installed Agency contract. Its `--force`
 overrides validation **and active worktree locks**, even during dry-run preparation.
-There is no safe readiness-only override in the installed **3.2.15** contract:
-neither `agency work prepare --help` nor `agency work --help` advertises
-`--allow-working-dependencies`. Explicit opt-in therefore fails closed on that
-version, before preparation or worker launch, with an error naming the executable
-and unsupported help commands. Use a verified supporting managed CLI via
-`--agency-executable`, or wait for a release. Help advertisement is a capability
+Agency **3.3.0** adds the readiness-only `--allow-working-dependencies` option.
+The older **3.2.15** contract does not advertise it in either work help command,
+so explicit opt-in fails closed on that version before preparation or worker
+launch, with an error naming the executable and unsupported help commands. Use
+a supporting release, or an explicitly approved managed development CLI via
+`--agency-executable` before release. Help advertisement is a capability
 gate, not proof of the upstream implementation's safety. The selected CLI remains
 responsible for readiness and active-lock enforcement. An unforced preflight
 refusal, including an open item blocked by working dependencies, builds the
@@ -135,11 +138,44 @@ warnings that were provisionally accepted initially.
 Output is JSON Lines: `command`, `diagnostic`, `error`, and pre-close `complete` events, with
 available target/workspace/tab/setup/worker/editor IDs. Failure returns status 1
 and retains the setup pane. Command failures include captured stdout/stderr;
-evidence is omitted from command progress to keep it readable. Preparation and
-context subprocesses have 120-second limits, ordinary Herdr calls 15 seconds,
-and detection calls use the remaining detection budget. Timed-out child CLI
-processes receive the subprocess runner's termination signal; the helper never
-issues process-kill commands or stops the worker or Herdr server.
+evidence is omitted from command progress to keep it readable. Context and
+preparation dry-run subprocesses have 120-second limits; applying preparation
+defaults to 300 seconds (`--prepare-timeout-ms`). Ordinary Herdr calls and optional
+capability probes have 15-second limits, and detection calls use the remaining
+detection budget. These are maxima, not delays: fast commands return immediately.
+
+Every agent Bash tool invocation of the helper must explicitly set its `timeout`
+field to **1200000 milliseconds (20 minutes)**. This caller timeout intentionally
+exceeds the full default transaction, not just one subprocess. A conservative
+sum is 900 seconds: initial context 120 + preview 120 + apply 300 + final context
+120 + startup 60 + up to eight ordinary Herdr calls at 15 each + two capability
+probes at 15 each + origin verification and notification at 15 each. The caller
+budget leaves another 300 seconds for overhead and cleanup; editor setup also
+consumes startup time, so the sum intentionally overcounts overlapping budgets.
+
+If explicitly increasing either helper limit, use at least this caller budget:
+`1200000 + max(0, prepareTimeoutMs - 300000) + max(0, startupTimeoutMs - 60000)`.
+At both supported maxima this is 1740000ms. Keep creation, lookups, and
+user-authorized metadata modifications in separate calls with their own budgets.
+The helper budget is not a CLI flag. For example, the Bash tool arguments are:
+
+```json
+{
+	"command": "agency-herdr-setup '/absolute/workbase/tasks/task-id/TASK.md' --intent launch",
+	"timeout": 1200000
+}
+```
+
+Shell clients run the plain commands above without a shorter timeout wrapper.
+Do not add sleeps or polling to fill the budget, or automatically retry a timed-out
+helper. An outer timeout can prevent recovery and notification from running and
+leave partially prepared state; inspect emitted IDs only through authorized recovery.
+
+The helper retains `spawnSync`'s default termination signal (SIGTERM) on subprocess
+timeout. `spawnSync` waits for child exit even after sending that signal, so a child
+that ignores it can exceed the configured limit; these are not guaranteed
+process-tree wall-clock bounds. No new kill flags, process-kill commands, worker
+termination, or Herdr server termination are introduced.
 
 ### Failure Notification
 
@@ -204,10 +240,10 @@ the adjacent TypeScript implementation, with no added dependency.
   Worker detection checks the expected Herdr lifecycle, not task completion or
   proof that `--auto` delivered a particular prompt. An `open` worker may be
   `done` because its unfocused idle tab has not been seen.
-- Tests use only injected fake subprocesses and a fake clock. No real Agency
-  mutation or Herdr pane control was exercised. Shell startup timing, installed
-  editor behavior, and self-close delivery still require an explicitly authorized
-  live smoke test.
+- The default tests use injected subprocesses and a fake clock. Optional contract
+  tests perform read-only CLI inspection. The September 5 round-5 recovery also
+  exercised Agency 3.3.0 preparation, worker startup, editor creation, and automatic
+  setup-pane closure in a live unfocused tab; default tests do not create live panes.
 
 ## Verification
 

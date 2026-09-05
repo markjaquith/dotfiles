@@ -173,6 +173,23 @@ detection, final verification, and closing the setup pane on success. If selecte
 the same quoted executable is forwarded via `--agency-executable`. Missing or
 failed helpers leave recovery panes visible; no fallback transaction is invented.
 
+The generated protocol requires every Bash tool call invoking the helper to set
+the tool's `timeout` field explicitly to **1200000ms (20 minutes)**, rather than
+the 120000ms default. This covers the whole helper transaction, including recovery,
+final verification, notification, and cleanup. It is a maximum, not a delay or a
+helper CLI flag. Creation, lookups, and user-authorized metadata modifications run
+in separate calls with their own budgets. This does not increase the dispatcher's
+own short subprocess deadlines or make the initiating agent poll.
+
+Applying preparation defaults to 300000ms; context and dry-run stay at 120000ms,
+and startup detection defaults to 60000ms. If explicitly changing the helper's
+`--prepare-timeout-ms` or `--timeout-ms`, the caller budget must be at least
+`1200000 + max(0, prepareTimeoutMs - 300000) + max(0, startupTimeoutMs - 60000)`.
+Shell clients invoke the helper plainly without a shorter timeout wrapper. Do not
+sleep, poll for the budget duration, or automatically retry on timeout. See
+[setup limits](agency-herdr-setup.md#output-and-limits) for the conservative budget
+sum, exact Bash tool arguments, and `spawnSync` signal/child-exit caveat.
+
 Before the helper starts, an initial resolution/creation failure or inability to
 invoke the helper requires one native toast, followed by stopping with the setup
 pane visible. The prompt supplies this command with actual origin and setup IDs
@@ -201,6 +218,10 @@ dispatch. The setup prompt permits passing that same dedicated flag to the helpe
 only when the original request explicitly authorizes it. This is not inferred
 from branch ancestry, a generic launch request, or dependency status. Without the
 flag, the prompt forbids the override. Existing dependency declarations remain.
+The setup agent records this invocation-specific approval in the item's Important
+Decisions before launch so the worker can distinguish an expected preserved gate
+from a new blocker, without re-requesting the same authorization. It is not a
+standing override for later launches or other safety checks.
 Never use `--force`. The helper flag is implemented separately; an older helper
 must fail rather than silently bypass readiness.
 

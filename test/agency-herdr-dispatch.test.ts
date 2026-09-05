@@ -510,6 +510,50 @@ describe("agency-herdr-dispatch", () => {
 		expect(f.calls).toHaveLength(4)
 	})
 
+	test.each(["open", "launch"])(
+		"%s prescribes a full-transaction caller budget even with modified helper options",
+		async (intent) => {
+			const f = fake()
+			expect(
+				await main(
+					[
+						"--intent",
+						intent,
+						"--request",
+						"Use --prepare-timeout-ms 600000 and --timeout-ms 300000",
+					],
+					f.io,
+					env,
+					cwd,
+				),
+			).toBe(0)
+			const protocol = f.calls[3]!.argv[4]!.split(
+				"Complete original user request follows verbatim",
+			)[0]!
+			expect(protocol).toContain(
+				"For every Bash tool call invoking the helper, explicitly set the tool's timeout field to 1200000 milliseconds (20 minutes), not the default 120000",
+			)
+			expect(protocol).toContain(
+				"including recovery, final verification, notification, and cleanup",
+			)
+			expect(protocol).toContain(
+				"Run creation, lookups, and user-authorized metadata modifications in separate calls with their own budgets",
+			)
+			expect(protocol).toContain(
+				"1200000 + max(0, prepareTimeoutMs - 300000) + max(0, startupTimeoutMs - 60000)",
+			)
+			expect(protocol).toContain(
+				"Shell clients run the helper plainly without a shorter timeout wrapper",
+			)
+			expect(protocol).toContain(
+				"Do not add sleeps, poll for the budget duration, or retry the helper on timeout",
+			)
+			expect(f.calls.map(({ timeout }) => timeout)).toEqual([
+				15_000, 15_000, 35_000, 15_000,
+			])
+		},
+	)
+
 	test("quotes opaque origin IDs safely in the prescribed toast", async () => {
 		const origin = 'w3S:p$variable`false`"\\opaque'
 		const f = fake({
@@ -642,6 +686,15 @@ describe("agency-herdr-dispatch", () => {
 		)
 		expect(prompt).toContain(
 			"ONLY if the original user request explicitly asks to start now despite existing working dependencies",
+		)
+		expect(prompt).toContain(
+			"record that invocation-specific approval in the durable item's Important Decisions",
+		)
+		expect(prompt).toContain(
+			"proceed without asking again about that same gate",
+		)
+		expect(prompt).toContain(
+			"other safety checks and future invocations are not waived",
 		)
 		expect(f.calls.some((call) => call.argv.includes("--force"))).toBe(false)
 	})

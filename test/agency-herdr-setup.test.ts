@@ -374,6 +374,96 @@ const contexts = (h: ReturnType<typeof harness>) =>
 	h.calls.filter(({ argv }) => argv[1] === "context")
 
 describe("agency-herdr-setup", () => {
+	for (const prepareTimeout of [undefined, 1000, 450000, 600000])
+		for (const intent of ["open", "launch"])
+			test(`separate apply budget: ${prepareTimeout ?? "default"}, ${intent}`, async () => {
+				const h = harness()
+				expect(
+					await run(h, intent, [
+						flag,
+						...(prepareTimeout === undefined
+							? []
+							: ["--prepare-timeout-ms", String(prepareTimeout)]),
+					]),
+				).toBe(0)
+				expect(contexts(h).map(({ timeout }) => timeout)).toEqual([
+					120_000, 120_000,
+				])
+				const preps = h.calls.filter(
+					({ argv }) => argv[2] === "prepare" && !argv.includes("--help"),
+				)
+				expect(preps.map(({ timeout }) => timeout)).toEqual([
+					120_000,
+					prepareTimeout ?? 300_000,
+				])
+				expect(preps[0]!.argv).toContain("--dry-run")
+				expect(preps[1]!.argv).toContain("--evidence")
+				expect(
+					h.calls.filter(({ argv }) => argv.includes("--help")),
+				).toHaveLength(2)
+				for (const { argv, timeout } of h.calls) {
+					if (
+						argv.includes("--help") ||
+						(argv[0] === "herdr" && argv[1] !== "agent")
+					)
+						expect(timeout).toBe(15_000)
+					if (argv[1] === "agent") expect(timeout).toBe(60_000)
+					expect(argv).not.toContain("--prepare-timeout-ms")
+				}
+				// No clock advancement or sleeps are needed for successful immediate IO.
+				expect(h.io.now()).toBe(0)
+			})
+	test("prepare and startup overrides are independent and can precede the path", async () => {
+		const h = harness()
+		expect(
+			await main(
+				[
+					"--prepare-timeout-ms",
+					"600000",
+					"--timeout-ms",
+					"300000",
+					h.context.target.path,
+					"--intent",
+					"launch",
+				],
+				h.io,
+				env,
+			),
+		).toBe(0)
+		expect(
+			h.calls.find(({ argv }) => argv.includes("--evidence"))!.timeout,
+		).toBe(600_000)
+		expect(h.calls.find(({ argv }) => argv[1] === "agent")!.timeout).toBe(
+			300_000,
+		)
+		expect(contexts(h).map(({ timeout }) => timeout)).toEqual([
+			120_000, 120_000,
+		])
+	})
+	for (const options of [
+		["--prepare-timeout-ms"],
+		["--prepare-timeout-ms", "--timeout-ms", "1000"],
+		["--prepare-timeout-ms", "300000", "--prepare-timeout-ms", "300000"],
+		...[
+			"",
+			"0",
+			"999",
+			"600001",
+			"-1000",
+			"1.5",
+			"3e5",
+			"NaN",
+			"Infinity",
+			"300000ms",
+			"300000\n",
+		].map((value) => ["--prepare-timeout-ms", value]),
+	])
+		test(`reject invalid prepare timeout before subprocesses: ${JSON.stringify(options)}`, async () => {
+			const h = harness()
+			expect(await run(h, "open", options)).toBe(1)
+			expect(h.calls).toHaveLength(0)
+		})
+
 	for (const intent of ["open", "launch"])
 		for (const before of [true, false])
 			for (const selected of [true, false])
@@ -1335,17 +1425,52 @@ describe("agency-herdr-setup", () => {
 		]
 		expect(await run(h)).toBe(0)
 	})
-	test("spawn timeout diagnostics survive recovery", async () => {
-		const h = harness()
-		h.override = (argv) =>
-			argv[2] === "prepare"
-				? { status: null, stdout: "", stderr: "spawnSync agency ETIMEDOUT" }
-				: undefined
-		expect(await run(h)).toBe(1)
-		expect(JSON.stringify(h.events)).toContain("ETIMEDOUT")
-		expect(commands(h).some((c) => c.includes("nvim --"))).toBe(true)
-		noClose(h)
-	})
+	for (const stage of ["preview", "apply"])
+		test(`${stage} timeout preserves recovery, final verification and one notification`, async () => {
+			const h = harness()
+			h.override = (argv, index) => {
+				if (
+					argv[2] !== "prepare" ||
+					argv.includes("--dry-run") !== (stage === "preview")
+				)
+					return
+				h.advance(h.calls[index]!.timeout)
+				return {
+					status: null,
+					stdout: "",
+					stderr: "spawnSync agency ETIMEDOUT",
+				}
+			}
+			expect(
+				await main(
+					[h.context.target.path, "--intent", "launch"],
+					h.io,
+					originEnv,
+				),
+			).toBe(1)
+			expect(h.io.now()).toBe(stage === "preview" ? 120_000 : 300_000)
+			expect(JSON.stringify(h.events)).toContain("ETIMEDOUT")
+			expect(commands(h).some((c) => c.includes("nvim --"))).toBe(true)
+			expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
+			expect(h.calls.filter(({ argv }) => argv[2] === "prepare")).toHaveLength(
+				stage === "preview" ? 1 : 2,
+			)
+			expect(contexts(h).map(({ timeout }) => timeout)).toEqual([
+				120_000, 120_000,
+			])
+			expect(
+				h.calls
+					.slice(-2)
+					.map(({ argv, timeout }) => [argv[1], argv[2], timeout]),
+			).toEqual([
+				["pane", "get", 15_000],
+				["notification", "show", 15_000],
+			])
+			expect(
+				h.events.filter((event) => event.event === "failure-notification"),
+			).toHaveLength(1)
+			noClose(h)
+		})
 	test("installed Agency IDs allow dots", async () => {
 		const h = harness(
 			JSON.parse(
