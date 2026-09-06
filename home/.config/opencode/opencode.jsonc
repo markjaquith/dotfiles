@@ -18,6 +18,9 @@
 		},
 		"external_directory": {
 			"~/.claude/plugins/**": "allow",
+			"~/.plannotator/plans/**": "allow",
+			"/Users/mark.jaquith/.crit/**": "allow",
+			"/Users/mark/.crit/**": "allow",
 			"~/worktrees/**": "allow",
 		},
 	},
