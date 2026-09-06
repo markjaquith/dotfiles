@@ -6,11 +6,6 @@ if ! command -v opencode &>/dev/null && [[ ! -x "$HOME/.opencode/bin/opencode" ]
 	curl -fsSL https://opencode.ai/install | bash
 fi
 
-# Pi
-if ! command -v pi &>/dev/null; then
-	curl -fsSL https://pi.dev/install.sh | sh
-fi
-
 # fx
 if ! command -v fx &>/dev/null; then
 	curl -fsSL https://fx.sh/setup.sh | bash

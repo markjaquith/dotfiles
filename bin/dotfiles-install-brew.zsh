@@ -32,6 +32,7 @@ brew install --quiet \
 		switchaudio-osx \
 		mole \
 		aerc \
+		w3m \
 		trash
 
 brew install --quiet --cask espanso

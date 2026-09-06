@@ -13,6 +13,7 @@ fi
 # Install mise tools globally
 mise use -g herdr@latest > /dev/null
 mise use hk@latest > /dev/null
+mise use -g pi@latest > /dev/null
 mise use -g pnpm@latest > /dev/null
 mise use pkl@latest > /dev/null
 
