@@ -17,9 +17,16 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - run: brew install fd jj stow worktrunk
+      - run: brew install fd fzf gum jj jq stow worktrunk
       - run: bun install
-      - run: hk run check
+      - run: hk run check --all
+      - name: Upload check failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hk-output
+          path: ~/.local/state/hk/output.log
+          if-no-files-found: ignore
       - name: Zsh integration tests
         run: |
           for test_file in test/dotfiles-overlay.test.zsh test/wt-*.test.zsh; do

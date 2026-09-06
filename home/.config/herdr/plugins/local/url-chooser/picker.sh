@@ -9,10 +9,6 @@ ensure_tool() {
 	export PATH="$(dirname "$tool_path"):$PATH"
 }
 
-ensure_tool jq
-ensure_tool fzf
-ensure_tool gum
-
 extract_urls() {
 	grep -oE 'https?://(localhost|[[:alnum:]-]+(\.[[:alnum:]-]+)+)(:[0-9]+)?(/[^[:space:]<>"'"'"'`{}\]*)?' | while IFS= read -r url; do
 		while true; do
@@ -89,6 +85,10 @@ join_wrapped_urls() {
 if [[ "${URL_CHOOSER_FUNCTIONS_ONLY:-}" == "1" ]]; then
 	return 0 2>/dev/null || exit 0
 fi
+
+ensure_tool jq
+ensure_tool fzf
+ensure_tool gum
 
 pause() {
 	printf '\nPress any key to close'

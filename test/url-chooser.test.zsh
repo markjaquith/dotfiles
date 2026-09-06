@@ -1,6 +1,12 @@
 #!/usr/bin/env zsh
 set -eo pipefail
 
+# Loading helpers must not require interactive tools or mise.
+PATH=/nonexistent URL_CHOOSER_FUNCTIONS_ONLY=1 /bin/bash -c '
+	source "$1"
+	declare -F extract_urls join_wrapped_urls >/dev/null
+' bash home/.config/herdr/plugins/local/url-chooser/picker.sh
+
 URL_CHOOSER_FUNCTIONS_ONLY=1
 source home/.config/herdr/plugins/local/url-chooser/picker.sh
 unset URL_CHOOSER_FUNCTIONS_ONLY
