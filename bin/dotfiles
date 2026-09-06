@@ -75,7 +75,21 @@ fi
 
 (
   cd "$DOTFILES_DIR" || exit 1
-  stow --simulate --restow home || exit 1
+
+  # Keep the safety preflight, but hide Stow's misleading success warning. The
+  # real restow runs immediately afterward; failed preflights retain all output.
+  typeset stow_preflight_output
+  if ! stow_preflight_output=$(stow --simulate --restow home 2>&1); then
+    [[ -z "$stow_preflight_output" ]] || print -ru2 -- "$stow_preflight_output"
+    exit 1
+  fi
+
+  typeset preflight_line
+  for preflight_line in "${(@f)stow_preflight_output}"; do
+    [[ "$preflight_line" == "WARNING: in simulation mode so not modifying filesystem." ]] \
+      || print -ru2 -- "$preflight_line"
+  done
+
   stow --restow home
 ) || { restore_previous_overlays; exit 1; }
 

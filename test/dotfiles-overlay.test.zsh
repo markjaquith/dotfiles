@@ -289,6 +289,8 @@ for backend in git jj; do
 	stow_test_mode=real
 	for attempt in 1 2; do
 		run_dotfiles >"$test_root/stow.out" 2>&1 || fail "external-source dotfiles failed: $(<"$test_root/stow.out")"
+		[[ "$(<"$test_root/stow.out")" != *"in simulation mode"* ]] \
+			|| fail "successful dotfiles run reported simulation mode"
 		for name in tracked base-link local-only; do
 			[[ "$(readlink "$dotfiles_dir/home/config/$name")" == "${overlay_dir:A}/home/config/$name" ]] \
 				|| fail "overlay link bypassed its immediate source: $name"
