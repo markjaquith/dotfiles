@@ -324,9 +324,15 @@ function opencode() {
 	fi
 
 	local session_id
-	session_id=$(command opencode session list --format json \
-		| jq -r --arg d "$PWD" \
-			'[.[] | select(.directory == $d)] | max_by(.updated) | .id')
+	local db="${XDG_DATA_HOME:-$HOME/.local/share}/opencode/opencode.db"
+	local directory_sql=${PWD//\'/\'\'}
+	# Avoid booting OpenCode twice; fall back if its internal schema changes.
+	if [[ ! -f "$db" ]] || ! session_id=$(command sqlite3 -readonly -cmd '.timeout 100' "$db" \
+		"SELECT id FROM session WHERE directory = '$directory_sql' AND parent_id IS NULL ORDER BY time_updated DESC LIMIT 1;" 2>/dev/null); then
+		session_id=$(command opencode session list --format json \
+			| jq -r --arg d "$PWD" \
+				'[.[] | select(.directory == $d)] | max_by(.updated) | .id')
+	fi
 
 	local rebuilt=()
 	for arg in "$@"; do
