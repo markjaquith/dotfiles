@@ -25,13 +25,6 @@ If this surface is a deployed instance that requires a token, also set
 `SIDESHOW_TOKEN` in your environment before using the CLI. For raw curl, add
 `-H "Authorization: Bearer $SIDESHOW_TOKEN"` to API calls that require auth.
 
-# Skill loading guidelines
-
-Load each skill at most once per conversation. Reuse its already-loaded
-instructions unless the skill file changed or the user explicitly asks to reload
-it. Do not re-read an unchanged skill merely because the task entered a new
-phase or another related skill was loaded.
-
 # Herdr guidelines
 
 If the user says "in a new tab" or "in a new workspace" then unless there is clear evidence showing they mean something else, assume that they mean "in a new Herdr tab (same workspace)" and "in a new Herdr workspace". Use the `herdr` skill. NEVER auto-focus a newly created Herdr tab or Herdr workspace.
@@ -181,7 +174,3 @@ task" means create the item and launch `agency work . --auto`.
 - Prompt: `the investigation is complete; kick off a new coding task`
   Outcome: create a distinct item, open it in a new Herdr tab in the current
   workspace, and launch with `--auto`; do not focus or babysit it
-
-# Version control guidelines
-
-If a repository is jj-enabled, prefer `jj` over `git` for all version control commands.
