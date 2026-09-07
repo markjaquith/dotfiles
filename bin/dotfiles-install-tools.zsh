@@ -2,7 +2,7 @@
 # Manual tool installs
 
 # OpenCode
-bun install -g --trust @opencode-ai/cli@next
+zsh "${0:A:h}/dotfiles-install-opencode.zsh" || exit $?
 
 # fx
 if ! command -v fx &>/dev/null; then

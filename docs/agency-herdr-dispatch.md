@@ -61,7 +61,7 @@ explicit user authorization described below.
 2. Create one tab with explicit inherited `--workspace`, requested `--cwd`,
    `--label`, `--no-focus`, and the four `--env` assignments below.
 3. Start a uniquely named agent in the returned root pane with
-   `herdr agent start <name> --kind opencode --pane <id> --timeout 30000 -- --mini --agent agency-herdr-dispatch-setup`.
+   `herdr agent start <name> --kind opencode --pane <id> --timeout 30000 -- mini --agent agency-herdr-dispatch-setup`.
 4. Submit the protocol and complete original request with `herdr agent prompt`.
    Return immediately when `agent_prompted` is accepted. No `--wait`, work
    polling, focus command, retry, or task mutation occurs in the dispatcher.
@@ -118,7 +118,7 @@ runtime dependency is declared in root `package.json` and `bun.lock`.
 }
 ```
 
-`--mini` selects the interface, not reasoning effort. Low effort is a real model
+`mini` selects the interface, not reasoning effort. Low effort is a real model
 option, not an instruction in the prompt. Only the temporary setup process
 selects this profile via explicit `--agent`; the profile supplies both its model
 and low variant. Do not add a redundant native `--model`: mini then looks up the

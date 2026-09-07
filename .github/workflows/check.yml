@@ -19,6 +19,7 @@ jobs:
 
       - run: brew install fd fzf gum jj jq stow worktrunk
       - run: bun install
+      - run: npm ci --ignore-scripts --prefix home/.config/opencode
       - run: PATH="$PWD/node_modules/.bin:$PATH" hk run check --all
       - name: Upload check failure log
         if: failure()

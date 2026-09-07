@@ -1,4 +1,4 @@
-import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
+import { Plugin } from "@opencode-ai/plugin"
 import { execFileSync } from "child_process"
 
 const GH_PR_MERGE_ALLOWLIST = new Set([
@@ -70,23 +70,23 @@ export function evaluateToolCall(
 	}
 }
 
-export const BlockGhPrMergePlugin: Plugin = async ({ directory }) => {
-	return {
-		"tool.execute.before": async (input, output) => {
-			const args = output.args as { command?: string; workdir?: string }
+export const BlockGhPrMergePlugin = Plugin.define({
+	id: "block-gh-pr-merge",
+	async setup({ location, tool }) {
+		await tool.hook("execute.before", async (event) => {
+			const args = event.input as { command?: string; workdir?: string }
 			const call: ToolCall = {
-				tool: input.tool,
+				tool: event.tool,
 				command: args.command ?? "",
 			}
-			const repository = getCurrentRepository(args.workdir ?? directory)
+			const repository = getCurrentRepository(
+				args.workdir ?? location.directory,
+			)
 			const decision = evaluateToolCall(call, repository)
 
 			if (decision.blocked) throw new Error(decision.reason)
-		},
-	}
-}
+		})
+	},
+})
 
-export default {
-	id: "block-gh-pr-merge",
-	server: BlockGhPrMergePlugin,
-} satisfies PluginModule
+export default BlockGhPrMergePlugin

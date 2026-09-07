@@ -1,4 +1,6 @@
 {
+	"$schema": "https://opencode.ai/v2/cli.json",
+	"plugins": [{ "package": "./beta-adapters/herdr" }],
 	"theme": {
 		"name": "catppuccin"
 	},
@@ -10,8 +12,8 @@
 		"scrollbar": false,
 		"thinking": "show"
 	},
-  "animations": true,
-  "tabs": {
-    "enabled": false
-  }
+	"animations": true,
+	"tabs": {
+		"enabled": false
+	}
 }

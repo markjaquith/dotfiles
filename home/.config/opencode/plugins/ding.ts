@@ -1,11 +1,13 @@
-import type { Plugin, PluginModule } from "@opencode-ai/plugin/v1"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { Plugin } from "@opencode-ai/plugin"
+
+const exec = promisify(execFile)
 
 const COMPLETION_SOUND = "/System/Library/Sounds/Glass.aiff"
 const ATTENTION_SOUND = "/System/Library/Sounds/Ping.aiff"
 const OPENCODE_PROCESS_ROLE = "OPENCODE_PROCESS_ROLE"
 const OPENCODE_DING = "OPENCODE_DING"
-
-const lastDingBySession = new Map<string, string>()
 
 function shouldPlayDings() {
 	if (process.env[OPENCODE_DING] === "1") {
@@ -20,65 +22,78 @@ function shouldPlayDings() {
 	return process.env[OPENCODE_PROCESS_ROLE] === "worker"
 }
 
-export const Ding: Plugin = async ({ $, client }) => {
-	if (!shouldPlayDings()) {
-		return {}
-	}
-
-	async function playSound(sound: string) {
-		await $`afplay ${sound}`
-	}
-
-	return {
-		async "permission.ask"() {
-			await playSound(ATTENTION_SOUND)
-		},
-
-		async "tool.execute.before"(input) {
-			if (input.tool !== "question") {
-				return
-			}
-
-			await playSound(ATTENTION_SOUND)
-		},
-
-		async event({ event }) {
-			if (event.type !== "session.idle") {
-				return
-			}
-
-			const { sessionID } = event.properties
-
-			const [{ data: session }, { data: messages = [] }] = await Promise.all([
-				client.session.get({ path: { id: sessionID } }),
-				client.session.messages({ path: { id: sessionID } }),
-			])
-
-			if (!session || session.parentID) {
-				return
-			}
-
-			const lastMessage = messages.at(-1)
-			if (!lastMessage || lastMessage.info.role !== "assistant") {
-				return
-			}
-
-			if (lastMessage.info.error) {
-				return
-			}
-
-			if (lastDingBySession.get(sessionID) === lastMessage.info.id) {
-				return
-			}
-
-			lastDingBySession.set(sessionID, lastMessage.info.id)
-
-			await playSound(COMPLETION_SOUND)
-		},
-	}
-}
-
-export default {
+export const Ding = Plugin.define({
 	id: "ding",
-	server: Ding,
-} satisfies PluginModule
+	async setup({ event, session, tool, location }) {
+		if (!shouldPlayDings()) return
+
+		const controller = new AbortController()
+		const { signal } = controller
+		const lastDingBySession = new Map<string, string>()
+		const sounds = new Set<Promise<void>>()
+		function playSound(sound: string) {
+			if (signal.aborted) return Promise.resolve()
+			const playing = exec("afplay", [sound], { signal })
+				.then(() => {})
+				.catch((error: unknown) => {
+					if (!signal.aborted) console.error("[ding] Sound failed", error)
+				})
+				.finally(() => sounds.delete(playing))
+			sounds.add(playing)
+			return playing
+		}
+		const question = await tool.hook("execute.before", async (input) => {
+			if (input.tool === "question") await playSound(ATTENTION_SOUND)
+		})
+		const listening = (async () => {
+			for await (const item of event.subscribe({ signal })) {
+				if (signal.aborted) break
+				if (
+					item.location &&
+					(item.location.directory !== location.directory ||
+						item.location.workspaceID !== location.workspaceID)
+				)
+					continue
+				try {
+					if (item.type === "permission.asked") {
+						await playSound(ATTENTION_SOUND)
+						continue
+					}
+					if (item.type === "session.deleted") {
+						lastDingBySession.delete(item.data.sessionID)
+						continue
+					}
+					if (
+						item.type !== "session.status" ||
+						item.data.status.type !== "idle"
+					)
+						continue
+					const { sessionID } = item.data
+					const info = await session.get({ sessionID })
+					if (signal.aborted || info.parentID) continue
+					const messages = await session.context({ sessionID })
+					const last = messages.findLast(
+						(message) =>
+							message.type === "user" || message.type === "assistant",
+					)
+					if (signal.aborted || last?.type !== "assistant" || last.error)
+						continue
+					if (lastDingBySession.get(sessionID) === last.id) continue
+					lastDingBySession.set(sessionID, last.id)
+					await playSound(COMPLETION_SOUND)
+				} catch (error) {
+					if (!signal.aborted) console.error("[ding] Event failed", error)
+				}
+			}
+		})().catch((error: unknown) => {
+			if (!signal.aborted) console.error("[ding] Event stream failed", error)
+		})
+		return async () => {
+			controller.abort()
+			await Promise.all([question.dispose(), listening, ...sounds])
+			lastDingBySession.clear()
+		}
+	},
+})
+
+export default Ding

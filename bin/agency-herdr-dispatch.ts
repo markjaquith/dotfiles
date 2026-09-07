@@ -268,7 +268,7 @@ export async function main(
 		io.emit({ event: "allocated", ...ids, cwd, intent })
 		stage = "agent-start"
 		// --model would activate mini's saved variant instead of the profile's low.
-		const nativeArgs = ["--mini", "--agent", setupProfile]
+		const nativeArgs = ["mini", "--agent", setupProfile]
 		const started = await call(
 			[
 				"agent",

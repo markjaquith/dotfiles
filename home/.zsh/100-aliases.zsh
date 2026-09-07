@@ -303,51 +303,6 @@ function h-workspace-rename() {
 	herdr workspace rename "$HERDR_WORKSPACE_ID" "$1"
 }
 
-# Intercept `opencode -c|--continue`: resolve the most recently updated
-# session for the current directory and pass `--session <id>` instead, or
-# omit the continue flag to start a new session when no match exists.
-# All other invocations pass straight through to the real binary.
-function opencode() {
-	emulate -L zsh
-
-	local arg has_continue=0
-	for arg in "$@"; do
-		if [[ "$arg" == "--continue" || "$arg" == "-c" ]]; then
-			has_continue=1
-			break
-		fi
-	done
-
-	if (( ! has_continue )); then
-		command opencode "$@"
-		return $?
-	fi
-
-	local session_id
-	local db="${XDG_DATA_HOME:-$HOME/.local/share}/opencode/opencode.db"
-	local directory_sql=${PWD//\'/\'\'}
-	# Avoid booting OpenCode twice; fall back if its internal schema changes.
-	if [[ ! -f "$db" ]] || ! session_id=$(command sqlite3 -readonly -cmd '.timeout 100' "$db" \
-		"SELECT id FROM session WHERE directory = '$directory_sql' AND parent_id IS NULL ORDER BY time_updated DESC LIMIT 1;" 2>/dev/null); then
-		session_id=$(command opencode session list --format json \
-			| jq -r --arg d "$PWD" \
-				'[.[] | select(.directory == $d)] | max_by(.updated) | .id')
-	fi
-
-	local rebuilt=()
-	for arg in "$@"; do
-		if [[ "$arg" == "--continue" || "$arg" == "-c" ]]; then
-			if [[ -n "$session_id" && "$session_id" != "null" ]]; then
-				rebuilt+=(--session "$session_id")
-			fi
-		else
-			rebuilt+=("$arg")
-		fi
-	done
-
-	command opencode "${rebuilt[@]}"
-}
-
 # OpenCode aliases.
 function oc() {
 	opencode "$@"
@@ -358,7 +313,7 @@ function occ() {
 }
 
 function ocm() {
-	opencode --mini "$@"
+	opencode mini "$@"
 }
 
 function ocfast() {

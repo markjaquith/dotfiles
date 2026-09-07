@@ -1,3 +1,4 @@
+// Archived: beta19228 has no supported composer threshold API.
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/v1/tui"
 
 const MAX_INLINE_CHARACTERS = 2048
