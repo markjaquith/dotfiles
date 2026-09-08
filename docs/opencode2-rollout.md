@@ -6,8 +6,9 @@ Bun's global bin directory. The OpenCode 1 executable has been removed; sessions
 credentials, and configuration are preserved. The installer maintains this setup.
 
 The legacy continuation wrapper and binary PATH entry are removed. `occ` now
-uses native OpenCode 2 continuation; equivalent directory-scoped behavior remains
-to be checked. Shell and Agency mini launches use the `mini` subcommand. This
+uses native OpenCode 2 continuation. Installed-client inspection and live API
+checks on September 8 confirmed directory-scoped selection in beta-19242.
+Shell and Agency mini launches use the `mini` subcommand. This
 activation does not imply the remaining integration gates have passed.
 
 ## Setup Profile Discovery: Verified
@@ -43,8 +44,6 @@ initialization has completed.
 - The user confirmed mini profile selection works. Shared-service isolation and
   Herdr state reporting in mini remain unverified; mini does not run TUI plugins.
   The user accepted the mini reporting limitation for this rollout.
-- Preserve directory-scoped continuation without the removed `session list`
-  command or unverified assumptions about preview database paths.
 - Validate end-to-end shell/automation behavior with the pinned global runtime.
 
 ## Plugin Migration
