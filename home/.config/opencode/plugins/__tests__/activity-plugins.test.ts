@@ -21,7 +21,6 @@ import { join } from "node:path"
 import type { Plugin } from "@opencode-ai/plugin"
 import type { CommandDefinition } from "@opencode-ai/plugin/promise/command"
 import type { SessionPrompt } from "@opencode-ai/plugin/promise/session"
-import Ding from "../ding"
 import KeepGoing from "../keep-going"
 import Worktrunk from "../worktrunk"
 
@@ -189,15 +188,6 @@ const status = (type = "idle", location?: unknown) => ({
 	location,
 })
 const deleted = { type: "session.deleted", data: { sessionID: "ses_test" } }
-const permission = {
-	type: "permission.asked",
-	data: {
-		sessionID: "ses_test",
-		id: "per_test",
-		action: "bash",
-		resources: ["git push"],
-	},
-}
 const assistant = (text: string, extra = {}) => ({
 	type: "assistant",
 	id: "msg_reply",
@@ -218,7 +208,7 @@ beforeEach(async () => {
 	directory = await realpath(
 		await mkdtemp(join(tmpdir(), "opencode-activity-")),
 	)
-	for (const name of ["afplay", "wt"]) {
+	for (const name of ["wt"]) {
 		const executable = join(directory, name)
 		await writeFile(
 			executable,
@@ -228,7 +218,6 @@ beforeEach(async () => {
 	}
 	process.env.PATH = `${directory}:${process.env.PATH}`
 	process.env.PLUGIN_TEST_LOG = join(directory, "calls")
-	process.env.OPENCODE_DING = "1"
 	errors.mockClear()
 })
 
@@ -250,90 +239,6 @@ async function calls() {
 		.split("\n")
 		.filter(Boolean)
 }
-
-describe("ding Promise plugin", () => {
-	test("rings for permissions and questions, and once for each successful top-level reply", async () => {
-		const host = await setup(Ding)
-		host.context.session.context = async () => transcript(assistant("finished"))
-		await host.stream.emit(permission)
-		await host.question()
-		await host.question("bash")
-		await host.stream.emit(status("busy"))
-		await host.stream.emit(status())
-		await host.stream.emit(status())
-		expect((await calls()).map((line) => line.split("|")[1])).toEqual([
-			"/System/Library/Sounds/Ping.aiff",
-			"/System/Library/Sounds/Ping.aiff",
-			"/System/Library/Sounds/Glass.aiff",
-		])
-		await host.stream.emit(deleted)
-		await host.stream.emit(status())
-		expect(await calls()).toHaveLength(4)
-	})
-
-	test("ignores child sessions, errors, user tails, and foreign locations", async () => {
-		const host = await setup(Ding)
-		host.context.session.get = async () => ({ parentID: "ses_parent" })
-		host.context.session.context = async () => transcript(assistant("done"))
-		await host.stream.emit(status())
-		host.context.session.get = async () => ({ parentID: undefined })
-		host.context.session.context = async () =>
-			transcript(assistant("done", { error: { message: "failed" } }))
-		await host.stream.emit(status())
-		host.context.session.context = async () =>
-			transcript({ type: "user", id: "msg_user", text: "hello" })
-		await host.stream.emit(status())
-		host.context.session.context = async () => transcript(assistant("done"))
-		await host.stream.emit(status("idle", { directory: "/other" }))
-		await host.stream.emit(
-			status("idle", { directory: "/test", workspaceID: "ws_other" }),
-		)
-		expect(await calls()).toEqual([])
-	})
-
-	test.each([
-		["0", "worker", false],
-		[undefined, "server", false],
-		[undefined, "worker", true],
-		["1", "server", true],
-	])(
-		"honors ding override %s and process role %s",
-		async (ding, role, enabled) => {
-			if (ding === undefined) delete process.env.OPENCODE_DING
-			else process.env.OPENCODE_DING = ding
-			process.env.OPENCODE_PROCESS_ROLE = role
-			const host = await setup(Ding)
-			await host.question()
-			expect(await calls()).toHaveLength(enabled ? 1 : 0)
-		},
-	)
-
-	test("unload cancels an in-flight lookup and new instances do not share deduplication", async () => {
-		const host = await setup(Ding)
-		const lookup = deferred<Messages>()
-		const entered = deferred<void>()
-		host.context.session.context = () => {
-			entered.resolve()
-			return lookup.promise
-		}
-		const emitted = host.stream.emit(status())
-		await entered.promise
-		const closing = host.cleanup()
-		lookup.resolve(transcript(assistant("done")))
-		await closing
-		await emitted
-		expect(host.stream.closed).toBe(true)
-		await host.question()
-		expect(await calls()).toEqual([])
-		for (let index = 0; index < 2; index++) {
-			const next = await setup(Ding)
-			next.context.session.context = async () => transcript(assistant("done"))
-			await next.stream.emit(status())
-			await next.cleanup()
-		}
-		expect(await calls()).toHaveLength(2)
-	})
-})
 
 describe("keep-going Promise plugin", () => {
 	test("registers the command, preserves delivery, replays once per reply, and stops only on exact done", async () => {
@@ -504,10 +409,10 @@ describe("worktrunk Promise plugin", () => {
 	})
 })
 
-test.each([Ding, Worktrunk])(
+test.each([Worktrunk])(
 	"%s unload aborts an in-flight subprocess without leaving the listener running",
 	async (plugin) => {
-		const executable = join(directory, plugin === Ding ? "afplay" : "wt")
+		const executable = join(directory, "wt")
 		await writeFile(
 			executable,
 			'#!/bin/sh\nprintf started >> "$PLUGIN_TEST_LOG"\nexec /bin/sleep 60\n',
@@ -520,8 +425,7 @@ test.each([Ding, Worktrunk])(
 			const host = harness()
 			host.context.location.directory = directory
 			const running = await setup(plugin, host)
-			const pending =
-				plugin === Ding ? host.question() : host.stream.emit(status("busy"))
+			const pending = host.stream.emit(status("busy"))
 			await started.promise
 			await running.cleanup()
 			await pending
