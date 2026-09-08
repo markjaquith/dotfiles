@@ -14,7 +14,10 @@ type Agent = {
 	id: string
 	mode: string
 	model?: { id: string; providerID: string; variant?: string }
-	request: { settings: Record<string, unknown> }
+	request: {
+		settings: Record<string, unknown>
+		body: Record<string, unknown>
+	}
 }
 
 test.skipIf(!executable)(
@@ -75,10 +78,12 @@ test.skipIf(!executable)(
 			}
 			const setup = agents.find((agent) => agent.id === setupProfile)
 			expect(setup).toBeDefined()
+			expect(setupConfig.default_agent).toBe(setupProfile)
 			expect(setup?.mode).toBe("primary")
 			const [providerID, id] = setupModel.split("/")
 			if (!providerID || !id) throw new Error("Invalid setup model")
 			expect(setup?.model).toEqual({ providerID, id, variant: "low" })
+			expect(setup?.request.body.reasoningEffort).toBe("low")
 			const build = agents.find((agent) => agent.id === "build")
 			expect(build).toBeDefined()
 			expect(build?.model).toBeUndefined()
