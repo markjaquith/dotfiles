@@ -12,10 +12,10 @@ Usage: ${SCRIPT_NAME} [option]
 Install and configure this dotfiles environment.
 
 This runs the full installation flow:
-  - install prerequisites and Homebrew taps
+  - install prerequisites and package-manager dependencies
   - install Homebrew, Bun, pip, mise, Rust, and manual tools
   - configure fonts, app/tool settings, and git hooks
-  - run ~/.local-dotfiles/bin/dotfiles-install when present
+  - run ~/.local-dotfiles/bin/dotfiles-install-local when present
 
 Options:
   -h, --help    Show this help message and exit.
@@ -104,11 +104,12 @@ crontab_status=$?
 fonts_status=$?
 (( fonts_status == 0 )) || exit "$fonts_status"
 
-# Run custom local dotfiles-install if available
-if [[ -f "${HOME}/.local-dotfiles/bin/dotfiles-install" ]]; then
+# Run custom local dotfiles-install if available. Keep its name distinct from
+# this driver so a higher-priority local bin directory cannot shadow the driver.
+if [[ -f "${HOME}/.local-dotfiles/bin/dotfiles-install-local" ]]; then
 	# Source in this shell so local PATH, functions, and exports still reach
 	# the dependency and hook installs below, without leaking strict options.
-	run_stage local source "${HOME}/.local-dotfiles/bin/dotfiles-install"
+	run_stage local source "${HOME}/.local-dotfiles/bin/dotfiles-install-local"
 fi
 (
 	install_dependencies() {

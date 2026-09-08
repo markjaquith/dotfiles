@@ -23,11 +23,17 @@ if [[ ! -d "$HOME/.local/bin/tmux/plugins/tpm" ]]; then
 	git clone https://github.com/tmux-plugins/tpm "$HOME/.local/bin/tmux/plugins/tpm"
 fi
 
-# Install tmux plugins declared in tmux.conf
+# Install tmux plugins declared in tmux.conf. A bare `tmux start-server` exits
+# immediately when no sessions exist, so keep a temporary session alive for TPM.
 if command -v tmux &>/dev/null; then
-	tmux start-server
+	typeset install_session="dotfiles-install-$$"
+	tmux new-session -d -s "$install_session"
 	tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "$HOME/.local/bin/tmux/plugins"
-	"$HOME/.local/bin/tmux/plugins/tpm/bin/install_plugins"
+	if ! "$HOME/.local/bin/tmux/plugins/tpm/bin/install_plugins"; then
+		tmux kill-session -t "$install_session"
+		return 1
+	fi
+	tmux kill-session -t "$install_session"
 fi
 
 # phpactor
