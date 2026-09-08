@@ -316,7 +316,7 @@ function ocm() {
 	opencode mini "$@"
 }
 
-function ocfast() {
+function ocr() {
 	emulate -L zsh
 
 	local prompt
@@ -325,15 +325,15 @@ function ocfast() {
 		if [[ -o interactive && -t 0 && -t 1 ]] && command -v gum >/dev/null 2>&1; then
 			prompt=$(gum input --placeholder "Enter prompt") || return 1
 			[[ -n "$prompt" ]] || return 1
-			opencode run --agent fast "$prompt"
+			opencode run "$prompt"
 			return $?
 		fi
 
-		echo "Usage: ocfast <prompt>"
+		echo "Usage: ocr <prompt>"
 		return 1
 	fi
 
-	opencode run --agent fast "$@"
+	opencode run "$@"
 }
 
 autoload -Uz add-zsh-hook
