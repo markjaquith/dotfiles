@@ -8,18 +8,15 @@ credentials, and configuration are preserved. The installer maintains this setup
 The legacy continuation wrapper and binary PATH entry are removed. `occ` now
 uses native OpenCode 2 continuation. Installed-client inspection and live API
 checks on September 8 confirmed directory-scoped selection in beta-19242.
-Shell aliases use the `mini` subcommand. Agency setup launches use the full TUI
-because OpenCode 2 mini cannot reliably activate the injected setup profile.
-This activation does not imply the remaining integration gates have passed.
+Shell and Agency mini launches use the `mini` subcommand. This
+activation does not imply the remaining integration gates have passed.
 
 ## Setup Profile Discovery: Verified
 
-On September 7-8, 2026, isolated runtime tests passed against these published
-builds:
+On September 7, 2026, isolated runtime tests passed against both published builds:
 
 - `@next`: `0.0.0-beta-17823`
 - `@beta`: `0.0.0-beta-19228`
-- installed beta: `0.0.0-beta-19296`
 
 The earlier empty `/api/agent` results were premature readiness checks. A new
 server can accept requests before its agent registry is populated; the older
@@ -44,8 +41,9 @@ initialization has completed.
 
 ## Remaining Gates
 
-- Validate the full-TUI Agency setup handoff in an unfocused Herdr tab. The
-  isolated server test covers profile resolution but not interactive startup.
+- The user confirmed mini profile selection works. Shared-service isolation and
+  Herdr state reporting in mini remain unverified; mini does not run TUI plugins.
+  The user accepted the mini reporting limitation for this rollout.
 - Validate end-to-end shell/automation behavior with the pinned global runtime.
 
 ## Plugin Migration

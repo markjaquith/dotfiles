@@ -721,15 +721,6 @@ export async function main(
 				} catch (error) {
 					record(error)
 				}
-			const workerOpenCodeConfig =
-				env.AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT
-			if (workerOpenCodeConfig !== undefined) {
-				requireValue(
-					!workerOpenCodeConfig.includes("\0"),
-					"Invalid inherited worker OpenCode configuration",
-				)
-				object(JSON.parse(workerOpenCodeConfig))
-			}
 			worker = pane(
 				(
 					await herdr(
@@ -742,9 +733,6 @@ export async function main(
 							"down",
 							"--cwd",
 							initial.directory,
-							...(workerOpenCodeConfig === undefined
-								? []
-								: ["--env", `OPENCODE_CONFIG_CONTENT=${workerOpenCodeConfig}`]),
 							"--no-focus",
 						],
 						"pane_info",
