@@ -15,10 +15,13 @@ export type Runtime = Pick<SetupRuntime, "run" | "emit"> & {
 }
 export const setupProfile = "agency-herdr-dispatch-setup"
 export const setupModel = "openai/gpt-5.6-sol"
+export const workerConfigEnv = "AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT"
 
-// Tab env reaches worker panes too. Select this profile only via setup's --agent.
+// The full TUI selects agents through default_agent. Worker panes restore the
+// inherited config via workerConfigEnv before Agency starts their OpenCode agent.
 export const setupConfig = {
 	$schema: "https://opencode.ai/config.json",
+	default_agent: setupProfile,
 	agent: {
 		[setupProfile]: {
 			mode: "primary",
@@ -179,6 +182,7 @@ export async function main(
 				...setupConfig.agent,
 			},
 		})
+		const workerConfig = JSON.stringify(inherited)
 		const call = async (argv: string[], type: string, timeout = 15_000) => {
 			const output = await io.run(["herdr", ...argv], cwd, timeout)
 			let envelope: ObjectValue
@@ -245,6 +249,8 @@ export async function main(
 				"--env",
 				`OPENCODE_CONFIG_CONTENT=${config}`,
 				"--env",
+				`${workerConfigEnv}=${workerConfig}`,
+				"--env",
 				`AGENCY_HERDR_ORIGIN_PANE_ID=${originPaneId}`,
 				"--env",
 				`AGENCY_HERDR_ORIGIN_TAB_ID=${originTabId}`,
@@ -267,8 +273,7 @@ export async function main(
 		ids.agentName = name
 		io.emit({ event: "allocated", ...ids, cwd, intent })
 		stage = "agent-start"
-		// --model would activate mini's saved variant instead of the profile's low.
-		const nativeArgs = ["mini", "--agent", setupProfile]
+		const nativeArgs: string[] = []
 		const started = await call(
 			[
 				"agent",
@@ -280,8 +285,6 @@ export async function main(
 				setupId,
 				"--timeout",
 				"30000",
-				"--",
-				...nativeArgs,
 			],
 			"agent_started",
 			35_000,
