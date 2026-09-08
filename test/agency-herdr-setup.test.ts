@@ -413,24 +413,6 @@ describe("agency-herdr-setup", () => {
 				// No clock advancement or sleeps are needed for successful immediate IO.
 				expect(h.io.now()).toBe(0)
 			})
-	test("restores inherited OpenCode config only on the worker pane", async () => {
-		const h = harness()
-		const workerConfig = JSON.stringify({
-			default_agent: "implementation",
-		})
-		expect(
-			await main([h.context.target.path, "--intent", "launch"], h.io, {
-				...env,
-				AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT: workerConfig,
-			}),
-		).toBe(0)
-		const splits = h.calls.filter(({ argv }) => argv[2] === "split")
-		expect(splits[0]!.argv).toContain("down")
-		expect(splits[0]!.argv).toContain("--no-focus")
-		expect(splits[0]!.argv).toContain("--env")
-		expect(splits[0]!.argv).toContain(`OPENCODE_CONFIG_CONTENT=${workerConfig}`)
-		expect(splits[1]!.argv).not.toContain("--env")
-	})
 	test("prepare and startup overrides are independent and can precede the path", async () => {
 		const h = harness()
 		expect(

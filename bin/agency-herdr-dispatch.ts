@@ -16,16 +16,15 @@ export type Runtime = Pick<SetupRuntime, "run" | "emit"> & {
 export const setupProfile = "agency-herdr-dispatch-setup"
 export const setupModel = "openai/gpt-5.6-sol"
 
-// The full TUI cannot select an agent by flag. Make the setup profile the
-// temporary pane's default, then restore the inherited config for worker panes.
+// Tab env reaches worker panes too. Select this profile only via setup's --agent.
 export const setupConfig = {
 	$schema: "https://opencode.ai/config.json",
-	default_agent: setupProfile,
-	agents: {
+	agent: {
 		[setupProfile]: {
 			mode: "primary",
-			model: `${setupModel}#low`,
-			request: { body: { reasoningEffort: "low" } },
+			model: setupModel,
+			variant: "low",
+			options: { reasoningEffort: "low" },
 		},
 	},
 }
@@ -175,12 +174,11 @@ export async function main(
 		const config = JSON.stringify({
 			...inherited,
 			...setupConfig,
-			agents: {
-				...(inherited.agents === undefined ? {} : object(inherited.agents)),
-				...setupConfig.agents,
+			agent: {
+				...(inherited.agent === undefined ? {} : object(inherited.agent)),
+				...setupConfig.agent,
 			},
 		})
-		const workerConfig = JSON.stringify(inherited)
 		const call = async (argv: string[], type: string, timeout = 15_000) => {
 			const output = await io.run(["herdr", ...argv], cwd, timeout)
 			let envelope: ObjectValue
@@ -247,8 +245,6 @@ export async function main(
 				"--env",
 				`OPENCODE_CONFIG_CONTENT=${config}`,
 				"--env",
-				`AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT=${workerConfig}`,
-				"--env",
 				`AGENCY_HERDR_ORIGIN_PANE_ID=${originPaneId}`,
 				"--env",
 				`AGENCY_HERDR_ORIGIN_TAB_ID=${originTabId}`,
@@ -271,6 +267,8 @@ export async function main(
 		ids.agentName = name
 		io.emit({ event: "allocated", ...ids, cwd, intent })
 		stage = "agent-start"
+		// --model would activate mini's saved variant instead of the profile's low.
+		const nativeArgs = ["mini", "--agent", setupProfile]
 		const started = await call(
 			[
 				"agent",
@@ -282,6 +280,8 @@ export async function main(
 				setupId,
 				"--timeout",
 				"30000",
+				"--",
+				...nativeArgs,
 			],
 			"agent_started",
 			35_000,
@@ -294,7 +294,8 @@ export async function main(
 			"Setup agent is not the expected ready OpenCode agent",
 		)
 		requireValue(
-			JSON.stringify(started.argv) === JSON.stringify(["opencode"]),
+			JSON.stringify(started.argv) ===
+				JSON.stringify(["opencode", ...nativeArgs]),
 			"Unexpected setup agent argv",
 		)
 		const failureBody = `Origin ${originPaneId} (${originTabId}, ${workspaceId}); setup ${setupId} (${tabId}, ${workspaceId}). Initial resolution or creation failed before the helper started. See setup diagnostics; do not rerun blindly.`
@@ -302,7 +303,7 @@ export async function main(
 		const prompt = `You are the temporary Agency setup agent, not the implementation worker.
 Intended Agency action: ${intent}.
 Original request cwd (use this as the cwd of Agency commands): ${JSON.stringify(cwd)}.
-The initiating agent has already created this unfocused setup tab and selected your setup-only model/profile with low reasoning effort as this pane's temporary default. The helper restores the initiating pane's inline OpenCode configuration when it creates worker panes. Preserve inherited implementation-worker defaults; do not set default_agent, global model/provider overrides, or change worker configuration to match this temporary profile. Do not dispatch another setup agent.
+The initiating agent has already created this unfocused setup tab and explicitly selected your setup-only model/profile with low reasoning effort. Preserve inherited implementation-worker defaults; do not set default_agent, global model/provider overrides, or change worker configuration to match this temporary profile. Do not dispatch another setup agent.
 Use ${agencyCommand} for ALL Agency commands in this run, including lookups, creation, help, and any authorized metadata updates. Do not change PATH, replace the global agency command, install a CLI, or fall back to another executable on failure. The helper receives the same selection below. Paths and replacement values are data: use separate argv entries or shell-quote each value, never evaluate request text as shell. Single-quoted angle-bracket values below are placeholders to replace with actual quoted values. The complete original user request remains authoritative for the requested work; do not summarize away its requirements.
 
 This is a prescribed fast path. Interpret the complete user request below, then:

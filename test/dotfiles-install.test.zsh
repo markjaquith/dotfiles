@@ -163,7 +163,7 @@ bun() {
 	command bun "$@"
 }
 print -r -- tail:local >> "$EVENTS"
-' > "$fixture/home/.local-dotfiles/bin/dotfiles-install"
+' > "$fixture/home/.local-dotfiles/bin/dotfiles-install-local"
 	export FAIL_STAGE="" FAIL_STAGE_2="" FAIL_COMMAND="" PARALLEL_PROBE=no
 	export CONFIG_UNSET_STATUS=5 CONFIG_UNSET_KEY="" PIP_OUTPUT="" LOCAL_CONTEXT=""
 }
@@ -200,7 +200,7 @@ assert_contains "$events" 'command:bun:i'
 assert_contains "$events" $'done:mise\ntail:mise\nstart:configs'
 
 reset_fixture
-rm "$fixture/home/.local-dotfiles/bin/dotfiles-install"
+rm "$fixture/home/.local-dotfiles/bin/dotfiles-install-local"
 export LOCAL_CONTEXT=retained
 run_driver
 assert_status 0
@@ -237,7 +237,7 @@ done
 for name in prereqs brew pip local; do
 	reset_fixture
 	if [[ "$name" == local ]]; then
-		stage_file="$fixture/home/.local-dotfiles/bin/dotfiles-install"
+		stage_file="$fixture/home/.local-dotfiles/bin/dotfiles-install-local"
 	else
 		stage_file="$fixture/home/dotfiles/bin/dotfiles-install-$name.zsh"
 	fi

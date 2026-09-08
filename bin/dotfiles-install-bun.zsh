@@ -1,6 +1,5 @@
 #!/usr/bin/env zsh
-# Upgrade and install Bun packages (bulk)
-bun upgrade > /dev/null 2>&1
+# Bun itself is managed by mise; install and update its global packages here.
 bun i -g --no-summary \
     typescript@latest \
     typescript-language-server@latest \
