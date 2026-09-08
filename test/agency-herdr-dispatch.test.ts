@@ -339,6 +339,34 @@ describe("agency-herdr-dispatch", () => {
 		},
 	)
 
+	test("allows only an exact, compatible already-existing item to continue without retrying creation", async () => {
+		const f = fake()
+		expect(await main(args, f.io, env, cwd)).toBe(0)
+		const prompt = f.calls[3]!.argv[4]!
+		expect(prompt).toContain(
+			"A structured non-retryable Agency error whose code and message say that the exact requested task, phase (including parent task), or epic ID already exists is the only idempotent creation exception",
+		)
+		for (const command of [
+			"agency task show '<id>' --json",
+			"agency phase show '<task-id>' '<phase-id>' --json",
+			"agency epic show '<id>' --json",
+		])
+			expect(prompt).toContain(command)
+		expect(prompt).toContain(
+			"Require the show result's IDs, parent, and canonical path plus the context target kind to match the intended item",
+		)
+		expect(prompt).toContain(
+			"require any explicitly requested repo, branch, base, references, and work requirements to be compatible",
+		)
+		expect(prompt).toContain(
+			"Never update, recreate, reopen, remove, or otherwise mutate the existing item merely to make it compatible",
+		)
+		expect(prompt).toContain("Do not retry creation after any failure")
+		expect(prompt).toContain(
+			"agency-herdr-setup '<absolute-document-path>' --intent launch exactly once",
+		)
+	})
+
 	test("preserves every request byte and passes cwd/label as argv, not shell", async () => {
 		const f = fake()
 		const request =
@@ -405,7 +433,9 @@ describe("agency-herdr-dispatch", () => {
 				"Complete original user request follows verbatim (all remaining text):\n",
 			)[0]!
 			for (const command of [
+				"task show '<id>' --json",
 				"phase show '<task-id>' '<phase-id>' --json",
+				"epic show '<id>' --json",
 				"context '<absolute-document-path>' --json",
 				"context '<document-path>' --json",
 				"context . --json",
