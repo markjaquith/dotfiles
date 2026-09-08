@@ -100,14 +100,18 @@ socket. The OpenCode installer permits version 12 or newer and rejects older
 server reporters. Until this Herdr change is released, reinstall the integration
 from the `opencode-v2-support` checkout rather than an older installed Herdr.
 
+## Restored Behavior
+
+- The custom 10-line/2,048-character paste threshold is restored by the V2 CLI
+  plugin in `plugins/paste-summary-threshold/`. V2 plugin storage cannot change
+  the composer's private paste-summary setting, so the plugin intercepts only
+  text that falls between OpenCode's native threshold and the custom threshold.
+  Larger pastes and local-file attachments stay on the native paste path. The
+  old KV-based plugin remains archived in
+  `legacy-integrations/paste-summary-threshold.ts.disabled`.
+
 ## Unsupported Behavior
 
-- The custom paste threshold is archived as
-  `legacy-integrations/paste-summary-threshold.ts.disabled`. This beta exposes
-  only native compact/full paste display, not the old composer KV control or
-  configurable 10-line/2,048-character threshold. Native behavior remains in use;
-  the old, inactive `tui.json` registration is removed. The user acknowledged
-  this limitation for the rollout.
 - `opencode-queue` versions `0.11.2` and current latest `0.13.2` both fail actual
   host activation because they export a legacy hook function. Its registration
   is removed. The user confirmed this plugin is unnecessary for v2; no parity
