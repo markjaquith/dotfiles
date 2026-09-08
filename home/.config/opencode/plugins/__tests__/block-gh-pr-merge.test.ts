@@ -17,7 +17,8 @@ function bash(command: string): ToolCall {
 describe("block-gh-pr-merge", () => {
 	test("exports an explicit plugin module", () => {
 		expect(BlockGhPrMergePluginModule.id).toBe("block-gh-pr-merge")
-		expect(BlockGhPrMergePluginModule.server).toBe(BlockGhPrMergePlugin)
+		expect(BlockGhPrMergePluginModule).toBe(BlockGhPrMergePlugin)
+		expect(BlockGhPrMergePluginModule.setup).toBeFunction()
 	})
 
 	test.each(["markjaquith/agency", "markjaquith/topo"])(

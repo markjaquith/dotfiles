@@ -137,7 +137,7 @@ function fake(
 					id: "cli:agent:start",
 					result: {
 						agent: { ...agent, name },
-						argv: ["opencode", "--mini", "--agent", setupProfile],
+						argv: ["opencode", "mini", "--agent", setupProfile],
 						type: "agent_started",
 					},
 				})
@@ -298,7 +298,7 @@ describe("agency-herdr-dispatch", () => {
 				"--timeout",
 				"30000",
 				"--",
-				"--mini",
+				"mini",
 				"--agent",
 				"agency-herdr-dispatch-setup",
 			])
@@ -666,7 +666,7 @@ describe("agency-herdr-dispatch", () => {
 		expect(config.agent[setupProfile].options.reasoningEffort).toBe("low")
 		const start = f.calls[2]!.argv
 		expect(start.slice(start.indexOf("--") + 1)).toEqual([
-			"--mini",
+			"mini",
 			"--agent",
 			setupProfile,
 		])
@@ -856,7 +856,7 @@ describe("agency-herdr-dispatch", () => {
 					result: {
 						type: "agent_started",
 						agent: { ...agent, name: argv[3] },
-						argv: ["opencode", "--mini"],
+						argv: ["opencode", "mini"],
 					},
 				}),
 		})
@@ -970,7 +970,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE_DIR)(
 		expect(await main(args, f.io, env, cwd)).toBe(0)
 		const start = f.calls[2]!.argv
 		const native = start.slice(start.indexOf("--") + 1)
-		expect(native).toEqual(["--mini", "--agent", setupProfile])
+		expect(native).toEqual(["mini", "--agent", setupProfile])
 		const modelIndex = native.indexOf("--model")
 		const cliModel =
 			modelIndex < 0

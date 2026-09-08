@@ -2,9 +2,7 @@
 # Manual tool installs
 
 # OpenCode
-if ! command -v opencode &>/dev/null && [[ ! -x "$HOME/.opencode/bin/opencode" ]]; then
-	curl -fsSL https://opencode.ai/install | bash
-fi
+zsh "${0:A:h}/dotfiles-install-opencode.zsh" || exit $?
 
 # fx
 if ! command -v fx &>/dev/null; then

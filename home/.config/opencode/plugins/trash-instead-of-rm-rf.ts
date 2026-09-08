@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode-ai/plugin"
 
 const trashCommandPattern = /^\s*trash\s+(.+)$/s
 
@@ -25,19 +25,21 @@ safe_trash ${args}`
  * This plugin intercepts bash commands that contain "rm -rf" patterns and rewrites them
  * to use the safer `trash` CLI tool instead.
  */
-export const TrashInsteadOfRmRfPlugin: Plugin = async ({ client }) => {
-	return {
-		"tool.execute.before": async (input, output) => {
+export const TrashInsteadOfRmRfPlugin = Plugin.define({
+	id: "trash-instead-of-rm-rf",
+	async setup({ tool }) {
+		await tool.hook("execute.before", async (event) => {
 			// Only check bash commands
-			if (input.tool !== "bash") {
+			if (event.tool !== "bash") {
 				return
 			}
 
-			const command = output.args.command as string
+			const args = event.input as { command: string }
+			const command = args.command
 
 			const trashMatch = command.match(trashCommandPattern)
 			if (trashMatch && trashMatch[1]) {
-				output.args.command = safeTrashCommand(trashMatch[1].trim())
+				args.command = safeTrashCommand(trashMatch[1].trim())
 				return
 			}
 
@@ -61,10 +63,12 @@ export const TrashInsteadOfRmRfPlugin: Plugin = async ({ client }) => {
 					const path = match[1].trim()
 
 					// Rewrite the command to use trash instead
-					output.args.command = safeTrashCommand(path)
+					args.command = safeTrashCommand(path)
 					return
 				}
 			}
-		},
-	}
-}
+		})
+	},
+})
+
+export default TrashInsteadOfRmRfPlugin
