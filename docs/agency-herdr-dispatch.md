@@ -229,5 +229,5 @@ responses, with names/caller fields and private paths/labels substituted. The
 optional OpenCode 2 smoke test starts an isolated authenticated server with
 temporary HOME/XDG directories. It confirms native profile discovery, low model
 selection, and unchanged built-in worker settings without sending a model prompt.
-JSONC tests preserve worker defaults, model and provider settings, comments
-inside strings, and reject malformed partial parses.
+JSONC tests preserve worker defaults and provider settings, comments inside
+strings, and reject malformed partial parses.

@@ -162,7 +162,6 @@ const args = [
 const inheritedJsonc = String.raw`// Inherited worker settings, not setup defaults.
 {
   "default_agent": "implementation",
-  "model": "openai/gpt-6-astra",
   "providers": {
     "openai": { "settings": { "baseURL": "https://example.invalid//api", }, },
   },
@@ -197,7 +196,6 @@ describe("agency-herdr-dispatch", () => {
 		expect(config).toEqual({
 			$schema: "https://opencode.ai/config.json",
 			default_agent: setupProfile,
-			model: "openai/gpt-6-astra",
 			providers: {
 				openai: { settings: { baseURL: "https://example.invalid//api" } },
 			},
@@ -218,9 +216,9 @@ describe("agency-herdr-dispatch", () => {
 
 	test.each([
 		'{"default_agent":"implementation", broken}',
-		'{"model":"openai/gpt-6-astra" "default_agent":"implementation"}',
+		'{"default_agent":"implementation" "permissions":[]}',
 		'{"default_agent":"unterminated}',
-		'{"model":"openai/gpt-6-astra"} /* unterminated',
+		'{"default_agent":"implementation"} /* unterminated',
 		"{} trailing-content",
 		'{"default_agent":undefined}',
 	])(
@@ -587,12 +585,10 @@ describe("agency-herdr-dispatch", () => {
 			const f = fake()
 			const inherited = {
 				default_agent: "implementation",
-				model: "openai/gpt-6-astra",
 				permissions: [{ action: "shell", resource: "*", effect: "ask" }],
 				agents: {
 					implementation: {
 						mode: "primary",
-						model: "openai/gpt-6-astra",
 						request: { body: { reasoningEffort: "high" } },
 					},
 				},
@@ -633,7 +629,6 @@ describe("agency-herdr-dispatch", () => {
 			expect(config.agents.implementation).toEqual(
 				inherited.agents.implementation,
 			)
-			expect(config.model).toBe(inherited.model)
 			expect(config.providers).toEqual(inherited.providers)
 			expect(config.agents[setupProfile]).toEqual({
 				mode: "primary",

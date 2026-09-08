@@ -417,7 +417,6 @@ describe("agency-herdr-setup", () => {
 		const h = harness()
 		const workerConfig = JSON.stringify({
 			default_agent: "implementation",
-			model: "openai/gpt-6-astra",
 		})
 		expect(
 			await main([h.context.target.path, "--intent", "launch"], h.io, {
