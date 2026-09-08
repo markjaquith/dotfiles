@@ -26,7 +26,7 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["opencode-tests"] {
-		check = "bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts ./home/.config/opencode/beta-adapters/herdr/tui.test.ts test/opencode2-profile.test.ts test/opencode2-plugins.test.ts"
+		check = "bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-profile.test.ts test/opencode2-plugins.test.ts"
 	}
 }
 

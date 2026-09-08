@@ -4,8 +4,11 @@ set -e
 
 config_dir="${0:A:h:h}/home/.config/opencode"
 if [[ -e "$config_dir/plugins/herdr-agent-state.js" ]]; then
-	print -u2 "Herdr restored its legacy server plugin. Reconcile it with legacy-integrations before installing OpenCode 2."
-	exit 1
+	version=$(sed -n 's|^// HERDR_INTEGRATION_VERSION=||p' "$config_dir/plugins/herdr-agent-state.js")
+	if [[ "$version" != <-> || "$version" -lt 12 ]]; then
+		print -u2 "Herdr's server plugin needs integration version 12 or newer for OpenCode 2. Reinstall the V2-compatible Herdr integration."
+		exit 1
+	fi
 fi
 npm ci --ignore-scripts --prefix "$config_dir"
 

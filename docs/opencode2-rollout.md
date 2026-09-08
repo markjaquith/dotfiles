@@ -81,21 +81,25 @@ is registered, without submitting prompts. Sound playback still requires the
 existing worker-role gate or `OPENCODE_DING=1`; the new shared-service default
 does not establish pane-local sound behavior.
 
-## Herdr Adapter
+## Herdr Integration
 
-`cli.json` registers the `beta-adapters/herdr` directory. Its TUI entrypoint
-adapts beta routes/events to Herdr's existing socket protocol, filters events to
-the selected root and its descendants, and cleans up listeners/polling.
-Unix-socket tests cover root/child isolation, selection changes, retries, and
-cleanup. Full interactive host validation remains outstanding.
+`cli.json` registers `./herdr-opencode`, the native TUI entrypoint shipped by
+Herdr integration version 12. The managed files are `herdr-tui-session.js`,
+`herdr-opencode/tui.js`, and `plugins/herdr-agent-state.js`. The custom beta
+adapter and archived v11 state reporter have been retired.
 
-The managed v11 state reporter is preserved byte-for-byte under
-`legacy-integrations/`, outside server autodiscovery. The original managed TUI
-reporter is reused through a facade. Do not reinstall the old Herdr integration
-without reconciliation: it can recreate `plugins/herdr-agent-state.js`. The
-OpenCode installer fails explicitly if that legacy path reappears rather than
-silently overwriting or enabling it. A shared server must not report another
-pane's session using its inherited Herdr environment.
+The server entrypoint supports V1 through `server()` and loads inertly in V2
+through `setup()`. V2 lifecycle reporting belongs to the pane-local TUI, which
+filters events to its selected root and aggregates descendant permissions and
+forms. Execution success and interruption report idle. Pending forms or
+permissions keep the pane blocked until all are resolved.
+
+Live checks passed with V1 1.18.29 and V2 beta-19242: completion, interruption,
+two panes sharing one server without cross-talk, and multiple pending forms.
+`test/herdr-opencode.test.ts` verifies the installed entrypoints over a local
+socket. The OpenCode installer permits version 12 or newer and rejects older
+server reporters. Until this Herdr change is released, reinstall the integration
+from the `opencode-v2-support` checkout rather than an older installed Herdr.
 
 ## Unsupported Behavior
 

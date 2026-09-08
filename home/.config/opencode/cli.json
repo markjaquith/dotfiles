@@ -1,6 +1,6 @@
 {
 	"$schema": "https://opencode.ai/v2/cli.json",
-	"plugins": [{ "package": "./beta-adapters/herdr" }],
+	"plugins": ["./herdr-opencode"],
 	"theme": {
 		"name": "catppuccin"
 	},
