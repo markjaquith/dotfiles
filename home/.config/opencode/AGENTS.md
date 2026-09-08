@@ -100,9 +100,13 @@ Exit zero means **dispatch accepted**, not **task started**.
 The initiating agent must not resolve the predecessor branch, glob task checkouts,
 list tabs, inspect model configuration, search for reasoning-effort settings, or
 rediscover Herdr/OpenCode command syntax before dispatch. Those are not kickoff
-prerequisites. Return when dispatch is accepted; do not poll or babysit unless
-the user explicitly requests monitoring. Do not manually duplicate the dispatch
-transaction when it fails or times out; retain returned IDs for recovery.
+prerequisites. It must not call `opencode.session_move`: the initiating session
+is delegating to a new Agency worker, not adopting the managed checkout as its
+own working directory. Agency and the setup helper own checkout materialization
+and worker placement, and the new worker starts in the correct managed context.
+Return when dispatch is accepted; do not poll or babysit unless the user
+explicitly requests monitoring. Do not manually duplicate the dispatch transaction
+when it fails or times out; retain returned IDs for recovery.
 
 The temporary setup agent owns only narrow item lookup and requested creation,
 then invokes `agency-herdr-setup <absolute-document-path> --intent open|launch`
