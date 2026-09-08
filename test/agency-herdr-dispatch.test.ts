@@ -4,7 +4,6 @@ import { resolve } from "node:path"
 import {
 	main,
 	setupConfig,
-	setupModel,
 	setupProfile,
 	type Runtime,
 } from "../bin/agency-herdr-dispatch.ts"
@@ -137,7 +136,7 @@ function fake(
 					id: "cli:agent:start",
 					result: {
 						agent: { ...agent, name },
-						argv: ["opencode", "mini", "--agent", setupProfile],
+						argv: ["opencode"],
 						type: "agent_started",
 					},
 				})
@@ -164,14 +163,14 @@ const inheritedJsonc = String.raw`// Inherited worker settings, not setup defaul
 {
   "default_agent": "implementation",
   "model": "openai/gpt-6-astra",
-  "provider": {
-    "openai": { "options": { "baseURL": "https://example.invalid//api", }, },
+  "providers": {
+    "openai": { "settings": { "baseURL": "https://example.invalid//api", }, },
   },
   /* Retain the worker profile and literal comment markers inside strings. */
-  "agent": {
+  "agents": {
     "implementation": {
       "mode": "primary",
-      "options": { "reasoningEffort": "high", },
+      "request": { "body": { "reasoningEffort": "high", }, },
     },
   },
   "instructions": ["Keep // and /* markers */ literal.", "Quote: \"ok\"",],
@@ -197,21 +196,20 @@ describe("agency-herdr-dispatch", () => {
 		)
 		expect(config).toEqual({
 			$schema: "https://opencode.ai/config.json",
-			default_agent: "implementation",
+			default_agent: setupProfile,
 			model: "openai/gpt-6-astra",
-			provider: {
-				openai: { options: { baseURL: "https://example.invalid//api" } },
+			providers: {
+				openai: { settings: { baseURL: "https://example.invalid//api" } },
 			},
-			agent: {
+			agents: {
 				implementation: {
 					mode: "primary",
-					options: { reasoningEffort: "high" },
+					request: { body: { reasoningEffort: "high" } },
 				},
 				[setupProfile]: {
 					mode: "primary",
-					model: "openai/gpt-5.6-sol",
-					variant: "low",
-					options: { reasoningEffort: "low" },
+					model: "openai/gpt-5.6-sol#low",
+					request: { body: { reasoningEffort: "low" } },
 				},
 			},
 			instructions: ["Keep // and /* markers */ literal.", 'Quote: "ok"'],
@@ -297,10 +295,6 @@ describe("agency-herdr-dispatch", () => {
 				"w3S:p48",
 				"--timeout",
 				"30000",
-				"--",
-				"mini",
-				"--agent",
-				"agency-herdr-dispatch-setup",
 			])
 			expect(f.calls[3]!.argv.slice(0, 4)).toEqual([
 				"herdr",
@@ -594,15 +588,15 @@ describe("agency-herdr-dispatch", () => {
 			const inherited = {
 				default_agent: "implementation",
 				model: "openai/gpt-6-astra",
-				permission: { bash: "ask" },
-				agent: {
+				permissions: [{ action: "shell", resource: "*", effect: "ask" }],
+				agents: {
 					implementation: {
 						mode: "primary",
 						model: "openai/gpt-6-astra",
-						options: { reasoningEffort: "high" },
+						request: { body: { reasoningEffort: "high" } },
 					},
 				},
-				provider: { openai: { options: { timeout: 1234 } } },
+				providers: { openai: { settings: { timeout: 1234 } } },
 			}
 			const sourceEnv = {
 				...env,
@@ -626,7 +620,8 @@ describe("agency-herdr-dispatch", () => {
 				arg === "--env" ? [tab[i + 1]!] : [],
 			)
 			expect(assignments).toEqual([
-				`OPENCODE_CONFIG_CONTENT=${JSON.stringify({ ...inherited, ...setupConfig, agent: { ...inherited.agent, ...setupConfig.agent } })}`,
+				`OPENCODE_CONFIG_CONTENT=${JSON.stringify({ ...inherited, ...setupConfig, agents: { ...inherited.agents, ...setupConfig.agents } })}`,
+				`AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT=${JSON.stringify(inherited)}`,
 				"AGENCY_HERDR_ORIGIN_PANE_ID=w3S:p47",
 				"AGENCY_HERDR_ORIGIN_TAB_ID=w3S:t20",
 				"AGENCY_HERDR_ORIGIN_WORKSPACE_ID=w3S",
@@ -634,17 +629,16 @@ describe("agency-herdr-dispatch", () => {
 			const config = JSON.parse(
 				assignments[0]!.slice("OPENCODE_CONFIG_CONTENT=".length),
 			)
-			expect(config.default_agent).toBe("implementation")
-			expect(config.agent[config.default_agent]).toEqual(
-				inherited.agent.implementation,
+			expect(config.default_agent).toBe(setupProfile)
+			expect(config.agents.implementation).toEqual(
+				inherited.agents.implementation,
 			)
 			expect(config.model).toBe(inherited.model)
-			expect(config.provider).toEqual(inherited.provider)
-			expect(config.agent[setupProfile]).toEqual({
+			expect(config.providers).toEqual(inherited.providers)
+			expect(config.agents[setupProfile]).toEqual({
 				mode: "primary",
-				model: "openai/gpt-5.6-sol",
-				variant: "low",
-				options: { reasoningEffort: "low" },
+				model: "openai/gpt-5.6-sol#low",
+				request: { body: { reasoningEffort: "low" } },
 			})
 			expect(
 				f.calls.filter((call) => call.argv.includes("--env")),
@@ -661,15 +655,15 @@ describe("agency-herdr-dispatch", () => {
 		const config = JSON.parse(
 			assignment.slice("OPENCODE_CONFIG_CONTENT=".length),
 		)
-		expect(Object.keys(config).sort()).toEqual(["$schema", "agent"])
-		expect(Object.keys(config.agent)).toEqual([setupProfile])
-		expect(config.agent[setupProfile].options.reasoningEffort).toBe("low")
-		const start = f.calls[2]!.argv
-		expect(start.slice(start.indexOf("--") + 1)).toEqual([
-			"mini",
-			"--agent",
-			setupProfile,
+		expect(Object.keys(config).sort()).toEqual([
+			"$schema",
+			"agents",
+			"default_agent",
 		])
+		expect(Object.keys(config.agents)).toEqual([setupProfile])
+		expect(config.agents[setupProfile].request.body.reasoningEffort).toBe("low")
+		const start = f.calls[2]!.argv
+		expect(start).not.toContain("--")
 		expect(f.calls[3]!.argv[4]).toContain(
 			"Preserve inherited implementation-worker defaults",
 		)
@@ -887,137 +881,3 @@ describe("agency-herdr-dispatch", () => {
 		}
 	})
 })
-
-// Optional source contract test; no CLI calls, network, or launches. The source
-// checkout must have its own dependencies installed. Never install them here.
-test.skipIf(!process.env.OPENCODE_SOURCE_DIR)(
-	"OpenCode's actual mini resolver bypasses saved high without CLI model and keeps setup low",
-	async () => {
-		const root = resolve(process.env.OPENCODE_SOURCE_DIR!)
-		const { Schema, Effect, Layer } = await import(
-			Bun.resolveSync("effect", `${root}/packages/core`)
-		)
-		const { ConfigAgentV1 } = await import(
-			`${root}/packages/core/src/v1/config/agent.ts`
-		)
-		const profile = Schema.decodeUnknownSync(ConfigAgentV1.Info)(
-			setupConfig.agent[setupProfile],
-		)
-		// Independent expected values, not merely a schema acceptance assertion.
-		expect(profile.options.reasoningEffort).toBe("low")
-		expect(profile.variant).toBe("low")
-		expect(profile.model).toBe("openai/gpt-5.6-sol")
-		expect(profile.mode).toBe("primary")
-		expect(setupConfig).not.toHaveProperty("default_agent")
-		const { ConfigParse } = await import(
-			`${root}/packages/opencode/src/config/parse.ts`
-		)
-		expect(
-			ConfigParse.jsonc(inheritedJsonc, "OPENCODE_CONFIG_CONTENT")
-				.default_agent,
-		).toBe("implementation")
-		const { prepare } = await import(
-			`${root}/packages/opencode/src/session/llm/request.ts`
-		)
-		const { ProviderTransform } = await import(
-			`${root}/packages/opencode/src/provider/transform.ts`
-		)
-		const model = {
-			id: "gpt-5.6-sol",
-			providerID: "openai",
-			api: {
-				id: "gpt-5.6-sol",
-				npm: "@ai-sdk/openai",
-				url: "https://api.openai.com/v1",
-			},
-			capabilities: { reasoning: true, temperature: false },
-			options: { reasoningEffort: "high" },
-			limit: { context: 200000, output: 32000 },
-			headers: {},
-		}
-		const variants = ProviderTransform.variants(model)
-		expect(variants.low.reasoningEffort).toBe("low")
-		const { createVariantRuntime, resolveVariant } = await import(
-			`${root}/packages/opencode/src/cli/cmd/run/variant.shared.ts`
-		)
-		const { FSUtil } = await import(`${root}/packages/core/src/fs-util.ts`)
-		let savedReads = 0
-		const mini = createVariantRuntime(
-			Layer.succeed(FSUtil.Service, {
-				readJson: () => {
-					savedReads++
-					return Effect.succeed({ variant: { [setupModel]: "high" } })
-				},
-				writeJson: () => {
-					throw new Error("Mini resolution must not write saved preferences")
-				},
-			}),
-		)
-		// Reproduce the old CLI --model path through mini's actual saved-state reader.
-		const legacySaved = await mini.resolveSavedVariant({
-			providerID: "openai",
-			modelID: "gpt-5.6-sol",
-		})
-		const legacyVariant = resolveVariant(
-			undefined,
-			undefined,
-			legacySaved,
-			Object.keys(variants),
-		)
-		expect(legacyVariant).toBe("high")
-		expect(savedReads).toBe(1)
-		const f = fake()
-		expect(await main(args, f.io, env, cwd)).toBe(0)
-		const start = f.calls[2]!.argv
-		const native = start.slice(start.indexOf("--") + 1)
-		expect(native).toEqual(["mini", "--agent", setupProfile])
-		const modelIndex = native.indexOf("--model")
-		const cliModel =
-			modelIndex < 0
-				? undefined
-				: {
-						providerID: native[modelIndex + 1]!.split("/")[0],
-						modelID: native[modelIndex + 1]!.split("/").slice(1).join("/"),
-					}
-		const miniSaved = await mini.resolveSavedVariant(cliModel)
-		const miniVariant = resolveVariant(
-			undefined,
-			undefined,
-			miniSaved,
-			Object.keys(variants),
-		)
-		expect(miniVariant).toBeUndefined()
-		expect(savedReads).toBe(1) // No saved model preference lookup without --model.
-		// The legacy saved high overrides options.low; the fixed mini path does not.
-		for (const [variant, effort] of [
-			[legacyVariant, "high"],
-			[miniVariant, "low"],
-			[profile.variant, "low"],
-		]) {
-			const prepared = await Effect.runPromise(
-				prepare({
-					user: { id: "test-message", model: { variant } },
-					sessionID: "test-session",
-					model: { ...model, variants },
-					agent: {
-						...profile,
-						name: setupProfile,
-						prompt: "Setup",
-						permission: [],
-					},
-					provider: { id: "openai", options: {} },
-					system: [],
-					messages: [],
-					tools: {},
-					flags: {},
-					isWorkflow: false,
-					plugin: {
-						trigger: (_name: string, _input: unknown, output: unknown) =>
-							Effect.succeed(output),
-					},
-				}),
-			)
-			expect(prepared.params.options.reasoningEffort).toBe(effort)
-		}
-	},
-)

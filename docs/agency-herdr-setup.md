@@ -73,10 +73,13 @@ these variables to make another pane appear to be the caller.
    `ReadinessService.isResumableWork`. Other non-validation blockers do not prevent
    that installed resumption path; unforced `agency work` checks it again.
 4. Split the setup pane down into a worker shell using the authoritative item
-   directory and `--no-focus`. If preflight or preparation failed, leave this
-   shell unlaunched. Otherwise submit `agency work .`, adding `--auto` only for
-   `launch`, and the explicit readiness switch when requested. Preparation and
-   launch never receive `--force`.
+   directory and `--no-focus`. When the dispatcher supplied
+   `AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT`, validate it as a JSON object and
+   set it as that pane's `OPENCODE_CONFIG_CONTENT`, removing the temporary setup
+   profile/default from implementation workers. If preflight or preparation
+   failed, leave this shell unlaunched. Otherwise submit `agency work .`, adding
+   `--auto` only for `launch`, and the explicit readiness switch when requested.
+   Preparation and launch never receive `--force`.
 5. Split the worker pane right, also with explicit cwd and `--no-focus`, and
    submit `nvim -- 'TASK.md'`, `PHASE.md`, or `EPIC.md`. This happens **before**
    worker detection, including after preparation or launch failures.
