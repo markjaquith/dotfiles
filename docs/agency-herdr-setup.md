@@ -63,9 +63,11 @@ these variables to make another pane appear to be the caller.
    checks precede UI mutations. Then rename the explicit setup tab. An unsupported
    capability retains the recovery layout but skips all preparation and worker
    launch. Default invocations make **no capability calls**.
-3. Require clean initial validation and nonterminal work. For execution tasks and
-   phases, let unforced preparation with `--dry-run --json` decide readiness,
-   including valid `working` resumption. Validate its execution contract and pass its exact
+3. Require clean initial validation and nonterminal work. For execution tasks,
+   phases, and review tasks, let unforced preparation with `--dry-run --json`
+   decide readiness, including valid `working` resumption. Review authority is
+   validated as one detached, read-only checkout; it is never treated as writable
+   repository authority. Validate the execution contract and pass its exact
    `validationEvidence.evidence` object as inline JSON to applying preparation
    with `--evidence`. Require unchanged, reused evidence in the applying result.
    Epic and multi-phase task orchestration skips preparation and accepts readiness
@@ -73,13 +75,17 @@ these variables to make another pane appear to be the caller.
    `ReadinessService.isResumableWork`. Other non-validation blockers do not prevent
    that installed resumption path; unforced `agency work` checks it again.
 4. Split the setup pane down into a worker shell using the authoritative item
-   directory and `--no-focus`. If preflight or preparation failed, leave this
-   shell unlaunched. Otherwise submit `agency work .`, adding `--auto` only for
-   `launch`, and the explicit readiness switch when requested. Preparation and
-   launch never receive `--force`.
+   directory and `--no-focus`. When the dispatcher supplied
+   `AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT`, restore that inherited config
+   as the pane's `OPENCODE_CONFIG_CONTENT`, removing the temporary setup-agent
+   default. If preflight or preparation failed, leave this shell unlaunched.
+   Otherwise submit `agency work .`, adding `--auto` only for `launch`, and the
+   explicit readiness switch when requested. Preparation and launch never
+   receive `--force`.
 5. Split the worker pane right, also with explicit cwd and `--no-focus`, and
-   submit `nvim -- 'TASK.md'`, `PHASE.md`, or `EPIC.md`. This happens **before**
-   worker detection, including after preparation or launch failures.
+   the same restored OpenCode config, then submit `nvim -- 'TASK.md'`, `PHASE.md`,
+   or `EPIC.md`. This happens **before** worker detection, including after
+   preparation or launch failures.
 6. If launched, wait on the explicit worker pane for `idle|done` (`open`) or
    `working|done` (`launch`). Also wait for `blocked` so it fails immediately and
    stays visible. Only the installed Herdr `agent_not_found` startup race is
@@ -91,8 +97,9 @@ these variables to make another pane appear to be the caller.
    Check validation and compare target identity, workbase root, and full authority
    against the initial context. Final workspace warnings must be empty. Legitimate
    status/revision changes, including rapid completion to `done` or `dropped`, are
-   allowed; only the initial check prohibits terminal work. A launched execution workspace must also be
-   completely materialized with its writable checkout registered.
+   allowed; only the initial check prohibits terminal work. A launched execution
+   workspace must have its writable checkout registered; a launched review
+   workspace must have its declared detached reference checkout registered.
 8. Only when every step succeeds, synchronously print completion and returned
    IDs, then close the explicit setup pane. Closing may terminate the helper
    before it returns. No success depends on reading output after that close.
@@ -255,7 +262,7 @@ bunx secretlint bin/agency-herdr-setup.ts test/agency-herdr-setup.test.ts docs/a
 ```
 
 The test runtime records every argv/cwd/timeout and never calls Agency or Herdr.
-Tests cover execution and orchestration routing, both intents, evidence reuse,
+Tests cover execution, review, and orchestration routing, both intents, evidence reuse,
 the absence of force on every recorded command, recovery ordering, bounded
 recognition, working resumption, rapid completion, provisional warning boundaries,
 final validation and authority changes, empty Agency environment variables,

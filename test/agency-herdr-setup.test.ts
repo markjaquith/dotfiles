@@ -69,7 +69,7 @@ const agentFailure = (code: string) => ({
 })
 
 // Fields consumed by the helper, using Agency 3.2.15 / Herdr 0.8.2 wire shapes.
-function fixture(kind = "task", container = false) {
+function fixture(kind = "task", container = false, review = false) {
 	const root = "/work base/owner's project"
 	const taskPath = `${root}/tasks/task-1/TASK.md`
 	const path =
@@ -79,14 +79,23 @@ function fixture(kind = "task", container = false) {
 				? `${root}/epics/epic-1/EPIC.md`
 				: taskPath
 	const directory = path.slice(0, path.lastIndexOf("/"))
-	const execution = kind !== "epic" && !container
+	const execution = kind !== "epic" && !container && !review
 	const id =
 		kind === "phase" ? "phase-2" : kind === "epic" ? "epic-1" : "task-1"
-	const data: JsonObject = execution
-		? { repo: "repo", branch: "feature/one", base: "main", status: "open" }
-		: container
-			? { phases: [{ id: "phase-2" }] }
-			: { tasks: [{ id: "task-1" }] }
+	const data: JsonObject = review
+		? {
+				review: {
+					repo: "repo",
+					commit: "review-commit",
+					source: { kind: "pull-request" },
+				},
+				status: "open",
+			}
+		: execution
+			? { repo: "repo", branch: "feature/one", base: "main", status: "open" }
+			: container
+				? { phases: [{ id: "phase-2" }] }
+				: { tasks: [{ id: "task-1" }] }
 	const doc = { id, path, sha256: "revision-1", data }
 	const task =
 		kind === "phase"
@@ -114,7 +123,7 @@ function fixture(kind = "task", container = false) {
 			epic: kind === "epic" ? doc : null,
 		},
 		authority: {
-			mode: execution ? "execution" : "orchestration",
+			mode: review ? "review" : execution ? "execution" : "orchestration",
 			writable: execution
 				? {
 						repo: "repo",
@@ -124,11 +133,21 @@ function fixture(kind = "task", container = false) {
 						base: "main",
 					}
 				: null,
-			references: [] as JsonObject[],
+			references: review
+				? [
+						{
+							repo: "repo",
+							ref: "review-commit",
+							repositoryPath: `${root}/repos/repo`,
+							checkoutPath: `${directory}/code/repo`,
+						},
+					]
+				: ([] as JsonObject[]),
 			documents: {
-				writable: execution
-					? [taskPath, ...(kind === "phase" ? [path] : [])]
-					: [],
+				writable:
+					execution || review
+						? [taskPath, ...(kind === "phase" ? [path] : [])]
+						: [],
 			},
 		},
 		graph: {
@@ -146,8 +165,18 @@ function fixture(kind = "task", container = false) {
 		workspace: {
 			materialization: "complete",
 			writable: execution ? { materialized: true, registered: true } : null,
+			references: review
+				? [{ repo: "repo", materialized: true, registered: true }]
+				: [],
 			warnings: [] as string[],
 		},
+		review: review
+			? {
+					repo: "repo",
+					commit: "review-commit",
+					checkout: { checkoutPath: `${directory}/code/repo` },
+				}
+			: null,
 	}
 }
 
@@ -175,6 +204,10 @@ function setStatus(context: Context, status: string) {
 
 function prepare(context: Context, dryRun: boolean) {
 	const { target, documents, authority, workbase } = context
+	const review = authority.mode === "review"
+	const checkoutPath = review
+		? context.review!.checkout.checkoutPath
+		: authority.writable!.checkoutPath
 	const doc = target.kind === "phase" ? documents.phase! : documents.task!
 	const node =
 		target.kind === "phase"
@@ -187,8 +220,8 @@ function prepare(context: Context, dryRun: boolean) {
 			taskPath: documents.task!.path,
 			phasePath: documents.phase?.path ?? null,
 			dryRun,
-			writablePath: authority.writable!.checkoutPath,
-			reviewPath: null,
+			writablePath: review ? null : checkoutPath,
+			reviewPath: review ? checkoutPath : null,
 			repo: "repo",
 			repos: [],
 		},
@@ -208,8 +241,7 @@ function prepare(context: Context, dryRun: boolean) {
 				configRevision: "config-revision",
 				repositoryMappingRevision: "mapping-revision",
 				recalledContext: {
-					repo: "repo",
-					base: "main",
+					...(review ? {} : { repo: "repo", base: "main" }),
 					preferredSlug: "task-1",
 					authoritativeSources: [],
 				},
@@ -226,7 +258,7 @@ function prepare(context: Context, dryRun: boolean) {
 				executionDirectory: directory,
 				taskDocument: documents.task!.path,
 				phaseDocument: documents.phase?.path ?? null,
-				checkoutPath: authority.writable!.checkoutPath,
+				checkoutPath,
 			},
 		},
 	}
@@ -374,6 +406,34 @@ const contexts = (h: ReturnType<typeof harness>) =>
 	h.calls.filter(({ argv }) => argv[1] === "context")
 
 describe("agency-herdr-setup", () => {
+	test("restores inherited OpenCode config on worker and editor panes", async () => {
+		const h = harness()
+		const inherited = JSON.stringify({ default_agent: "implementation" })
+		expect(
+			await main([h.context.target.path, "--intent", "open"], h.io, {
+				...env,
+				AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT: inherited,
+			}),
+		).toBe(0)
+		const splits = h.calls.filter(({ argv }) => argv[2] === "split")
+		expect(splits).toHaveLength(2)
+		for (const { argv } of splits)
+			expect(argv).toContain(`OPENCODE_CONFIG_CONTENT=${inherited}`)
+	})
+
+	for (const intent of ["open", "launch"])
+		test(`review task: ${intent}`, async () => {
+			const h = harness(fixture("task", false, true))
+			expect(await run(h, intent)).toBe(0)
+			const prepareCalls = h.calls.filter(
+				({ argv }) =>
+					argv[0] === "agency" && argv[1] === "work" && argv[2] === "prepare",
+			)
+			expect(prepareCalls).toHaveLength(2)
+			expect(prepareCalls[0]!.argv).toContain("--dry-run")
+			expect(prepareCalls[1]!.argv).not.toContain("--dry-run")
+		})
+
 	for (const prepareTimeout of [undefined, 1000, 450000, 600000])
 		for (const intent of ["open", "launch"])
 			test(`separate apply budget: ${prepareTimeout ?? "default"}, ${intent}`, async () => {

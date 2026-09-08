@@ -61,7 +61,7 @@ explicit user authorization described below.
 2. Create one tab with explicit inherited `--workspace`, requested `--cwd`,
    `--label`, `--no-focus`, and the four `--env` assignments below.
 3. Start a uniquely named agent in the returned root pane with
-   `herdr agent start <name> --kind opencode --pane <id> --timeout 30000 -- mini --agent agency-herdr-dispatch-setup`.
+   `herdr agent start <name> --kind opencode --pane <id> --timeout 30000`.
 4. Submit the protocol and complete original request with `herdr agent prompt`.
    Return immediately when `agent_prompted` is accepted. No `--wait`, work
    polling, focus command, retry, or task mutation occurs in the dispatcher.
@@ -84,10 +84,11 @@ Only the new tab receives these explicit overrides:
 
 - `OPENCODE_CONFIG_CONTENT`: the named setup profile below, merged with
   inherited inline configuration. Other profiles, providers, permissions, and
-  settings remain intact; the reserved setup profile is replaced. Later worker
-  and editor panes inherit this tab environment too, so it must not change their
-  defaults: inherited `default_agent`, global `model`, and provider configuration
-  remain unchanged, and none are added when absent.
+  settings remain intact; the reserved setup profile is replaced and selected as
+  this temporary full TUI's `default_agent`.
+- `AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT`: the inherited inline
+  configuration before that setup-only override. The helper explicitly restores
+  it on the worker and editor panes, preserving their defaults.
 - `AGENCY_HERDR_ORIGIN_PANE_ID`: this dispatch's verified caller pane.
 - `AGENCY_HERDR_ORIGIN_TAB_ID`: this dispatch's verified caller tab.
 - `AGENCY_HERDR_ORIGIN_WORKSPACE_ID`: this dispatch's verified caller workspace.
@@ -107,6 +108,7 @@ runtime dependency is declared in root `package.json` and `bun.lock`.
 ```json
 {
 	"$schema": "https://opencode.ai/config.json",
+	"default_agent": "agency-herdr-dispatch-setup",
 	"agent": {
 		"agency-herdr-dispatch-setup": {
 			"mode": "primary",
@@ -118,14 +120,12 @@ runtime dependency is declared in root `package.json` and `bun.lock`.
 }
 ```
 
-`mini` selects the interface, not reasoning effort. Low effort is a real model
-option, not an instruction in the prompt. Only the temporary setup process
-selects this profile via explicit `--agent`; the profile supplies both its model
-and low variant. Do not add a redundant native `--model`: mini then looks up the
-saved preference for that model, and a saved high variant can override the
-profile's low options. Without a CLI model, that saved preference lookup is
-skipped. Subsequent `agency work` processes keep their inherited implementation
-defaults; no `default_agent` override is introduced.
+The dispatcher starts the full OpenCode TUI, not `mini`. Low effort is a real
+model option, not an instruction in the prompt. The temporary tab selects the
+setup profile with `default_agent`; the profile supplies both its model and low
+variant. Before launching subsequent `agency work` processes, the helper restores
+the inherited inline configuration on their panes, preserving implementation
+worker defaults.
 
 Verified against the published `https://opencode.ai/config.json` schema and local
 OpenCode source:
@@ -136,17 +136,13 @@ OpenCode source:
   local file-based profiles.
 - `packages/opencode/src/config/parse.ts`: JSONC comments and trailing commas are
   accepted, but parse errors are rejected.
-- `packages/opencode/src/cli/cmd/run/runtime.ts` and `run/variant.shared.ts`:
-  mini resolves saved variants using the CLI model; no model skips saved-state
-  lookup. The source contract test supplies fake saved-high preferences to the
-  real resolver, not to a reimplementation of its selection logic.
 - `packages/opencode/src/session/llm/request.ts`: model defaults, model options,
   agent options, and selected variant are merged in that order.
 
 Installed OpenCode 1.18.29's read-only `debug agent` resolved the exact exported
 setup profile to `openai/gpt-5.6-sol`, `variant: low`, and
 `options.reasoningEffort: low`. `debug config` and injected-IO tests verify that
-the profile does not replace inherited worker defaults. OpenAI was enabled, and
+the helper restores inherited worker defaults. OpenAI was enabled, and
 `opencode models openai` included that model. These checks
 were development verification, not extra discovery commands on every dispatch.
 Local source was 1.18.28; installed CLI acceptance is the authority for startup.
@@ -167,11 +163,21 @@ ancestry is not a completion gate: basing a phase on another phase's branch must
 not imply `--depends-on`. Explicit user gates and existing dependencies are
 preserved unless the user explicitly asks to remove them.
 
-The setup agent calls `agency-herdr-setup '<document-path>' --intent open|launch`
-exactly once. That helper owns preparation, layout, launch, bounded startup
-detection, final verification, and closing the setup pane on success. If selected,
-the same quoted executable is forwarded via `--agency-executable`. Missing or
-failed helpers leave recovery panes visible; no fallback transaction is invented.
+Creation is attempted at most once. A structured, non-retryable `already exists`
+error for the exact requested kind and ID is treated as an idempotent kickoff:
+the setup agent resolves that exact item with the matching narrow `show` command,
+verifies its identity and context, and requires explicitly requested repository,
+branch, base, references, and work requirements to be compatible. It never
+mutates an existing item to manufacture compatibility. Every other creation or
+resolution failure follows the normal pre-helper failure path.
+
+The setup agent then calls
+`agency-herdr-setup '<document-path>' --intent open|launch` exactly once. That
+helper owns preparation—including safe reuse of an already-materialized
+checkout—layout, launch, bounded startup detection, final verification, and
+closing the setup pane on success. If selected, the same quoted executable is
+forwarded via `--agency-executable`. Missing or failed helpers leave recovery
+panes visible; no fallback transaction is invented.
 
 The generated protocol requires every Bash tool call invoking the helper to set
 the tool's `timeout` field explicitly to **1200000ms (20 minutes)**, rather than
@@ -242,11 +248,9 @@ setup configuration/worker defaults.
 Full Herdr response fixtures come from read-only inspection and historical CLI
 responses, with names/caller fields and private paths/labels substituted. The
 optional source contract test loads OpenCode's real JSONC parser, schema decoder,
-mini saved-variant runtime/resolver, variant generator, and LLM request-preparation
-function from an existing dependency-installed checkout. A fake filesystem
-supplies a saved high preference without reading or writing actual model state.
-It reproduces the old high-effort path with a CLI model and proves that the emitted
-agent-only arguments bypass that lookup and retain low effort. Plugin hooks are
-fake, with no tools or inference. JSONC tests preserve worker defaults, model and
-provider settings, comments inside strings, and reject malformed partial parses.
+variant generator, and LLM request-preparation function from an existing
+dependency-installed checkout. It proves that the full-TUI setup profile retains
+low effort. Plugin hooks are fake, with no tools or inference. JSONC tests preserve
+worker defaults, model and provider settings, comments inside strings, and reject
+malformed partial parses.
 No test invokes a CLI or installs dependencies.

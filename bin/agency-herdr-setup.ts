@@ -112,12 +112,15 @@ function inspect(value: unknown, documentPath: string) {
 	const data = object(doc.data)
 	const authority = object(context.authority)
 	const execution = authority.mode === "execution"
+	const review = authority.mode === "review"
 	const orchestration =
 		kind === "epic" || (kind === "task" && Array.isArray(data.phases))
 	requireValue(
-		execution !== orchestration &&
-			authority.mode === (orchestration ? "orchestration" : "execution"),
-		"Unsupported or inconsistent authority mode",
+		[execution, review, orchestration].filter(Boolean).length === 1 &&
+			authority.mode ===
+				(review ? "review" : orchestration ? "orchestration" : "execution") &&
+			(!review || kind === "task"),
+		`Unsupported or inconsistent authority mode: ${JSON.stringify(authority.mode)} for ${kind}`,
 	)
 	const directory = dirname(documentPath)
 	if (kind !== "epic") {
@@ -128,9 +131,13 @@ function inspect(value: unknown, documentPath: string) {
 			"Parent task identity mismatch",
 		)
 	}
-	const writableDocuments = execution
-		? [object(documents.task).path, ...(kind === "phase" ? [documentPath] : [])]
-		: []
+	const writableDocuments =
+		execution || review
+			? [
+					object(documents.task).path,
+					...(kind === "phase" ? [documentPath] : []),
+				]
+			: []
 	requireValue(
 		isDeepStrictEqual(
 			array(object(authority.documents).writable),
@@ -153,8 +160,23 @@ function inspect(value: unknown, documentPath: string) {
 	} else
 		requireValue(
 			authority.writable === null,
-			"Orchestration cannot have write authority",
+			"Review or orchestration cannot have repository write authority",
 		)
+	let reviewRepo: string | undefined
+	let reviewPath: string | undefined
+	if (review) {
+		const declared = object(data.review)
+		const observed = object(context.review)
+		reviewRepo = slug(declared.repo)
+		const commit = text(declared.commit)
+		reviewPath = join(directory, "code", reviewRepo)
+		requireValue(
+			observed.repo === reviewRepo &&
+				observed.commit === commit &&
+				object(observed.checkout).checkoutPath === reviewPath,
+			"Unexpected review authority",
+		)
+	}
 	for (const entry of array(authority.references)) {
 		const reference = object(entry)
 		const repo = slug(reference.repo)
@@ -166,8 +188,20 @@ function inspect(value: unknown, documentPath: string) {
 			"Unexpected reference authority",
 		)
 	}
+	if (review) {
+		const references = array(authority.references).map(object)
+		requireValue(
+			references.length === 1 &&
+				references[0]!.repo === reviewRepo &&
+				references[0]!.checkoutPath === reviewPath &&
+				references[0]!.ref === object(data.review).commit,
+			"Review reference authority changed",
+		)
+	}
 	const graph = object(context.graph)
-	const status = text(execution ? data.status : object(graph.aggregate).status)
+	const status = text(
+		execution || review ? data.status : object(graph.aggregate).status,
+	)
 	requireValue(
 		["open", "working", "delegated", "done", "dropped"].includes(status),
 		"Unknown target status",
@@ -180,7 +214,7 @@ function inspect(value: unknown, documentPath: string) {
 		"Malformed readiness",
 	)
 	const blockers = array(readiness.blockers).map(object)
-	if (execution) {
+	if (execution || review) {
 		requireValue(
 			readiness.ready === (status === "open" && blockers.length === 0) &&
 				readiness.terminal === (status === "done" || status === "dropped"),
@@ -214,6 +248,9 @@ function inspect(value: unknown, documentPath: string) {
 		kind,
 		directory,
 		execution,
+		review,
+		reviewRepo,
+		reviewPath,
 		authority,
 		writable,
 		readiness,
@@ -278,10 +315,13 @@ function prepared(
 	requireValue(
 		isDeepStrictEqual(
 			array(workspace.repos),
-			array(context.authority.references).map((entry) => {
-				const reference = object(entry)
-				return { repo: reference.repo, ref: reference.ref }
-			}),
+			array(context.authority.references)
+				.map(object)
+				.filter(
+					(reference) =>
+						!context.review || reference.repo !== context.reviewRepo,
+				)
+				.map((reference) => ({ repo: reference.repo, ref: reference.ref })),
 		),
 		"Preparation reference authority changed",
 	)
@@ -291,9 +331,9 @@ function prepared(
 			workspace.phasePath ===
 				(context.kind === "phase" ? context.doc.path : null) &&
 			workspace.dryRun === dryRun &&
-			workspace.writablePath === context.writable?.checkoutPath &&
-			workspace.repo === context.writable?.repo &&
-			workspace.reviewPath === null,
+			workspace.writablePath === (context.writable?.checkoutPath ?? null) &&
+			workspace.repo === (context.reviewRepo ?? context.writable?.repo) &&
+			workspace.reviewPath === (context.reviewPath ?? null),
 		"Preparation workspace changed authority or identity",
 	)
 	requireValue(
@@ -304,7 +344,8 @@ function prepared(
 			identity.target === context.node &&
 			identity.documentRevision === context.doc.sha256 &&
 			contractWorkspace.executionDirectory === context.directory &&
-			contractWorkspace.checkoutPath === context.writable?.checkoutPath &&
+			contractWorkspace.checkoutPath ===
+				(context.reviewPath ?? context.writable?.checkoutPath) &&
 			contractWorkspace.taskDocument === workspace.taskPath &&
 			contractWorkspace.phaseDocument === workspace.phasePath &&
 			contractWorkspace.state === (dryRun ? "planned" : "materialized"),
@@ -328,11 +369,15 @@ function prepared(
 		text(evidence[key])
 	const recalled = object(evidence.recalledContext)
 	requireValue(
-		recalled.repo === context.writable?.repo &&
-			recalled.base === context.writable?.base &&
-			recalled.preferredSlug === context.taskId,
-		"Evidence recalled authority mismatch",
+		recalled.preferredSlug === context.taskId,
+		"Evidence target mismatch",
 	)
+	if (!context.review)
+		requireValue(
+			recalled.repo === context.writable?.repo &&
+				recalled.base === context.writable?.base,
+			"Evidence recalled authority mismatch",
+		)
 	array(recalled.authoritativeSources).map(text)
 	if (previous)
 		requireValue(
@@ -456,6 +501,11 @@ export async function main(
 		const workspaceId = text(env.HERDR_WORKSPACE_ID)
 		const tabId = text(env.HERDR_TAB_ID)
 		const setupId = text(env.HERDR_PANE_ID)
+		const workerConfig = env.AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT
+		const workerEnv =
+			workerConfig === undefined
+				? []
+				: ["--env", `OPENCODE_CONFIG_CONTENT=${workerConfig}`]
 		// Herdr IDs are opaque; verify their relationships against live metadata below.
 		Object.assign(ids, { workspaceId, tabId, setupId })
 		let documentPath: string | undefined
@@ -678,7 +728,7 @@ export async function main(
 						initial.readiness.terminal === false,
 						"Terminal work is not launchable",
 					)
-					if (initial.execution) {
+					if (initial.execution || initial.review) {
 						const preview = await call([
 							agency,
 							"work",
@@ -733,6 +783,7 @@ export async function main(
 							"down",
 							"--cwd",
 							initial.directory,
+							...workerEnv,
 							"--no-focus",
 						],
 						"pane_info",
@@ -770,6 +821,7 @@ export async function main(
 							"right",
 							"--cwd",
 							initial.directory,
+							...workerEnv,
 							"--no-focus",
 						],
 						"pane_info",
@@ -850,14 +902,25 @@ export async function main(
 					isDeepStrictEqual(initial.authority, final.authority),
 				"Final context identity or authority changed",
 			)
-			if (launched && initial.execution) {
+			if (launched && (initial.execution || initial.review)) {
 				const workspace = object(final.context.workspace)
-				requireValue(
-					workspace.materialization === "complete" &&
-						object(workspace.writable).materialized === true &&
-						object(workspace.writable).registered === true,
-					"Final execution workspace is not materialized and registered",
-				)
+				if (initial.review) {
+					const reference = array(workspace.references)
+						.map(object)
+						.find((entry) => entry.repo === initial.reviewRepo)
+					requireValue(
+						workspace.materialization === "complete" &&
+							reference?.materialized === true &&
+							reference.registered === true,
+						"Final review workspace is not materialized and registered",
+					)
+				} else
+					requireValue(
+						workspace.materialization === "complete" &&
+							object(workspace.writable).materialized === true &&
+							object(workspace.writable).registered === true,
+						"Final execution workspace is not materialized and registered",
+					)
 			}
 		} catch (error) {
 			record(error)
