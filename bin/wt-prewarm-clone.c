@@ -97,6 +97,7 @@ int main(int argc, char **argv) {
 		struct stat source_before;
 		struct stat source_after;
 		struct stat target_stat;
+		struct stat target_after;
 		struct timespec target_times[2];
 
 		if (path[0] == '\0' || path[0] == '/') {
@@ -142,7 +143,8 @@ int main(int argc, char **argv) {
 		target_times[1] = target_stat.st_mtimespec;
 		if (chmod(temporary, target_stat.st_mode & 07777) != 0 ||
 			utimensat(AT_FDCWD, temporary, target_times, 0) != 0 ||
-			rename(temporary, target) != 0) {
+			lstat(target, &target_after) != 0 ||
+			!unchanged(&target_stat, &target_after) || rename(temporary, target) != 0) {
 			unlink(temporary);
 			goto next;
 		}

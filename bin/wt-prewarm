@@ -26,7 +26,8 @@ function usage() {
 	print -r -- "  prepare [--create] [--base <base>] [--start-point <commit>]"
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
 	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
-	print -r -- "  compact <branch>  Replace files matching the default branch with APFS clones"
+	print -r -- "  compact <branch|path>"
+	print -r -- "                    Replace files matching the default branch with APFS clones"
 	print -r -- "  compact-status [branch]"
 	print -r -- "                    Report compaction receipts for one or all worktrees"
 	print -r -- "  update <branch>   Fast-forward <branch>'s worktree to the prewarm base"
@@ -193,7 +194,7 @@ function compact_worktree() {
 
 	if ! cc -O2 -o "$helper" "$helper_source" >/dev/null 2>&1 \
 		|| ! git -c core.trustctime=true -C "$target" diff --name-only -z \
-			--no-ext-diff "$base_head" -- >"$excluded_file" \
+			--no-ext-diff --no-renames "$base_head" -- >"$excluded_file" \
 		|| ! git -C "$source" ls-files -z >"$list_file"; then
 		rm -f "$helper" "$list_file" "$excluded_file" 2>/dev/null
 		rmdir "$helper_dir" 2>/dev/null
@@ -233,17 +234,28 @@ EOF
 	print -r -- "wt-prewarm: compacted ${cloned} tracked files against ${base}"
 }
 
-function compact_branch() {
-	local branch_name="$1"
-	local base wt_path rc
+function compact_target() {
+	local requested="$1"
+	local base wt_path common_dir target_common_dir rc
 
-	[[ -n "$branch_name" ]] || die "compact requires a branch name"
+	[[ -n "$requested" ]] || die "compact requires a branch or worktree path"
 	base=$(default_branch) || die "could not resolve default branch"
-	[[ "$branch_name" != "$base" ]] || die "cannot compact ${base} against itself"
 
-	wt_path=$(worktree_path_for_branch "$branch_name" 2>/dev/null)
-	[[ -n "$wt_path" && -d "$wt_path" ]] \
-		|| die "no worktree found for ${branch_name}"
+	if [[ -d "$requested" ]]; then
+		wt_path="${requested:A}"
+		common_dir=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+		target_common_dir=$(git -C "$wt_path" rev-parse \
+			--path-format=absolute --git-common-dir 2>/dev/null)
+		[[ -n "$common_dir" && "$target_common_dir" == "$common_dir" ]] \
+			|| die "not a worktree of this repository: ${requested}"
+	else
+		[[ "$requested" != "$base" ]] || die "cannot compact ${base} against itself"
+		wt_path=$(worktree_path_for_branch "$requested" 2>/dev/null)
+		[[ -n "$wt_path" && -d "$wt_path" ]] \
+			|| die "no worktree found for ${requested}"
+	fi
+	[[ "${wt_path:A}" != "$(worktree_path_for_branch "$base" 2>/dev/null)" ]] \
+		|| die "cannot compact ${base} against itself"
 
 	compact_worktree "$wt_path" "$base"
 	rc=$?
@@ -684,8 +696,8 @@ case "$command_name" in
 		exit $?
 		;;
 	compact)
-		[[ $# -eq 1 ]] || die "compact requires exactly one branch"
-		compact_branch "$1"
+		[[ $# -eq 1 ]] || die "compact requires exactly one branch or worktree path"
+		compact_target "$1"
 		exit $?
 		;;
 	compact-status)
