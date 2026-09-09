@@ -106,6 +106,18 @@ if [[ "$(uname -s)" == "Darwin" && "$feature_status" != compacted:* ]]; then
 	exit 1
 fi
 
+feature_git_dir=$(git -C "$feature_worktree" rev-parse --absolute-git-dir)
+rm -f "$feature_git_dir/wt-prewarm-compaction"
+compact_all_output=$(
+	cd "$repository"
+	wt-prewarm compact --all
+)
+if [[ "$(uname -s)" == "Darwin" \
+	&& "$compact_all_output" != *"compact --all complete (1 compacted, 2 skipped, 0 failed)"* ]]; then
+	print -ru2 -- "FAIL: compact --all did not process only the worktree missing a receipt"
+	exit 1
+fi
+
 if [[ "$(<"$feature_worktree/committed.txt")" != "committed on feature" \
 	|| "$(<"$feature_worktree/dirty.txt")" != "dirty on feature" ]]; then
 	print -ru2 -- "FAIL: compact changed a divergent or dirty file"

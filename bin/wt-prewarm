@@ -26,7 +26,7 @@ function usage() {
 	print -r -- "  prepare [--create] [--base <base>] [--start-point <commit>]"
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
 	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
-	print -r -- "  compact <branch|path>"
+	print -r -- "  compact <branch|path|--all>"
 	print -r -- "                    Replace files matching the default branch with APFS clones"
 	print -r -- "  compact-status [branch]"
 	print -r -- "                    Report compaction receipts for one or all worktrees"
@@ -263,6 +263,92 @@ function compact_target() {
 		die "compaction requires a clean ${base} worktree on the same APFS volume"
 	fi
 	return $rc
+}
+
+function compaction_receipt_is_current() {
+	local wt_path="$1"
+	local base="$2"
+	local base_head="$3"
+	local git_dir receipt key value
+	local version source_branch source_commit target_commit current_target
+
+	git_dir=$(git -C "$wt_path" rev-parse --absolute-git-dir 2>/dev/null) || return 1
+	receipt="${git_dir}/wt-prewarm-compaction"
+	[[ -f "$receipt" ]] || return 1
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+			version) version="$value" ;;
+			source_branch) source_branch="$value" ;;
+			source_commit) source_commit="$value" ;;
+			target_commit) target_commit="$value" ;;
+		esac
+	done <"$receipt"
+
+	current_target=$(git -C "$wt_path" rev-parse --verify HEAD 2>/dev/null) || return 1
+	[[ "$version" == "1" && "$source_branch" == "$base" \
+		&& "$source_commit" == "$base_head" \
+		&& "$target_commit" == "$current_target" ]]
+}
+
+function compact_all() {
+	local base base_path base_head wt_path branch head label rc index total
+	local successes=0
+	local failures=0
+	local skipped=0
+	local -a paths labels
+
+	base=$(default_branch) || die "could not resolve default branch"
+	base_path=$(worktree_path_for_branch "$base" 2>/dev/null)
+	[[ -n "$base_path" && -d "$base_path" ]] \
+		|| die "no worktree found for ${base}"
+	base_path="${base_path:A}"
+	base_head=$(git rev-parse --verify "${base}^{commit}" 2>/dev/null) \
+		|| die "could not resolve ${base}"
+
+	while IFS= read -r line; do
+		case "$line" in
+			worktree\ *)
+				wt_path="${line#worktree }"
+				branch=""
+				head=""
+				;;
+			HEAD\ *) head="${line#HEAD }" ;;
+			branch\ refs/heads/*) branch="${line#branch refs/heads/}" ;;
+			'')
+				[[ -n "$wt_path" ]] || continue
+				if [[ "${wt_path:A}" != "$base_path" ]]; then
+					paths+=("$wt_path")
+					labels+=("${branch:-detached@${head[1,12]}}")
+				fi
+				wt_path=""
+				;;
+		esac
+	done < <(git worktree list --porcelain)
+
+	total=${#paths}
+	for (( index = 1; index <= total; index++ )); do
+		wt_path="${paths[index]}"
+		label="${labels[index]}"
+		if compaction_receipt_is_current "$wt_path" "$base" "$base_head"; then
+			(( skipped++ ))
+			print -r -- "wt-prewarm: [${index}/${total}] skipping ${label} (current receipt)"
+			continue
+		fi
+
+		print -r -- "wt-prewarm: [${index}/${total}] compacting ${label}"
+		compact_worktree "$wt_path" "$base"
+		rc=$?
+		if (( rc == 0 )); then
+			(( successes++ ))
+		else
+			(( failures++ ))
+			print -u2 -- "wt-prewarm: [${index}/${total}] failed ${label}"
+		fi
+	done
+
+	print -r -- "wt-prewarm: compact --all complete (${successes} compacted, ${skipped} skipped, ${failures} failed)"
+	(( failures == 0 ))
 }
 
 function report_compaction_status() {
@@ -696,8 +782,12 @@ case "$command_name" in
 		exit $?
 		;;
 	compact)
-		[[ $# -eq 1 ]] || die "compact requires exactly one branch or worktree path"
-		compact_target "$1"
+		[[ $# -eq 1 ]] || die "compact requires exactly one branch, worktree path, or --all"
+		if [[ "$1" == "--all" ]]; then
+			compact_all
+		else
+			compact_target "$1"
+		fi
 		exit $?
 		;;
 	compact-status)
