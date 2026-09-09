@@ -35,15 +35,59 @@ static int unchanged(const struct stat *before, const struct stat *after) {
 		before->st_ctimespec.tv_nsec == after->st_ctimespec.tv_nsec;
 }
 
+static int compare_paths(const void *left, const void *right) {
+	const char *left_path = *(const char *const *)left;
+	const char *right_path = *(const char *const *)right;
+
+	return strcmp(left_path, right_path);
+}
+
 int main(int argc, char **argv) {
 	char *path = NULL;
 	size_t path_capacity = 0;
+	char **excluded = NULL;
+	size_t excluded_count = 0;
+	size_t excluded_capacity = 0;
 	unsigned long long cloned = 0;
 	unsigned long long sequence = 0;
 
-	if (argc != 3) {
+	if (argc != 4) {
 		return 2;
 	}
+
+	FILE *excluded_file = fopen(argv[3], "r");
+	if (excluded_file == NULL) {
+		return 3;
+	}
+
+	while (getdelim(&path, &path_capacity, '\0', excluded_file) != -1) {
+		if (excluded_count == excluded_capacity) {
+			size_t next_capacity = excluded_capacity == 0 ? 64 : excluded_capacity * 2;
+			char **next = realloc(excluded, next_capacity * sizeof(*excluded));
+			if (next == NULL) {
+				fclose(excluded_file);
+				free(path);
+				return 3;
+			}
+			excluded = next;
+			excluded_capacity = next_capacity;
+		}
+
+		excluded[excluded_count] = strdup(path);
+		if (excluded[excluded_count] == NULL) {
+			fclose(excluded_file);
+			free(path);
+			return 3;
+		}
+		excluded_count++;
+	}
+	if (ferror(excluded_file)) {
+		fclose(excluded_file);
+		free(path);
+		return 4;
+	}
+	fclose(excluded_file);
+	qsort(excluded, excluded_count, sizeof(*excluded), compare_paths);
 
 	while (getdelim(&path, &path_capacity, '\0', stdin) != -1) {
 		char suffix[80];
@@ -56,6 +100,11 @@ int main(int argc, char **argv) {
 		struct timespec target_times[2];
 
 		if (path[0] == '\0' || path[0] == '/') {
+			continue;
+		}
+		char *candidate = path;
+		if (bsearch(&candidate, excluded, excluded_count, sizeof(*excluded),
+			compare_paths) != NULL) {
 			continue;
 		}
 
@@ -107,10 +156,18 @@ int main(int argc, char **argv) {
 	}
 
 	if (ferror(stdin)) {
+		for (size_t index = 0; index < excluded_count; index++) {
+			free(excluded[index]);
+		}
+		free(excluded);
 		free(path);
 		return 4;
 	}
 
+	for (size_t index = 0; index < excluded_count; index++) {
+		free(excluded[index]);
+	}
+	free(excluded);
 	free(path);
 	printf("%llu\n", cloned);
 	return 0;
