@@ -11,6 +11,7 @@ setopt pipefail
 
 PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
 MARKER=".wt-prewarm-ready"
+SCRIPT_DIR="${0:A:h}"
 
 function usage() {
 	print -r -- "Usage: wt-prewarm [command] [options]"
@@ -25,6 +26,10 @@ function usage() {
 	print -r -- "  prepare [--create] [--base <base>] [--start-point <commit>]"
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
 	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
+	print -r -- "  compact <branch|path|--all>"
+	print -r -- "                    Replace files matching the default branch with APFS clones"
+	print -r -- "  compact-status [branch]"
+	print -r -- "                    Report compaction receipts for one or all worktrees"
 	print -r -- "  update <branch>   Fast-forward <branch>'s worktree to the prewarm base"
 	print -r -- "  help              Show this help"
 }
@@ -138,8 +143,293 @@ function remove_prewarm() {
 	fi
 }
 
+# Replace matching tracked files with APFS copy-on-write clones of the
+# default-branch worktree. Git creates ordinary files when checking out a
+# worktree; cloning them afterward lets worktrees share those data blocks until
+# either copy changes.
+#
+# This is deliberately best-effort. A prewarm is still useful on non-APFS
+# filesystems, across volumes, or while the default worktree has local changes.
+function compact_worktree() {
+	local target="$1"
+	local base="$2"
+	local source source_head base_head source_device target_device source_device_name
+	local helper_source helper_dir helper list_file excluded_file cloned
+	local git_dir receipt receipt_temp excluded_hash target_head completed_at
+
+	# BSD cp's -c flag uses clonefile(2). Restrict it to same-volume APFS so it
+	# cannot fall back to a full copy on a filesystem without clone support.
+	[[ "$(uname -s 2>/dev/null)" == "Darwin" ]] || return 2
+
+	source=$(worktree_path_for_branch "$base" 2>/dev/null)
+	[[ -n "$source" && -d "$source" && "$source" != "$target" ]] || return 2
+
+	source_device=$(stat -f %d "$source" 2>/dev/null) || return 2
+	target_device=$(stat -f %d "$target" 2>/dev/null) || return 2
+	[[ "$source_device" == "$target_device" ]] || return 2
+	source_device_name=$(stat -f %Sd "$source" 2>/dev/null) || return 2
+	mount | grep -Eq "^/dev/${source_device_name} on .+ \\(apfs[,)]" || return 2
+
+	# The source checkout must represent exactly the commit used to build the
+	# prewarm. Refuse the whole compaction if any tracked source file is staged
+	# or modified; untracked files are irrelevant because ls-files omits them.
+	source_head=$(git -C "$source" rev-parse --verify HEAD 2>/dev/null) || return 2
+	base_head=$(git rev-parse --verify "${base}^{commit}" 2>/dev/null) || return 2
+	[[ "$source_head" == "$base_head" ]] || return 2
+	git -c core.trustctime=true -C "$source" diff --quiet --no-ext-diff HEAD -- 2>/dev/null || {
+		print -u2 -- "wt-prewarm: skipping compaction; ${base} worktree has tracked changes"
+		return 2
+	}
+
+	# One cp/chmod/touch/mv/stat process per file is prohibitively expensive in
+	# large repositories. Compile a tiny helper and perform all clonefile(2),
+	# metadata, and rename operations in that single process instead.
+	helper_source="${SCRIPT_DIR}/wt-prewarm-clone.c"
+	[[ -f "$helper_source" ]] || return 2
+	command -v cc >/dev/null 2>&1 || return 2
+	helper_dir=$(mktemp -d "${TMPDIR:-/tmp}/wt-prewarm-clone.XXXXXX") || return 2
+	helper="${helper_dir}/wt-prewarm-clone"
+	list_file="${helper_dir}/tracked"
+	excluded_file="${helper_dir}/excluded"
+
+	if ! cc -O2 -o "$helper" "$helper_source" >/dev/null 2>&1 \
+		|| ! git -c core.trustctime=true -C "$target" diff --name-only -z \
+			--no-ext-diff --no-renames "$base_head" -- >"$excluded_file" \
+		|| ! git -C "$source" ls-files -z >"$list_file"; then
+		rm -f "$helper" "$list_file" "$excluded_file" 2>/dev/null
+		rmdir "$helper_dir" 2>/dev/null
+		return 2
+	fi
+
+	cloned=$("$helper" "$source" "$target" "$excluded_file" <"$list_file")
+	if [[ $? -ne 0 || "$cloned" != <-> ]]; then
+		print -u2 -- "wt-prewarm: native compaction helper failed"
+		rm -f "$helper" "$list_file" "$excluded_file" 2>/dev/null
+		rmdir "$helper_dir" 2>/dev/null
+		return 1
+	fi
+
+	git_dir=$(git -C "$target" rev-parse --absolute-git-dir 2>/dev/null) || return 1
+	excluded_hash=$(git hash-object "$excluded_file" 2>/dev/null) || return 1
+	target_head=$(git -C "$target" rev-parse --verify HEAD 2>/dev/null) || return 1
+	completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ) || return 1
+	receipt="${git_dir}/wt-prewarm-compaction"
+	receipt_temp="${receipt}.tmp.$$"
+	cat >"$receipt_temp" <<EOF
+version=1
+source_branch=${base}
+source_commit=${base_head}
+target_commit=${target_head}
+excluded_hash=${excluded_hash}
+cloned_files=${cloned}
+completed_at=${completed_at}
+EOF
+	if ! mv -f "$receipt_temp" "$receipt"; then
+		rm -f "$receipt_temp" 2>/dev/null
+		return 1
+	fi
+	rm -f "$helper" "$list_file" "$excluded_file" 2>/dev/null
+	rmdir "$helper_dir" 2>/dev/null
+
+	print -r -- "wt-prewarm: compacted ${cloned} tracked files against ${base}"
+}
+
+function compact_target() {
+	local requested="$1"
+	local base wt_path common_dir target_common_dir rc
+
+	[[ -n "$requested" ]] || die "compact requires a branch or worktree path"
+	base=$(default_branch) || die "could not resolve default branch"
+
+	if [[ -d "$requested" ]]; then
+		wt_path="${requested:A}"
+		common_dir=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+		target_common_dir=$(git -C "$wt_path" rev-parse \
+			--path-format=absolute --git-common-dir 2>/dev/null)
+		[[ -n "$common_dir" && "$target_common_dir" == "$common_dir" ]] \
+			|| die "not a worktree of this repository: ${requested}"
+	else
+		[[ "$requested" != "$base" ]] || die "cannot compact ${base} against itself"
+		wt_path=$(worktree_path_for_branch "$requested" 2>/dev/null)
+		[[ -n "$wt_path" && -d "$wt_path" ]] \
+			|| die "no worktree found for ${requested}"
+	fi
+	[[ "${wt_path:A}" != "$(worktree_path_for_branch "$base" 2>/dev/null)" ]] \
+		|| die "cannot compact ${base} against itself"
+
+	compact_worktree "$wt_path" "$base"
+	rc=$?
+	if (( rc == 2 )); then
+		die "compaction requires a clean ${base} worktree on the same APFS volume"
+	fi
+	return $rc
+}
+
+function compaction_receipt_is_current() {
+	local wt_path="$1"
+	local base="$2"
+	local base_head="$3"
+	local git_dir receipt key value
+	local version source_branch source_commit target_commit current_target
+
+	git_dir=$(git -C "$wt_path" rev-parse --absolute-git-dir 2>/dev/null) || return 1
+	receipt="${git_dir}/wt-prewarm-compaction"
+	[[ -f "$receipt" ]] || return 1
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+			version) version="$value" ;;
+			source_branch) source_branch="$value" ;;
+			source_commit) source_commit="$value" ;;
+			target_commit) target_commit="$value" ;;
+		esac
+	done <"$receipt"
+
+	current_target=$(git -C "$wt_path" rev-parse --verify HEAD 2>/dev/null) || return 1
+	[[ "$version" == "1" && "$source_branch" == "$base" \
+		&& "$source_commit" == "$base_head" \
+		&& "$target_commit" == "$current_target" ]]
+}
+
+function compact_all() {
+	local base base_path base_head wt_path branch head label rc index total
+	local successes=0
+	local failures=0
+	local skipped=0
+	local -a paths labels
+
+	base=$(default_branch) || die "could not resolve default branch"
+	base_path=$(worktree_path_for_branch "$base" 2>/dev/null)
+	[[ -n "$base_path" && -d "$base_path" ]] \
+		|| die "no worktree found for ${base}"
+	base_path="${base_path:A}"
+	base_head=$(git rev-parse --verify "${base}^{commit}" 2>/dev/null) \
+		|| die "could not resolve ${base}"
+
+	while IFS= read -r line; do
+		case "$line" in
+			worktree\ *)
+				wt_path="${line#worktree }"
+				branch=""
+				head=""
+				;;
+			HEAD\ *) head="${line#HEAD }" ;;
+			branch\ refs/heads/*) branch="${line#branch refs/heads/}" ;;
+			'')
+				[[ -n "$wt_path" ]] || continue
+				if [[ "${wt_path:A}" != "$base_path" ]]; then
+					paths+=("$wt_path")
+					labels+=("${branch:-detached@${head[1,12]}}")
+				fi
+				wt_path=""
+				;;
+		esac
+	done < <(git worktree list --porcelain)
+
+	total=${#paths}
+	for (( index = 1; index <= total; index++ )); do
+		wt_path="${paths[index]}"
+		label="${labels[index]}"
+		if compaction_receipt_is_current "$wt_path" "$base" "$base_head"; then
+			(( skipped++ ))
+			print -r -- "wt-prewarm: [${index}/${total}] skipping ${label} (current receipt)"
+			continue
+		fi
+
+		print -r -- "wt-prewarm: [${index}/${total}] compacting ${label}"
+		compact_worktree "$wt_path" "$base"
+		rc=$?
+		if (( rc == 0 )); then
+			(( successes++ ))
+		else
+			(( failures++ ))
+			print -u2 -- "wt-prewarm: [${index}/${total}] failed ${label}"
+		fi
+	done
+
+	print -r -- "wt-prewarm: compact --all complete (${successes} compacted, ${skipped} skipped, ${failures} failed)"
+	(( failures == 0 ))
+}
+
+function report_compaction_status() {
+	local wt_path="$1"
+	local label="$2"
+	local git_dir receipt key value
+	local version source_branch source_commit target_commit excluded_hash
+	local cloned_files completed_at current_source current_target state
+
+	git_dir=$(git -C "$wt_path" rev-parse --absolute-git-dir 2>/dev/null) || {
+		print -r -- "unknown: ${label} (${wt_path})"
+		return 0
+	}
+	receipt="${git_dir}/wt-prewarm-compaction"
+	if [[ ! -f "$receipt" ]]; then
+		print -r -- "not compacted: ${label} (${wt_path})"
+		return 0
+	fi
+
+	while IFS='=' read -r key value; do
+		case "$key" in
+			version) version="$value" ;;
+			source_branch) source_branch="$value" ;;
+			source_commit) source_commit="$value" ;;
+			target_commit) target_commit="$value" ;;
+			excluded_hash) excluded_hash="$value" ;;
+			cloned_files) cloned_files="$value" ;;
+			completed_at) completed_at="$value" ;;
+		esac
+	done <"$receipt"
+
+	if [[ "$version" != "1" || -z "$source_branch" || -z "$source_commit" \
+		|| -z "$target_commit" || -z "$excluded_hash" \
+		|| "$cloned_files" != <-> || -z "$completed_at" ]]; then
+		print -r -- "invalid receipt: ${label} (${wt_path})"
+		return 0
+	fi
+
+	current_source=$(git rev-parse --verify "${source_branch}^{commit}" 2>/dev/null)
+	current_target=$(git -C "$wt_path" rev-parse --verify HEAD 2>/dev/null)
+	state="compacted"
+	if [[ "$current_source" != "$source_commit" || "$current_target" != "$target_commit" ]]; then
+		state="stale receipt"
+	fi
+
+	print -r -- "${state}: ${label} (${cloned_files} files, ${completed_at}, ${source_branch} ${source_commit[1,12]} → ${target_commit[1,12]})"
+}
+
+function compaction_status() {
+	local requested_branch="$1"
+	local wt_path branch head label
+
+	if [[ -n "$requested_branch" ]]; then
+		wt_path=$(worktree_path_for_branch "$requested_branch" 2>/dev/null)
+		[[ -n "$wt_path" && -d "$wt_path" ]] \
+			|| die "no worktree found for ${requested_branch}"
+		report_compaction_status "$wt_path" "$requested_branch"
+		return 0
+	fi
+
+	while IFS= read -r line; do
+		case "$line" in
+			worktree\ *)
+				wt_path="${line#worktree }"
+				branch=""
+				head=""
+				;;
+			HEAD\ *) head="${line#HEAD }" ;;
+			branch\ refs/heads/*) branch="${line#branch refs/heads/}" ;;
+			'')
+				[[ -n "$wt_path" ]] || continue
+				label="${branch:-detached@${head[1,12]}}"
+				report_compaction_status "$wt_path" "$label"
+				wt_path=""
+				;;
+		esac
+	done < <(git worktree list --porcelain)
+}
+
 function build_prewarm() {
-	local base pw
+	local base pw rc
 
 	base=$(default_branch) || return 1
 
@@ -155,6 +445,10 @@ function build_prewarm() {
 
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
+
+	compact_worktree "$pw" "$base"
+	rc=$?
+	(( rc == 0 || rc == 2 )) || return 1
 
 	# The marker means the expensive checkout is complete. Because the build runs
 	# no hooks, there is no background install that a claim could move out from
@@ -485,6 +779,20 @@ case "$command_name" in
 		;;
 	prepare)
 		prepare_worktree "$@"
+		exit $?
+		;;
+	compact)
+		[[ $# -eq 1 ]] || die "compact requires exactly one branch, worktree path, or --all"
+		if [[ "$1" == "--all" ]]; then
+			compact_all
+		else
+			compact_target "$1"
+		fi
+		exit $?
+		;;
+	compact-status)
+		[[ $# -le 1 ]] || die "compact-status accepts at most one branch"
+		compaction_status "$1"
 		exit $?
 		;;
 	update)
