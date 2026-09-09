@@ -11,6 +11,7 @@ setopt pipefail
 
 PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
 MARKER=".wt-prewarm-ready"
+SCRIPT_DIR="${0:A:h}"
 
 function usage() {
 	print -r -- "Usage: wt-prewarm [command] [options]"
@@ -138,6 +139,72 @@ function remove_prewarm() {
 	fi
 }
 
+# Replace the prewarm's clean tracked files with APFS copy-on-write clones of
+# the default-branch worktree. Git creates ordinary files when checking out a
+# worktree; cloning them afterward lets claimed worktrees share those data
+# blocks until either copy changes.
+#
+# This is deliberately best-effort. A prewarm is still useful on non-APFS
+# filesystems, across volumes, or while the default worktree has local changes.
+function compact_prewarm() {
+	local pw="$1"
+	local base="$2"
+	local source source_head base_head source_device pw_device source_device_name
+	local helper_source helper_dir helper list_file cloned
+
+	# BSD cp's -c flag uses clonefile(2). Restrict it to same-volume APFS so it
+	# cannot fall back to a full copy on a filesystem without clone support.
+	[[ "$(uname -s 2>/dev/null)" == "Darwin" ]] || return 0
+
+	source=$(worktree_path_for_branch "$base" 2>/dev/null)
+	[[ -n "$source" && -d "$source" && "$source" != "$pw" ]] || return 0
+
+	source_device=$(stat -f %d "$source" 2>/dev/null) || return 0
+	pw_device=$(stat -f %d "$pw" 2>/dev/null) || return 0
+	[[ "$source_device" == "$pw_device" ]] || return 0
+	source_device_name=$(stat -f %Sd "$source" 2>/dev/null) || return 0
+	mount | grep -Eq "^/dev/${source_device_name} on .+ \\(apfs[,)]" || return 0
+
+	# The source checkout must represent exactly the commit used to build the
+	# prewarm. Refuse the whole compaction if any tracked source file is staged
+	# or modified; untracked files are irrelevant because ls-files omits them.
+	source_head=$(git -C "$source" rev-parse --verify HEAD 2>/dev/null) || return 0
+	base_head=$(git rev-parse --verify "${base}^{commit}" 2>/dev/null) || return 0
+	[[ "$source_head" == "$base_head" ]] || return 0
+	git -c core.trustctime=true -C "$source" diff --quiet --no-ext-diff HEAD -- 2>/dev/null || {
+		print -u2 -- "wt-prewarm: skipping compaction; ${base} worktree has tracked changes"
+		return 0
+	}
+
+	# One cp/chmod/touch/mv/stat process per file is prohibitively expensive in
+	# large repositories. Compile a tiny helper and perform all clonefile(2),
+	# metadata, and rename operations in that single process instead.
+	helper_source="${SCRIPT_DIR}/wt-prewarm-clone.c"
+	[[ -f "$helper_source" ]] || return 0
+	command -v cc >/dev/null 2>&1 || return 0
+	helper_dir=$(mktemp -d "${TMPDIR:-/tmp}/wt-prewarm-clone.XXXXXX") || return 0
+	helper="${helper_dir}/wt-prewarm-clone"
+	list_file="${helper_dir}/tracked"
+
+	if ! cc -O2 -o "$helper" "$helper_source" >/dev/null 2>&1 \
+		|| ! git -C "$pw" ls-files -z >"$list_file"; then
+		rm -f "$helper" "$list_file" 2>/dev/null
+		rmdir "$helper_dir" 2>/dev/null
+		return 0
+	fi
+
+	cloned=$("$helper" "$source" "$pw" <"$list_file")
+	if [[ $? -ne 0 || "$cloned" != <-> ]]; then
+		print -u2 -- "wt-prewarm: native compaction helper failed; restoring checkout"
+		git -C "$pw" reset --hard "$base_head" >/dev/null 2>&1 || return 1
+		cloned=0
+	fi
+	rm -f "$helper" "$list_file" 2>/dev/null
+	rmdir "$helper_dir" 2>/dev/null
+
+	print -r -- "wt-prewarm: compacted ${cloned} tracked files against ${base}"
+}
+
 function build_prewarm() {
 	local base pw
 
@@ -155,6 +222,8 @@ function build_prewarm() {
 
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
+
+	compact_prewarm "$pw" "$base" || return 1
 
 	# The marker means the expensive checkout is complete. Because the build runs
 	# no hooks, there is no background install that a claim could move out from
