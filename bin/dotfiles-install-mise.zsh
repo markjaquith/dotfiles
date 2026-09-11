@@ -11,7 +11,7 @@ then
 fi
 
 # Install mise tools globally
-mise use -g herdr@latest > /dev/null
+mise use -g herdr@0.8.2 > /dev/null
 mise use hk@latest > /dev/null
 mise use -g pi@latest > /dev/null
 mise use -g pnpm@latest > /dev/null
