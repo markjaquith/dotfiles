@@ -7,20 +7,10 @@ type ExtensionAPI = {
 		args: string[],
 		options: { timeout: number },
 	) => Promise<{ code: number; stdout: string }>
-	on(name: "session_start", handler: () => void): void
-	on(
-		name: "resources_discover",
-		handler: (event: {
-			cwd: string
-		}) => Promise<{ skillPaths: string[] } | undefined>,
-	): void
-	on(
-		name: "before_agent_start",
-		handler: (
-			event: { systemPrompt: string },
-			ctx: { cwd: string },
-		) => Promise<{ systemPrompt: string } | undefined>,
-	): void
+	on: (
+		name: "resources_discover" | "before_agent_start",
+		handler: (...args: any[]) => unknown,
+	) => void
 }
 
 type AgencyContext = {
@@ -90,38 +80,15 @@ const agencyContext = async (
 }
 
 export default function agencyExtension(pi: ExtensionAPI) {
-	const contexts = new Map<
-		string,
-		{
-			promise: Promise<AgencyContext | undefined>
-			expiresAt: number
-			retryDelay: number
-		}
-	>()
-	// Pi emits session_start for startup, reload, new, resume, and fork.
-	// Resource discovery follows it and must share the same cached lookup.
-	pi.on("session_start", () => contexts.clear())
-
+	const contexts = new Map<string, Promise<AgencyContext | undefined>>()
 	const runtimeContext = (directory: string) => {
 		const key = resolve(directory)
-		const previous = contexts.get(key)
-		if (previous && Date.now() < previous.expiresAt) return previous.promise
-
-		const entry = {
-			promise: agencyContext(pi, key)
-				.catch(() => undefined)
-				.then((context) => {
-					entry.retryDelay = context
-						? 0
-						: Math.min((previous?.retryDelay || 500) * 2, 30_000)
-					entry.expiresAt = Date.now() + (context ? 60_000 : entry.retryDelay)
-					return context
-				}),
-			expiresAt: Infinity,
-			retryDelay: 0,
+		let context = contexts.get(key)
+		if (!context) {
+			context = agencyContext(pi, key).catch(() => undefined)
+			contexts.set(key, context)
 		}
-		contexts.set(key, entry)
-		return entry.promise
+		return context
 	}
 
 	pi.on("resources_discover", async (event: { cwd: string }) => {
@@ -142,12 +109,7 @@ export default function agencyExtension(pi: ExtensionAPI) {
 		"before_agent_start",
 		async (event: { systemPrompt: string }, ctx: { cwd: string }) => {
 			const context = await runtimeContext(ctx.cwd)
-			if (!context?.root) {
-				if (!process.env.AGENCY_TARGET && !process.env.AGENCY_SESSION_ID) return
-				return {
-					systemPrompt: `${event.systemPrompt}\n\nAgency worker context is unavailable. Do not assume write authority. Run agency context . --compact --json before implementation; automatic lookups will retry with backoff.`,
-				}
-			}
+			if (!context?.root) return
 
 			const instructionsPath = join(context.root, ".agency", "AGENTS.md")
 			const instructions = existsSync(instructionsPath)
