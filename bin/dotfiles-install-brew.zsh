@@ -33,6 +33,7 @@ brew install --quiet \
 		mole \
 		aerc \
 		w3m \
+		markjaquith/tap/cowtree \
 		trash
 
 brew install --quiet --cask espanso

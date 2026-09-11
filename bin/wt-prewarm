@@ -131,6 +131,41 @@ function wt_internal() {
 	)
 }
 
+# Resolve the configured Worktrunk path for the prewarm branch. The supported
+# variables cover this machine's central worktree layout and Worktrunk's default.
+function prewarm_worktree_path() {
+	local config_json identifier template repo_path repo branch_sanitized rendered
+
+	command -v jq >/dev/null 2>&1 || return 1
+	config_json=$(wt_internal config show --format=json 2>/dev/null) || return 1
+	identifier=$(print -r -- "$config_json" | jq -r '.project.identifier // ""') || return 1
+	template=$(print -r -- "$config_json" | jq -r --arg identifier "$identifier" \
+		'.user.config.projects[$identifier]["worktree-path"] //
+		 .user.config["worktree-path"] //
+		 "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}"') || return 1
+
+	repo_path=$(git worktree list --porcelain | sed -n 's/^worktree //p' | head -1)
+	[[ -n "$repo_path" ]] || return 1
+	repo="${repo_path:t}"
+	branch_sanitized="${PREWARM_BRANCH//[\/\\]/-}"
+	rendered=$(jq -nr \
+		--arg template "$template" \
+		--arg repo_path "$repo_path" \
+		--arg repo "$repo" \
+		--arg branch "$PREWARM_BRANCH" \
+		--arg branch_sanitized "$branch_sanitized" \
+		'$template
+		| gsub("\\{\\{ repo_path \\}\\}"; $repo_path)
+		| gsub("\\{\\{ repo \\}\\}"; $repo)
+		| gsub("\\{\\{ branch \\}\\}"; $branch)
+		| gsub("\\{\\{ branch \\| sanitize \\}\\}"; $branch_sanitized)') || return 1
+	[[ "$rendered" != *'{{'* ]] || return 1
+
+	[[ "$rendered" == '~/'* ]] && rendered="${HOME}/${rendered#\~/}"
+	[[ "$rendered" == /* ]] || rendered="${repo_path}/${rendered}"
+	print -r -- "${rendered:A}"
+}
+
 function remove_prewarm() {
 	local pw
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
@@ -436,12 +471,16 @@ function build_prewarm() {
 	# Clean slate so the prewarm always starts from the current default tip.
 	remove_prewarm
 
-	# Build with --no-hooks: the prewarm is a bare checkout of the default tip.
-	# Hooks must run against the *claiming* branch at its final path, not against
-	# "$PREWARM_BRANCH" at the prewarm path (zoxide/mise trust are path-keyed,
-	# and branch-derived templates would resolve to the wrong branch), so the
-	# claim side runs them after the move.
-	wt_internal -y switch --create --no-cd --no-hooks --base "$base" "$PREWARM_BRANCH" || return 1
+	command -v cowtree >/dev/null 2>&1 \
+		|| die "cowtree is required; run dotfiles-install"
+	pw=$(prewarm_worktree_path) \
+		|| die "could not resolve the configured Worktrunk prewarm path"
+	mkdir -p "${pw:h}" || return 1
+
+	# The prewarm is intentionally created without Worktrunk hooks. Hooks must
+	# run against the claiming branch at its final path, not against the prewarm
+	# branch at this temporary path.
+	cowtree add -b "$PREWARM_BRANCH" "$pw" "$base" || return 1
 
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
