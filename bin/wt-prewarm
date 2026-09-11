@@ -163,14 +163,12 @@ function prewarm_worktree_path() {
 
 function remove_prewarm() {
 	local pw
+
 	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-	if [[ -n "$pw" ]]; then
-		git worktree remove --force "$pw" 2>/dev/null
-	fi
-	git worktree prune 2>/dev/null
-	if branch_exists "$PREWARM_BRANCH"; then
-		git branch -D "$PREWARM_BRANCH" 2>/dev/null
-	fi
+	[[ -n "$pw" ]] || branch_exists "$PREWARM_BRANCH" || return 0
+
+	wt_internal -y remove --foreground --force --force-delete --no-hooks \
+		"$PREWARM_BRANCH"
 }
 
 function build_prewarm() {
