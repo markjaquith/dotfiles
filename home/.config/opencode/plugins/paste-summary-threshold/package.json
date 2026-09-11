@@ -1,0 +1,9 @@
+{
+  "name": "paste-summary-threshold",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./tui": "./tui.js"
+  }
+}
