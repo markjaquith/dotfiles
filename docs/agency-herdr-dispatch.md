@@ -163,21 +163,11 @@ ancestry is not a completion gate: basing a phase on another phase's branch must
 not imply `--depends-on`. Explicit user gates and existing dependencies are
 preserved unless the user explicitly asks to remove them.
 
-Creation is attempted at most once. A structured, non-retryable `already exists`
-error for the exact requested kind and ID is treated as an idempotent kickoff:
-the setup agent resolves that exact item with the matching narrow `show` command,
-verifies its identity and context, and requires explicitly requested repository,
-branch, base, references, and work requirements to be compatible. It never
-mutates an existing item to manufacture compatibility. Every other creation or
-resolution failure follows the normal pre-helper failure path.
-
-The setup agent then calls
-`agency-herdr-setup '<document-path>' --intent open|launch` exactly once. That
-helper owns preparation—including safe reuse of an already-materialized
-checkout—layout, launch, bounded startup detection, final verification, and
-closing the setup pane on success. If selected, the same quoted executable is
-forwarded via `--agency-executable`. Missing or failed helpers leave recovery
-panes visible; no fallback transaction is invented.
+The setup agent calls `agency-herdr-setup '<document-path>' --intent open|launch`
+exactly once. That helper owns preparation, layout, launch, bounded startup
+detection, final verification, and closing the setup pane on success. If selected,
+the same quoted executable is forwarded via `--agency-executable`. Missing or
+failed helpers leave recovery panes visible; no fallback transaction is invented.
 
 The generated protocol requires every Bash tool call invoking the helper to set
 the tool's `timeout` field explicitly to **1200000ms (20 minutes)**, rather than

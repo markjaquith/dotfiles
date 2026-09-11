@@ -178,13 +178,6 @@ layout before dispatch; the generated setup protocol owns narrow item lookup.
 Branch ancestry is not a completion dependency: never infer `--depends-on` solely
 from the requested base branch, and preserve existing explicit gates.
 
-The setup protocol attempts requested creation once. Its only idempotent
-creation exception is a structured, non-retryable exact-item `already exists`
-error, followed by a narrow `show` lookup and identity, context, and requested
-metadata compatibility checks. It must not retry creation or mutate the existing
-item to force compatibility. The helper may then safely reuse an already
-materialized checkout.
-
 Only the temporary setup agent invokes
 `agency-herdr-setup <absolute-document-path> --intent open|launch` once instead
 of executing the mechanical steps individually. It performs execution-only
