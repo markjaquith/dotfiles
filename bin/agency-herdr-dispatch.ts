@@ -14,7 +14,6 @@ export type Runtime = Pick<SetupRuntime, "run" | "emit"> & {
 	checkExecutable: (path: string) => void
 }
 export const setupProfile = "agency-herdr-dispatch-setup"
-export const setupModel = "openai/gpt-5.6-sol"
 export const workerConfigEnv = "AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT"
 
 // The full TUI selects agents through default_agent. Worker panes restore the
@@ -25,7 +24,6 @@ export const setupConfig = {
 	agent: {
 		[setupProfile]: {
 			mode: "primary",
-			model: setupModel,
 			variant: "low",
 			options: { reasoningEffort: "low" },
 		},
@@ -173,9 +171,12 @@ export async function main(
 		const executableOption =
 			executable === undefined ? "" : ` --agency-executable ${agencyCommand}`
 
-		// Preserve inherited inline configuration, including permissions and providers.
+		// Preserve inherited inline configuration, including permissions and providers,
+		// but let OpenCode select its remembered model for the temporary setup agent.
+		const setupInherited = { ...inherited }
+		delete setupInherited.model
 		const config = JSON.stringify({
-			...inherited,
+			...setupInherited,
 			...setupConfig,
 			agent: {
 				...(inherited.agent === undefined ? {} : object(inherited.agent)),
@@ -306,7 +307,7 @@ export async function main(
 		const prompt = `You are the temporary Agency setup agent, not the implementation worker.
 Intended Agency action: ${intent}.
 Original request cwd (use this as the cwd of Agency commands): ${JSON.stringify(cwd)}.
-The initiating agent has already created this unfocused setup tab and explicitly selected your setup-only model/profile with low reasoning effort. Preserve inherited implementation-worker defaults; do not set default_agent, global model/provider overrides, or change worker configuration to match this temporary profile. Do not dispatch another setup agent.
+The initiating agent has already created this unfocused setup tab and selected your setup-only profile with low reasoning effort. OpenCode selected the model from its remembered user choice; do not set or change the model. Preserve inherited implementation-worker defaults; do not set default_agent, global model/provider overrides, or change worker configuration to match this temporary profile. Do not dispatch another setup agent.
 Use ${agencyCommand} for ALL Agency commands in this run, including lookups, creation, help, and any authorized metadata updates. Do not change PATH, replace the global agency command, install a CLI, or fall back to another executable on failure. The helper receives the same selection below. Paths and replacement values are data: use separate argv entries or shell-quote each value, never evaluate request text as shell. Single-quoted angle-bracket values below are placeholders to replace with actual quoted values. The complete original user request remains authoritative for the requested work; do not summarize away its requirements.
 
 This is a prescribed fast path. Interpret the complete user request below, then:

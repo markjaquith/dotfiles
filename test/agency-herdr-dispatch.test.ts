@@ -163,7 +163,6 @@ const args = [
 const inheritedJsonc = String.raw`// Inherited worker settings, not setup defaults.
 {
   "default_agent": "implementation",
-  "model": "openai/gpt-6-astra",
   "provider": {
     "openai": { "options": { "baseURL": "https://example.invalid//api", }, },
   },
@@ -198,7 +197,6 @@ describe("agency-herdr-dispatch", () => {
 		expect(config).toEqual({
 			$schema: "https://opencode.ai/config.json",
 			default_agent: setupProfile,
-			model: "openai/gpt-6-astra",
 			provider: {
 				openai: { options: { baseURL: "https://example.invalid//api" } },
 			},
@@ -209,7 +207,6 @@ describe("agency-herdr-dispatch", () => {
 				},
 				[setupProfile]: {
 					mode: "primary",
-					model: "openai/gpt-5.6-sol",
 					variant: "low",
 					options: { reasoningEffort: "low" },
 				},
@@ -220,9 +217,9 @@ describe("agency-herdr-dispatch", () => {
 
 	test.each([
 		'{"default_agent":"implementation", broken}',
-		'{"model":"openai/gpt-6-astra" "default_agent":"implementation"}',
+		'{"permission":{} "default_agent":"implementation"}',
 		'{"default_agent":"unterminated}',
-		'{"model":"openai/gpt-6-astra"} /* unterminated',
+		'{"permission":{}} /* unterminated',
 		"{} trailing-content",
 		'{"default_agent":undefined}',
 	])(
@@ -584,17 +581,16 @@ describe("agency-herdr-dispatch", () => {
 	})
 
 	test.each([undefined, "/managed/agency"])(
-		"preserves worker defaults and low setup config with executable %j",
+		"preserves worker defaults and model-free low setup config with executable %j",
 		async (executable) => {
 			const f = fake()
 			const inherited = {
 				default_agent: "implementation",
-				model: "openai/gpt-6-astra",
+				model: "provider/inherited-worker-default",
 				permission: { bash: "ask" },
 				agent: {
 					implementation: {
 						mode: "primary",
-						model: "openai/gpt-6-astra",
 						options: { reasoningEffort: "high" },
 					},
 				},
@@ -621,8 +617,10 @@ describe("agency-herdr-dispatch", () => {
 			const assignments = tab.flatMap((arg, i) =>
 				arg === "--env" ? [tab[i + 1]!] : [],
 			)
+			const setupInherited = { ...inherited }
+			delete (setupInherited as Partial<typeof inherited>).model
 			expect(assignments).toEqual([
-				`OPENCODE_CONFIG_CONTENT=${JSON.stringify({ ...inherited, ...setupConfig, agent: { ...inherited.agent, ...setupConfig.agent } })}`,
+				`OPENCODE_CONFIG_CONTENT=${JSON.stringify({ ...setupInherited, ...setupConfig, agent: { ...inherited.agent, ...setupConfig.agent } })}`,
 				`${workerConfigEnv}=${JSON.stringify(inherited)}`,
 				"AGENCY_HERDR_ORIGIN_PANE_ID=w3S:p47",
 				"AGENCY_HERDR_ORIGIN_TAB_ID=w3S:t20",
@@ -635,11 +633,10 @@ describe("agency-herdr-dispatch", () => {
 			expect(config.agent[config.default_agent]).toEqual(
 				config.agent[setupProfile],
 			)
-			expect(config.model).toBe(inherited.model)
+			expect(config.model).toBeUndefined()
 			expect(config.provider).toEqual(inherited.provider)
 			expect(config.agent[setupProfile]).toEqual({
 				mode: "primary",
-				model: "openai/gpt-5.6-sol",
 				variant: "low",
 				options: { reasoningEffort: "low" },
 			})
@@ -665,6 +662,8 @@ describe("agency-herdr-dispatch", () => {
 		])
 		expect(config.default_agent).toBe(setupProfile)
 		expect(Object.keys(config.agent)).toEqual([setupProfile])
+		expect(config.model).toBeUndefined()
+		expect(config.agent[setupProfile].model).toBeUndefined()
 		expect(config.agent[setupProfile].options.reasoningEffort).toBe("low")
 		const start = f.calls[2]!.argv
 		expect(start).not.toContain("--")
@@ -889,10 +888,10 @@ describe("agency-herdr-dispatch", () => {
 // Optional source contract test; no CLI calls, network, or launches. The source
 // checkout must have its own dependencies installed. Never install them here.
 test.skipIf(!process.env.OPENCODE_SOURCE_DIR)(
-	"OpenCode's config and request pipeline keep the full TUI setup profile low",
+	"OpenCode's config keeps the full TUI setup profile model-free and low",
 	async () => {
 		const root = resolve(process.env.OPENCODE_SOURCE_DIR!)
-		const { Schema, Effect } = await import(
+		const { Schema } = await import(
 			Bun.resolveSync("effect", `${root}/packages/core`)
 		)
 		const { ConfigAgentV1 } = await import(
@@ -904,7 +903,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE_DIR)(
 		// Independent expected values, not merely a schema acceptance assertion.
 		expect(profile.options.reasoningEffort).toBe("low")
 		expect(profile.variant).toBe("low")
-		expect(profile.model).toBe("openai/gpt-5.6-sol")
+		expect(profile.model).toBeUndefined()
 		expect(profile.mode).toBe("primary")
 		expect(setupConfig.default_agent).toBe(setupProfile)
 		const { ConfigParse } = await import(
@@ -914,54 +913,9 @@ test.skipIf(!process.env.OPENCODE_SOURCE_DIR)(
 			ConfigParse.jsonc(inheritedJsonc, "OPENCODE_CONFIG_CONTENT")
 				.default_agent,
 		).toBe("implementation")
-		const { prepare } = await import(
-			`${root}/packages/opencode/src/session/llm/request.ts`
-		)
-		const { ProviderTransform } = await import(
-			`${root}/packages/opencode/src/provider/transform.ts`
-		)
-		const model = {
-			id: "gpt-5.6-sol",
-			providerID: "openai",
-			api: {
-				id: "gpt-5.6-sol",
-				npm: "@ai-sdk/openai",
-				url: "https://api.openai.com/v1",
-			},
-			capabilities: { reasoning: true, temperature: false },
-			options: { reasoningEffort: "high" },
-			limit: { context: 200000, output: 32000 },
-			headers: {},
-		}
-		const variants = ProviderTransform.variants(model)
-		expect(variants.low.reasoningEffort).toBe("low")
 		const f = fake()
 		expect(await main(args, f.io, env, cwd)).toBe(0)
 		const start = f.calls[2]!.argv
 		expect(start).not.toContain("--")
-		const prepared = await Effect.runPromise(
-			prepare({
-				user: { id: "test-message", model: { variant: profile.variant } },
-				sessionID: "test-session",
-				model: { ...model, variants },
-				agent: {
-					...profile,
-					name: setupProfile,
-					prompt: "Setup",
-					permission: [],
-				},
-				provider: { id: "openai", options: {} },
-				system: [],
-				messages: [],
-				tools: {},
-				flags: {},
-				isWorkflow: false,
-				plugin: {
-					trigger: (_name: string, _input: unknown, output: unknown) =>
-						Effect.succeed(output),
-				},
-			}),
-		)
-		expect(prepared.params.options.reasoningEffort).toBe("low")
 	},
 )

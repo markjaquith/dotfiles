@@ -24,8 +24,8 @@ build also returned a transient HTTP 503 during startup. Repeated reads against
 the same server load the built-ins and the inline Agency setup profile.
 
 The opt-in smoke test imports the dispatcher's actual `setupConfig` and verifies
-the setup profile's primary mode, model, and low variant, while the build agent
-retains its default model/settings. It uses a temporary HOME and XDG directories,
+the setup profile's primary mode, absent model, and low variant, while the build
+agent retains its default model/settings. It uses temporary HOME and XDG directories,
 an isolated authenticated loopback server, and no inherited provider credentials.
 It sends no model prompts, and terminates the server and removes temporary state.
 

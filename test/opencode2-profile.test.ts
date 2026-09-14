@@ -2,11 +2,7 @@ import { expect, test } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { isAbsolute, join } from "node:path"
-import {
-	setupConfig,
-	setupModel,
-	setupProfile,
-} from "../bin/agency-herdr-dispatch.ts"
+import { setupConfig, setupProfile } from "../bin/agency-herdr-dispatch.ts"
 
 const executable = process.env.OPENCODE2_TEST_EXECUTABLE
 
@@ -76,9 +72,7 @@ test.skipIf(!executable)(
 			const setup = agents.find((agent) => agent.id === setupProfile)
 			expect(setup).toBeDefined()
 			expect(setup?.mode).toBe("primary")
-			const [providerID, id] = setupModel.split("/")
-			if (!providerID || !id) throw new Error("Invalid setup model")
-			expect(setup?.model).toEqual({ providerID, id, variant: "low" })
+			expect(setup?.model).toBeUndefined()
 			const build = agents.find((agent) => agent.id === "build")
 			expect(build).toBeDefined()
 			expect(build?.model).toBeUndefined()

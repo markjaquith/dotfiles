@@ -78,14 +78,15 @@ after creation leave the tab visible. A timeout can mean the server acted but th
 response was lost: do not blindly redispatch. No automatic cleanup hides recovery
 state. Partial valid handles are retained in errors when available.
 
-## Environment And Model
+## Environment And Profile
 
 Only the new tab receives these explicit overrides:
 
 - `OPENCODE_CONFIG_CONTENT`: the named setup profile below, merged with
   inherited inline configuration. Other profiles, providers, permissions, and
   settings remain intact; the reserved setup profile is replaced and selected as
-  this temporary full TUI's `default_agent`.
+  this temporary full TUI's `default_agent`. Any inherited top-level `model` is
+  omitted so OpenCode uses the user's remembered model choice.
 - `AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT`: the inherited inline
   configuration before that setup-only override. The helper explicitly restores
   it on the worker and editor panes, preserving their defaults.
@@ -112,7 +113,6 @@ runtime dependency is declared in root `package.json` and `bun.lock`.
 	"agent": {
 		"agency-herdr-dispatch-setup": {
 			"mode": "primary",
-			"model": "openai/gpt-5.6-sol",
 			"variant": "low",
 			"options": { "reasoningEffort": "low" }
 		}
@@ -120,12 +120,11 @@ runtime dependency is declared in root `package.json` and `bun.lock`.
 }
 ```
 
-The dispatcher starts the full OpenCode TUI, not `mini`. Low effort is a real
-model option, not an instruction in the prompt. The temporary tab selects the
-setup profile with `default_agent`; the profile supplies both its model and low
-variant. Before launching subsequent `agency work` processes, the helper restores
-the inherited inline configuration on their panes, preserving implementation
-worker defaults.
+The dispatcher starts the full OpenCode TUI, not `mini`. It does not specify a
+model, so OpenCode uses the last model selected by the user. Low effort remains a
+real profile option, not an instruction in the prompt. Before launching subsequent
+`agency work` processes, the helper restores the inherited inline configuration
+on their panes, preserving implementation worker defaults.
 
 Verified against the published `https://opencode.ai/config.json` schema and local
 OpenCode source:
@@ -136,19 +135,11 @@ OpenCode source:
   local file-based profiles.
 - `packages/opencode/src/config/parse.ts`: JSONC comments and trailing commas are
   accepted, but parse errors are rejected.
-- `packages/opencode/src/session/llm/request.ts`: model defaults, model options,
-  agent options, and selected variant are merged in that order.
 
-Installed OpenCode 1.18.29's read-only `debug agent` resolved the exact exported
-setup profile to `openai/gpt-5.6-sol`, `variant: low`, and
-`options.reasoningEffort: low`. `debug config` and injected-IO tests verify that
-the helper restores inherited worker defaults. OpenAI was enabled, and
-`opencode models openai` included that model. These checks
-were development verification, not extra discovery commands on every dispatch.
-Local source was 1.18.28; installed CLI acceptance is the authority for startup.
-Provider credentials, model access, and plugins remain user-configured. A future
-config/plugin/model change can invalidate these assumptions; no paid inference
-or real agent launch was used to verify them.
+Runtime and injected-IO tests verify that the setup profile has no model and that
+the helper restores inherited worker defaults. Provider credentials, model
+selection, and plugins remain user-configured; no paid inference or real agent
+launch is used by these tests.
 
 ## Setup Agent Protocol
 
@@ -238,9 +229,8 @@ setup configuration/worker defaults.
 Full Herdr response fixtures come from read-only inspection and historical CLI
 responses, with names/caller fields and private paths/labels substituted. The
 optional source contract test loads OpenCode's real JSONC parser, schema decoder,
-variant generator, and LLM request-preparation function from an existing
-dependency-installed checkout. It proves that the full-TUI setup profile retains
-low effort. Plugin hooks are fake, with no tools or inference. JSONC tests preserve
-worker defaults, model and provider settings, comments inside strings, and reject
+schema decoder from an existing dependency-installed checkout. It proves that the
+full-TUI setup profile remains model-free with low effort. JSONC tests preserve
+worker defaults, provider settings, comments inside strings, and reject
 malformed partial parses.
 No test invokes a CLI or installs dependencies.
