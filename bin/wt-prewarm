@@ -3,24 +3,25 @@
 emulate -L zsh
 setopt pipefail
 
-# Maintain a prewarmed worktree so `wt new <branch>` and `wt try <branch>` can
-# claim it instead of paying for a full checkout. The prewarm's existence is the
-# opt-in signal: callers only take the fast path — and only re-arm a prewarm
-# afterward — when one already exists. Arm it by running `wt prewarm` (alias for
-# this script).
+# Maintain a pool of prewarmed worktrees so `wt new <branch>` and
+# `wt try <branch>` can claim one instead of paying for a full checkout. The
+# pool's existence is the opt-in signal: callers only take the fast path — and
+# only ensure one remains afterward — when a ready member already exists. Arm
+# it by running `wt prewarm` (alias for this script).
 
-PREWARM_BRANCH="${WT_PREWARM_BRANCH:-worktrunk-prewarm}"
+PREWARM_PREFIX="${WT_PREWARM_PREFIX:-worktree-prewarm-}"
+LEGACY_PREWARM_BRANCH="worktrunk-prewarm"
 MARKER=".wt-prewarm-ready"
 
 function usage() {
 	print -r -- "Usage: wt-prewarm [command] [options]"
 	print -r -- ""
-	print -r -- "Maintains a prewarmed worktree on branch '${PREWARM_BRANCH}'."
+	print -r -- "Maintains a pool of prewarmed worktrees with prefix '${PREWARM_PREFIX}'."
 	print -r -- ""
 	print -r -- "Commands:"
-	print -r -- "  ensure            Create the prewarm if missing/incomplete (default)"
-	print -r -- "  rebuild           Remove and recreate from the default branch tip"
-	print -r -- "  remove            Remove the prewarm worktree and branch"
+	print -r -- "  ensure [--count N] [--refresh]"
+	print -r -- "                    Ensure at least N ready prewarms (default: 1)"
+	print -r -- "  remove            Remove all prewarm worktrees and branches"
 	print -r -- "  status            Report prewarm state"
 	print -r -- "  prepare [--create] [--base <base>] [--start-point <commit>]"
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
@@ -38,6 +39,34 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not inside a git rep
 
 function branch_exists() {
 	git show-ref --verify --quiet "refs/heads/$1"
+}
+
+function is_prewarm_branch() {
+	[[ "$1" == "${PREWARM_PREFIX}"[0-9a-f][0-9a-f][0-9a-f][0-9a-f] ]]
+}
+
+function prewarm_branches() {
+	local branch
+
+	git for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null \
+		| while IFS= read -r branch; do
+			is_prewarm_branch "$branch" && print -r -- "$branch"
+		done
+}
+
+function new_prewarm_branch() {
+	local suffix branch candidate_path
+
+	while true; do
+		suffix=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d '[:space:]')
+		[[ "$suffix" == [0-9a-f][0-9a-f][0-9a-f][0-9a-f] ]] || return 1
+		branch="${PREWARM_PREFIX}${suffix}"
+		candidate_path=$(prewarm_worktree_path "$branch") || return 1
+		if ! branch_exists "$branch" && [[ ! -e "$candidate_path" ]]; then
+			print -r -- "$branch"
+			return 0
+		fi
+	done
 }
 
 function worktree_path_for_branch() {
@@ -80,6 +109,15 @@ function lock_path() {
 	gcd=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
 	[[ "$gcd" == /* ]] || gcd="${PWD}/${gcd}"
 	print -r -- "${gcd%/}/wt-prewarm.lock"
+}
+
+function member_lock_path() {
+	local gcd branch_sanitized
+
+	gcd=$(git rev-parse --git-common-dir 2>/dev/null) || return 1
+	[[ "$gcd" == /* ]] || gcd="${PWD}/${gcd}"
+	branch_sanitized="${1//[\/\\]/-}"
+	print -r -- "${gcd%/}/wt-prewarm.${branch_sanitized}.lock"
 }
 
 function acquire_lock() {
@@ -129,6 +167,7 @@ function wt_internal() {
 # Resolve the configured Worktrunk path for the prewarm branch. The supported
 # variables cover this machine's central worktree layout and Worktrunk's default.
 function prewarm_worktree_path() {
+	local prewarm_branch="$1"
 	local config_json identifier template repo_path repo branch_sanitized rendered
 
 	command -v jq >/dev/null 2>&1 || return 1
@@ -142,12 +181,12 @@ function prewarm_worktree_path() {
 	repo_path=$(git worktree list --porcelain | sed -n 's/^worktree //p' | head -1)
 	[[ -n "$repo_path" ]] || return 1
 	repo="${repo_path:t}"
-	branch_sanitized="${PREWARM_BRANCH//[\/\\]/-}"
+	branch_sanitized="${prewarm_branch//[\/\\]/-}"
 	rendered=$(jq -nr \
 		--arg template "$template" \
 		--arg repo_path "$repo_path" \
 		--arg repo "$repo" \
-		--arg branch "$PREWARM_BRANCH" \
+		--arg branch "$prewarm_branch" \
 		--arg branch_sanitized "$branch_sanitized" \
 		'$template
 		| gsub("\\{\\{ repo_path \\}\\}"; $repo_path)
@@ -162,42 +201,75 @@ function prewarm_worktree_path() {
 }
 
 function remove_prewarm() {
+	local prewarm_branch="$1"
 	local pw
 
-	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-	[[ -n "$pw" ]] || branch_exists "$PREWARM_BRANCH" || return 0
+	pw=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
+	[[ -n "$pw" ]] || branch_exists "$prewarm_branch" || return 0
 
 	wt_internal -y remove --foreground --force --force-delete --no-hooks \
-		"$PREWARM_BRANCH"
+		"$prewarm_branch"
 }
 
 function build_prewarm() {
+	local prewarm_branch="$1"
 	local base pw
 
 	base=$(default_branch) || return 1
 
-	# Clean slate so the prewarm always starts from the current default tip.
-	remove_prewarm
-
 	command -v cowtree >/dev/null 2>&1 \
 		|| die "cowtree is required; run dotfiles-install"
-	pw=$(prewarm_worktree_path) \
+	pw=$(prewarm_worktree_path "$prewarm_branch") \
 		|| die "could not resolve the configured Worktrunk prewarm path"
 	mkdir -p "${pw:h}" || return 1
 
 	# The prewarm is intentionally created without Worktrunk hooks. Hooks must
 	# run against the claiming branch at its final path, not against the prewarm
 	# branch at this temporary path.
-	cowtree add -b "$PREWARM_BRANCH" "$pw" "$base" || return 1
+	cowtree add -b "$prewarm_branch" "$pw" "$base" || return 1
 
-	pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
+	pw=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
 
 	# The marker means the expensive checkout is complete. Because the build runs
 	# no hooks, there is no background install that a claim could move out from
 	# under, so marker-present truly means claimable.
 	touch "${pw}/${MARKER}"
-	print -r -- "wt-prewarm: ready at ${pw} (branch ${PREWARM_BRANCH}, base ${base})"
+	print -r -- "wt-prewarm: ready at ${pw} (branch ${prewarm_branch}, base ${base})"
+}
+
+function remove_all_prewarms() {
+	local include_legacy="${1:-0}"
+	local branch member_lock
+	local -a branches
+
+	branches=("${(@f)$(prewarm_branches)}")
+	if (( include_legacy )) && branch_exists "$LEGACY_PREWARM_BRANCH"; then
+		branches+=("$LEGACY_PREWARM_BRANCH")
+	fi
+
+	for branch in "${branches[@]}"; do
+		[[ -n "$branch" ]] || continue
+		member_lock=$(member_lock_path "$branch") || return 1
+		acquire_lock_wait "$member_lock" || return 1
+		if ! remove_prewarm "$branch"; then
+			release_lock "$member_lock"
+			return 1
+		fi
+		release_lock "$member_lock"
+	done
+}
+
+function ready_prewarm_count() {
+	local branch pw count=0
+
+	for branch in "${(@f)$(prewarm_branches)}"; do
+		[[ -n "$branch" ]] || continue
+		pw=$(worktree_path_for_branch "$branch" 2>/dev/null)
+		[[ -n "$pw" && -d "$pw" && -f "${pw}/${MARKER}" ]] && (( count++ ))
+	done
+
+	print -r -- "$count"
 }
 
 # Claim the prewarmed worktree instead of paying for a full checkout. Returns 0
@@ -210,6 +282,7 @@ function claim_prewarm() {
 	local branch_name="$1"
 	local start_point="$2"
 	local upstream="$3"
+	local prewarm_branch candidate_path candidate_lock
 	local pw_path parent pw_base prewarm_sanitized branch_sanitized target_path lock
 	local prewarm_head target_commit
 
@@ -219,17 +292,23 @@ function claim_prewarm() {
 	# gate, kept before the lock so an obviously-doomed claim never contends.
 	branch_exists "$branch_name" && return 1
 
-	# Acquire the lock before enumerating worktrees so the listing below is the
-	# single authoritative read for this claim: there is no separate pre-lock
-	# `git worktree list`, and nothing can race the prewarm out from under us
-	# between validation and the rename/move.
-	lock=$(lock_path) || return 1
-	acquire_lock "$lock" || return 1
+	# Scan ready pool members and atomically reserve the first available one.
+	# Locks are per member, so independent claims can proceed concurrently.
+	for prewarm_branch in "${(@f)$(prewarm_branches)}"; do
+		[[ -n "$prewarm_branch" ]] || continue
+		candidate_path=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
+		[[ -n "$candidate_path" && -d "$candidate_path" \
+			&& -f "${candidate_path}/${MARKER}" ]] || continue
+		candidate_lock=$(member_lock_path "$prewarm_branch") || continue
+		if acquire_lock "$candidate_lock"; then
+			pw_path="$candidate_path"
+			lock="$candidate_lock"
+			break
+		fi
+	done
 
-	# A ready prewarm worktree (checkout complete) must exist. This is the only
-	# worktree enumeration in the claim path.
-	pw_path=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-	if [[ -z "$pw_path" || ! -d "$pw_path" || ! -f "${pw_path}/${MARKER}" ]]; then
+	[[ -n "$pw_path" ]] || return 1
+	if ! branch_exists "$prewarm_branch" || [[ ! -d "$pw_path" || ! -f "${pw_path}/${MARKER}" ]]; then
 		release_lock "$lock"
 		return 1
 	fi
@@ -238,7 +317,7 @@ function claim_prewarm() {
 	# Callers such as `wt new --worktree-path` may supply an exact destination.
 	parent="${pw_path:h}"
 	pw_base="${pw_path:t}"
-	prewarm_sanitized="${PREWARM_BRANCH//[\/\\]/-}"
+	prewarm_sanitized="${prewarm_branch//[\/\\]/-}"
 	branch_sanitized="${branch_name//[\/\\]/-}"
 	if [[ -n "${WT_NEW_WORKTREE_PATH:-}" ]]; then
 		target_path="$WT_NEW_WORKTREE_PATH"
@@ -256,7 +335,7 @@ function claim_prewarm() {
 
 	# Drop the readiness marker so it does not travel into the new worktree.
 	rm -f "${pw_path}/${MARKER}" 2>/dev/null
-	prewarm_head=$(git rev-parse --verify "${PREWARM_BRANCH}^{commit}" 2>/dev/null)
+	prewarm_head=$(git rev-parse --verify "${prewarm_branch}^{commit}" 2>/dev/null)
 	if [[ -z "$prewarm_head" ]]; then
 		touch "${pw_path}/${MARKER}" 2>/dev/null
 		release_lock "$lock"
@@ -277,7 +356,7 @@ function claim_prewarm() {
 	fi
 
 	# Rename the branch in place (instant).
-	if ! git branch -m "$PREWARM_BRANCH" "$branch_name" 2>/dev/null; then
+	if ! git branch -m "$prewarm_branch" "$branch_name" 2>/dev/null; then
 		git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
 		touch "${pw_path}/${MARKER}" 2>/dev/null
 		release_lock "$lock"
@@ -287,7 +366,7 @@ function claim_prewarm() {
 	# Move the worktree directory to its template path (same-filesystem rename).
 	if ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
 		# Roll back the rename; the worktree is still at pw_path on branch_name.
-		if git branch -m "$branch_name" "$PREWARM_BRANCH" 2>/dev/null; then
+		if git branch -m "$branch_name" "$prewarm_branch" 2>/dev/null; then
 			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
 			touch "${pw_path}/${MARKER}" 2>/dev/null
 		fi
@@ -485,6 +564,89 @@ function update_branch() {
 	return 0
 }
 
+function ensure_pool() {
+	local count=1
+	local refresh=0
+	local existing_count target ready branch pw new_branch
+	local lock rc=0
+	local -a existing
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--count)
+				shift
+				[[ -n "${1:-}" ]] || die "ensure --count requires a number"
+				count="$1"
+				shift
+				;;
+			--refresh)
+				refresh=1
+				shift
+				;;
+			-*)
+				die "unknown ensure option: $1"
+				;;
+			*)
+				die "ensure does not accept arguments"
+				;;
+		esac
+	done
+
+	[[ "$count" == <-> ]] && (( count >= 1 )) \
+		|| die "ensure --count must be a positive integer"
+
+	lock=$(lock_path) || die "could not resolve lock path"
+	acquire_lock_wait "$lock" || return 1
+
+	# The old singleton is not a pool member. Clean it up automatically during
+	# migration so it cannot leave a hidden worktree behind.
+	if branch_exists "$LEGACY_PREWARM_BRANCH"; then
+		remove_prewarm "$LEGACY_PREWARM_BRANCH" || rc=$?
+	fi
+
+	existing=("${(@f)$(prewarm_branches)}")
+	existing_count=0
+	for branch in "${existing[@]}"; do
+		[[ -n "$branch" ]] && (( existing_count++ ))
+	done
+	target=$count
+	(( refresh && existing_count > target )) && target=$existing_count
+
+	if (( rc == 0 && refresh )); then
+		remove_all_prewarms || rc=$?
+	elif (( rc == 0 )); then
+		# An unmarked member is incomplete and cannot be claimed. Remove it so the
+		# top-up below replaces it rather than accumulating broken pool members.
+		for branch in "${existing[@]}"; do
+			[[ -n "$branch" ]] || continue
+			pw=$(worktree_path_for_branch "$branch" 2>/dev/null)
+			if [[ -z "$pw" || ! -d "$pw" || ! -f "${pw}/${MARKER}" ]]; then
+				remove_prewarm "$branch" || {
+					rc=$?
+					break
+				}
+			fi
+		done
+	fi
+
+	while (( rc == 0 )); do
+		ready=$(ready_prewarm_count) || {
+			rc=$?
+			break
+		}
+		(( ready >= target )) && break
+		new_branch=$(new_prewarm_branch) || {
+			rc=$?
+			break
+		}
+		build_prewarm "$new_branch" || rc=$?
+	done
+
+	release_lock "$lock"
+	(( rc == 0 )) || return $rc
+	print -r -- "wt-prewarm: ${ready} ready (minimum ${target})"
+}
+
 command_name="${1:-ensure}"
 if [[ $# -gt 0 ]]; then
 	shift
@@ -497,28 +659,35 @@ case "$command_name" in
 		;;
 	status)
 		[[ $# -eq 0 ]] || die "status does not accept arguments"
-		pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-		if [[ -n "$pw" && -d "$pw" ]]; then
-			if [[ -f "${pw}/${MARKER}" ]]; then
-				print -r -- "ready: ${pw}"
+		ready=0
+		building=0
+		status_lines=()
+		for branch in "${(@f)$(prewarm_branches)}"; do
+			[[ -n "$branch" ]] || continue
+			pw=$(worktree_path_for_branch "$branch" 2>/dev/null)
+			if [[ -n "$pw" && -d "$pw" && -f "${pw}/${MARKER}" ]]; then
+				(( ready++ ))
+				status_lines+=("ready: ${branch} ${pw}")
 			else
-				print -r -- "building (no marker yet): ${pw}"
+				(( building++ ))
+				status_lines+=("building: ${branch} ${pw:-no worktree}")
 			fi
-		elif branch_exists "$PREWARM_BRANCH"; then
-			print -r -- "branch '${PREWARM_BRANCH}' exists but has no worktree"
-		else
-			print -r -- "absent"
-		fi
+		done
+		print -r -- "ready: ${ready}, building: ${building}, total: $(( ready + building ))"
+		for line in "${status_lines[@]}"; do
+			print -r -- "$line"
+		done
 		exit 0
 		;;
 	remove)
 		[[ $# -eq 0 ]] || die "remove does not accept arguments"
 		lock=$(lock_path) || die "could not resolve lock path"
 		acquire_lock "$lock" || die "another wt-prewarm operation is in progress"
-		remove_prewarm
+		remove_all_prewarms 1
+		rc=$?
 		release_lock "$lock"
-		print -r -- "wt-prewarm: removed"
-		exit 0
+		(( rc == 0 )) && print -r -- "wt-prewarm: removed all"
+		exit $rc
 		;;
 	prepare)
 		prepare_worktree "$@"
@@ -529,30 +698,9 @@ case "$command_name" in
 		update_branch "$1"
 		exit $?
 		;;
-	rebuild)
-		[[ $# -eq 0 ]] || die "rebuild does not accept arguments"
-		lock=$(lock_path) || die "could not resolve lock path"
-		# If a rebuild is already running, do nothing.
-		acquire_lock "$lock" || exit 0
-		build_prewarm
-		rc=$?
-		release_lock "$lock"
-		exit $rc
-		;;
 	ensure)
-		[[ $# -eq 0 ]] || die "ensure does not accept arguments"
-		lock=$(lock_path) || die "could not resolve lock path"
-		acquire_lock_wait "$lock" || exit 1
-		pw=$(worktree_path_for_branch "$PREWARM_BRANCH" 2>/dev/null)
-		if [[ -n "$pw" && -f "${pw}/${MARKER}" ]]; then
-			release_lock "$lock"
-			print -r -- "wt-prewarm: already ready at ${pw}"
-			exit 0
-		fi
-		build_prewarm
-		rc=$?
-		release_lock "$lock"
-		exit $rc
+		ensure_pool "$@"
+		exit $?
 		;;
 	*)
 		usage

@@ -9,9 +9,9 @@ trap 'rm -rf "$test_root"' EXIT
 repository="$test_root/repository"
 worktrees="$test_root/worktrees"
 agency_worktree="$test_root/agency/tasks/example/code/repository"
+second_worktree="$test_root/agency/tasks/second/code/repository"
 config="$test_root/worktrunk.toml"
-prewarm_branch="worktrunk-prewarm-agency-test"
-prewarm_worktree="$worktrees/$prewarm_branch"
+prewarm_prefix="worktree-prewarm-agency-"
 
 mkdir -p "$repository" "$worktrees"
 jj git init --colocate "$repository" >/dev/null
@@ -31,15 +31,16 @@ EOF
 
 export PATH="$repo_root/bin:$PATH"
 export WORKTRUNK_CONFIG_PATH="$config"
-export WT_PREWARM_BRANCH="$prewarm_branch"
+export WT_PREWARM_PREFIX="$prewarm_prefix"
 
 (
 	cd "$repository"
-	wt-prewarm ensure >/dev/null
+	wt-prewarm ensure --count 2 >/dev/null
 )
 
-if [[ ! -f "$prewarm_worktree/.wt-prewarm-ready" ]]; then
-	print -ru2 -- "FAIL: prewarm was not ready before Agency-style creation"
+prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
+if [[ ${#prewarm_worktrees} -ne 2 ]]; then
+	print -ru2 -- "FAIL: two prewarms were not ready before Agency-style creation"
 	exit 1
 fi
 
@@ -70,13 +71,32 @@ if ! wt -C "$repository" list --format=json \
 	exit 1
 fi
 
+# A remaining pool member means the default background `ensure` is a no-op.
+sleep 0.5
+prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
+if [[ ${#prewarm_worktrees} -ne 1 ]]; then
+	print -ru2 -- "FAIL: prewarm was replenished before the pool reached zero"
+	exit 1
+fi
+
+# Claim the last member. This time background `ensure` must restore one.
+(
+	cd "$repository"
+	wt-new \
+		--reuse-existing \
+		--worktree-path "$second_worktree" \
+		--from main \
+		agency-test-second >/dev/null
+)
+
 for _ in {1..100}; do
-	[[ -f "$prewarm_worktree/.wt-prewarm-ready" ]] && break
+	prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
+	[[ ${#prewarm_worktrees} -eq 1 && -f "${prewarm_worktrees[1]}/.wt-prewarm-ready" ]] && break
 	sleep 0.1
 done
 
-if [[ ! -f "$prewarm_worktree/.wt-prewarm-ready" ]]; then
-	print -ru2 -- "FAIL: prewarm was not replenished after the claim"
+if [[ ${#prewarm_worktrees} -ne 1 || ! -f "${prewarm_worktrees[1]}/.wt-prewarm-ready" ]]; then
+	print -ru2 -- "FAIL: prewarm was not replenished after the last claim"
 	exit 1
 fi
 
