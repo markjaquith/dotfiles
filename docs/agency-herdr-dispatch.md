@@ -149,6 +149,16 @@ it prescribes `agency phase show '<task-id>' '<phase-id>' --json`, then context 
 returned absolute document path. It includes direct task/phase/epic creation
 recipes and prohibits broad source investigation, globs, and tool discovery.
 
+When an external ticket key or URL is the target of the requested Agency action,
+the setup agent uses `agency task list --json` to match both slug-suffixed task
+IDs and `ticketUrl` values. One match is reused. With no match, the Agency action
+itself authorizes task creation from the remote ticket; the user need not also
+say `create` or `new`. The setup agent fetches narrow remote evidence, records the
+canonical ticket URL as both `ticketUrl` and an authoritative source, and stops
+instead of guessing when lookup, remote evidence, or required repository metadata
+is ambiguous. Tickets mentioned only as context or dependencies do not trigger
+creation.
+
 An explicit new/separate/follow-up request creates a distinct item. Branch
 ancestry is not a completion gate: basing a phase on another phase's branch must
 not imply `--depends-on`. Explicit user gates and existing dependencies are

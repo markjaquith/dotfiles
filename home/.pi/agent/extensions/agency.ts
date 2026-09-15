@@ -142,12 +142,7 @@ export default function agencyExtension(pi: ExtensionAPI) {
 		"before_agent_start",
 		async (event: { systemPrompt: string }, ctx: { cwd: string }) => {
 			const context = await runtimeContext(ctx.cwd)
-			if (!context?.root) {
-				if (!process.env.AGENCY_TARGET && !process.env.AGENCY_SESSION_ID) return
-				return {
-					systemPrompt: `${event.systemPrompt}\n\nAgency worker context is unavailable. Do not assume write authority. Run agency context . --compact --json before implementation; automatic lookups will retry with backoff.`,
-				}
-			}
+			if (!context?.root) return
 
 			const instructionsPath = join(context.root, ".agency", "AGENTS.md")
 			const instructions = existsSync(instructionsPath)

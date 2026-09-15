@@ -322,6 +322,15 @@ describe("agency-herdr-dispatch", () => {
 			expect(prompt).toContain(
 				"agency phase show '<task-id>' '<phase-id>' --json",
 			)
+			expect(prompt).toContain("agency task list --json")
+			expect(prompt).toContain(
+				"the requested Agency action authorizes creating the task from the remote ticket",
+			)
+			expect(prompt).toContain(
+				"Do not assume the Agency task ID is exactly the ticket key",
+			)
+			expect(prompt).toContain("--ticket-url '<canonical-url>'")
+			expect(prompt).toContain("--authoritative-source '<canonical-url>'")
 			expect(prompt).toContain("result.path and result.data.branch")
 			expect(prompt).toContain(
 				"agency context '<absolute-document-path>' --json",
@@ -370,6 +379,20 @@ describe("agency-herdr-dispatch", () => {
 		expect(f.calls[1]!.argv[8]).toBe(label)
 	})
 
+	test("preserves ticket kickoff wording with create-on-miss instructions", async () => {
+		const f = fake()
+		const request = "Okay, kick off CAN-1988"
+		expect(
+			await main(["--intent", "launch", "--request", request], f.io, env, cwd),
+		).toBe(0)
+		const prompt = f.calls[3]!.argv[4]!
+		expect(prompt).toContain("agency task list --json")
+		expect(prompt).toContain(
+			"the requested Agency action authorizes creating the task from the remote ticket",
+		)
+		expect(prompt.endsWith(request)).toBe(true)
+	})
+
 	test.each(["open", "launch"])(
 		"%s validates and quotes an explicit executable in all Agency recipes and helper handoff",
 		async (intent) => {
@@ -402,6 +425,7 @@ describe("agency-herdr-dispatch", () => {
 				"Complete original user request follows verbatim (all remaining text):\n",
 			)[0]!
 			for (const command of [
+				"task list --json",
 				"phase show '<task-id>' '<phase-id>' --json",
 				"context '<absolute-document-path>' --json",
 				"context '<document-path>' --json",

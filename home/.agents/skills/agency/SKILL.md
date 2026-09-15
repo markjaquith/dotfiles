@@ -90,6 +90,14 @@ without `--auto`, and **launch/work/start** starts it with `--auto`. Do not turn
 create-only or materialize-only request into an agent launch or UI operation.
 More-specific workbase instructions remain authoritative for managed fast paths.
 
+When an external ticket key or URL is the target of one of those Agency actions,
+resolve an existing task by normalized ticket key across both its ID (including
+slug-suffixed IDs) and `ticketUrl`. If none exists, the action itself authorizes
+creating a task from the remote ticket; a separate `create` or `new` verb is not
+required. Preserve the canonical ticket URL and supported requirements. Do not
+apply this fallback to tickets mentioned only as context or dependencies, and do
+not guess when multiple tasks match or required creation metadata is ambiguous.
+
 ## Safety Invariants
 
 - Keep task-wide decisions in `TASK.md` and phase delivery details in `PHASE.md`.
