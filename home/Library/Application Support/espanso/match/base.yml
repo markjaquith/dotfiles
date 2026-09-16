@@ -10,8 +10,9 @@ matches:
       line by line? If not, fix.
   - trigger: //shipit
     replace: >-
-      Commit changes; git push; if in a branch, create a PR, wait for it to
-      pass CI, merge it; if using Agency, archive this Agency task; if in a
+      Commit changes; git push; if in a branch, create a PR; wait for it to
+      pass CI; if it doesn't pass ci, fix with new commits and push; once it passes
+      CI, merge it; if using Agency, archive this Agency task; if in a
       branch and using Agency, close this Herdr tab. If any steps are not
       applicable, skip them. If any step fails, stop there.
   - trigger: //draftpr
