@@ -15,6 +15,7 @@ export type Runtime = Pick<SetupRuntime, "run" | "emit"> & {
 }
 export const setupProfile = "agency-herdr-dispatch-setup"
 export const workerConfigEnv = "AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT"
+export const originTargetEnv = "AGENCY_HERDR_ORIGIN_TARGET"
 
 // The full TUI selects agents through default_agent. Worker panes restore the
 // inherited config via workerConfigEnv before Agency starts their OpenCode agent.
@@ -131,10 +132,10 @@ export async function main(
 		const cwd = resolve(processCwd, text(options.get("--cwd") ?? processCwd))
 		const label = text(options.get("--label") ?? (basename(cwd) || "agency"))
 		requireValue(env.HERDR_ENV === "1", "HERDR_ENV=1 is required")
-		requireValue(
-			env.AGENCY_SESSION_ID === undefined && env.AGENCY_TARGET === undefined,
-			"Active Agency workers cannot dispatch nested setup agents (even an empty defined session variable blocks dispatch)",
-		)
+		const originTarget =
+			env.AGENCY_TARGET === undefined || env.AGENCY_TARGET === ""
+				? ""
+				: text(env.AGENCY_TARGET)
 		const workspaceId = text(env.HERDR_WORKSPACE_ID)
 		const originTabId = text(env.HERDR_TAB_ID)
 		const originPaneId = text(env.HERDR_PANE_ID)
@@ -257,6 +258,8 @@ export async function main(
 				`AGENCY_HERDR_ORIGIN_TAB_ID=${originTabId}`,
 				"--env",
 				`AGENCY_HERDR_ORIGIN_WORKSPACE_ID=${workspaceId}`,
+				"--env",
+				`${originTargetEnv}=${originTarget}`,
 			],
 			"tab_created",
 		)

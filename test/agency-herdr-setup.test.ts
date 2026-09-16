@@ -1019,14 +1019,7 @@ describe("agency-herdr-setup", () => {
 		).toEqual(["agency work . --auto", "nvim -- 'TASK.md'"])
 	})
 
-	for (const bad of [
-		{ HERDR_ENV: "0" },
-		{ HERDR_WORKSPACE_ID: "" },
-		{ AGENCY_SESSION_ID: "session" },
-		{ AGENCY_TARGET: "target" },
-		{ AGENCY_SESSION_ID: "" },
-		{ AGENCY_TARGET: "" },
-	])
+	for (const bad of [{ HERDR_ENV: "0" }, { HERDR_WORKSPACE_ID: "" }])
 		test(`reject environment ${JSON.stringify(bad)}`, async () => {
 			const h = harness()
 			expect(
@@ -1037,6 +1030,48 @@ describe("agency-herdr-setup", () => {
 			).toBe(1)
 			expect(h.calls).toHaveLength(0)
 		})
+
+	test.each([
+		{ AGENCY_SESSION_ID: "session" },
+		{ AGENCY_SESSION_ID: "" },
+		{ AGENCY_TARGET: "execution-unit:task/other" },
+		{ AGENCY_TARGET: "" },
+		{
+			AGENCY_TARGET: "execution-unit:task/task-1",
+			AGENCY_HERDR_ORIGIN_TARGET: "",
+		},
+	])("allows setup for a different Agency target: %j", async (override) => {
+		const h = harness()
+		expect(
+			await main([h.context.target.path, "--intent", "open"], h.io, {
+				...env,
+				...override,
+			}),
+		).toBe(0)
+	})
+
+	test.each([
+		{ AGENCY_TARGET: "execution-unit:task/task-1" },
+		{ AGENCY_HERDR_ORIGIN_TARGET: "execution-unit:task/task-1" },
+	])(
+		"rejects setup for its originating Agency target: %j",
+		async (override) => {
+			const h = harness()
+			expect(
+				await main([h.context.target.path, "--intent", "open"], h.io, {
+					...env,
+					...override,
+				}),
+			).toBe(1)
+			expect(h.calls).toHaveLength(1)
+			expect(h.events).toContainEqual(
+				expect.objectContaining({
+					event: "error",
+					message: expect.stringContaining("cannot launch itself"),
+				}),
+			)
+		},
+	)
 	for (const bad of [
 		{ HERDR_TAB_ID: "w3:t9" },
 		{ HERDR_PANE_ID: "focused" },

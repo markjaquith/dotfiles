@@ -44,10 +44,12 @@ and `agency work . --auto` text stays unchanged when neither option is present.
 The helper requires `HERDR_ENV=1`, `HERDR_WORKSPACE_ID`, `HERDR_TAB_ID`, and
 `HERDR_PANE_ID` inherited from the **temporary setup agent**, not the initiating
 agent. IDs are opaque handles, not decimal counters; their exact workspace/tab/pane
-relationships must match live metadata. Either
-`AGENCY_SESSION_ID` or `AGENCY_TARGET` being set, even to an empty string, rejects
-the invocation. Both must be absent from the environment. Do not override
-these variables to make another pane appear to be the caller.
+relationships must match live metadata. Active Agency environment variables do
+not by themselves reject setup. After resolving authoritative context, the
+helper compares the target with `AGENCY_HERDR_ORIGIN_TARGET` (falling back to
+`AGENCY_TARGET` for direct invocation) and rejects an attempt by a worker to
+launch itself. Empty values do not identify a target. Do not override these
+variables to make another pane appear to be the caller.
 
 ## Protocol
 

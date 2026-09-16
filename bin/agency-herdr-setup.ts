@@ -233,6 +233,14 @@ function inspect(value: unknown, documentPath: string) {
 	const workspace = object(context.workspace)
 	array(validation.warnings)
 	const warnings = array(workspace.warnings).map(text)
+	const targetIdentity =
+		kind === "epic"
+			? `epic:${id}`
+			: kind === "phase"
+				? `execution-unit:phase/${taskId}/${id}`
+				: execution
+					? `execution-unit:task/${id}`
+					: `task:${id}`
 	const node =
 		kind === "phase"
 			? `execution-unit:phase/${taskId}/${id}`
@@ -259,6 +267,7 @@ function inspect(value: unknown, documentPath: string) {
 		validation,
 		warnings,
 		node,
+		targetIdentity,
 	}
 }
 
@@ -494,10 +503,6 @@ export async function main(
 	}
 	try {
 		requireValue(env.HERDR_ENV === "1", "HERDR_ENV=1 is required")
-		requireValue(
-			env.AGENCY_SESSION_ID === undefined && env.AGENCY_TARGET === undefined,
-			"Active Agency workers cannot run setup",
-		)
 		const workspaceId = text(env.HERDR_WORKSPACE_ID)
 		const tabId = text(env.HERDR_TAB_ID)
 		const setupId = text(env.HERDR_PANE_ID)
@@ -680,6 +685,17 @@ export async function main(
 			success(await call([agency, "context", documentPath, "--json"])),
 			documentPath,
 		)
+		const originTarget =
+			env.AGENCY_HERDR_ORIGIN_TARGET === undefined
+				? env.AGENCY_TARGET || undefined
+				: env.AGENCY_HERDR_ORIGIN_TARGET || undefined
+		if (originTarget !== undefined) {
+			text(originTarget)
+			requireValue(
+				originTarget !== initial.targetIdentity,
+				`An Agency worker cannot launch itself (${originTarget})`,
+			)
+		}
 		ids.targetId =
 			initial.kind === "phase" ? `${initial.taskId}/${initial.id}` : initial.id
 		// Without trusted identity there is no safe recovery layout. Always verify once after inspection.

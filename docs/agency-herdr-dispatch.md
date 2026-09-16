@@ -17,9 +17,11 @@ arguments, never shell source. Requests retain whitespace, newlines, quotes, and
 Unicode exactly; NUL is rejected because subprocess arguments cannot contain it.
 
 Only invoke this command for an authorized user open/launch flow. Create-only
-and materialize-only requests must not use it. Defined `AGENCY_SESSION_ID` or
-`AGENCY_TARGET` blocks dispatch, including empty values. There is no automatic
-nested-worker override.
+and materialize-only requests must not use it. An active Agency worker may
+dispatch a different target. The dispatcher forwards its `AGENCY_TARGET` to the
+setup helper, which rejects the launch after authoritative target resolution if
+the requested target is the originating worker itself. Empty Agency environment
+variables do not identify an active target.
 
 ## Optional Executable
 
@@ -59,7 +61,7 @@ explicit user authorization described below.
    IDs. Verify their exact location with `herdr pane get "$HERDR_PANE_ID"`.
    IDs are opaque strings; `w3S:t21` and `w3S:p48` are valid real handles.
 2. Create one tab with explicit inherited `--workspace`, requested `--cwd`,
-   `--label`, `--no-focus`, and the four `--env` assignments below.
+   `--label`, `--no-focus`, and the environment assignments below.
 3. Start a uniquely named agent in the returned root pane with
    `herdr agent start <name> --kind opencode --pane <id> --timeout 30000`.
 4. Submit the protocol and complete original request with `herdr agent prompt`.
@@ -93,6 +95,9 @@ Only the new tab receives these explicit overrides:
 - `AGENCY_HERDR_ORIGIN_PANE_ID`: this dispatch's verified caller pane.
 - `AGENCY_HERDR_ORIGIN_TAB_ID`: this dispatch's verified caller tab.
 - `AGENCY_HERDR_ORIGIN_WORKSPACE_ID`: this dispatch's verified caller workspace.
+- `AGENCY_HERDR_ORIGIN_TARGET`: the caller's nonempty `AGENCY_TARGET`, or an
+  empty value when the caller is not an active Agency target. The helper uses it
+  only to prevent a worker from launching itself.
 
 Origin metadata is refreshed on each dispatch, not copied from stale origin
 variables. It is for failure notifications, never a substitute for Herdr's own

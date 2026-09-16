@@ -3,6 +3,7 @@ import { accessSync, constants } from "node:fs"
 import { resolve } from "node:path"
 import {
 	main,
+	originTargetEnv,
 	setupConfig,
 	setupProfile,
 	workerConfigEnv,
@@ -625,6 +626,7 @@ describe("agency-herdr-dispatch", () => {
 				AGENCY_HERDR_ORIGIN_PANE_ID: "stale",
 				AGENCY_HERDR_ORIGIN_TAB_ID: "stale",
 				AGENCY_HERDR_ORIGIN_WORKSPACE_ID: "stale",
+				AGENCY_HERDR_ORIGIN_TARGET: "stale",
 				OPENCODE_CONFIG_CONTENT: JSON.stringify(inherited),
 			}
 			const before = { ...sourceEnv }
@@ -649,6 +651,7 @@ describe("agency-herdr-dispatch", () => {
 				"AGENCY_HERDR_ORIGIN_PANE_ID=w3S:p47",
 				"AGENCY_HERDR_ORIGIN_TAB_ID=w3S:t20",
 				"AGENCY_HERDR_ORIGIN_WORKSPACE_ID=w3S",
+				`${originTargetEnv}=`,
 			])
 			const config = JSON.parse(
 				assignments[0]!.slice("OPENCODE_CONFIG_CONTENT=".length),
@@ -726,10 +729,6 @@ describe("agency-herdr-dispatch", () => {
 		{ HERDR_PANE_ID: undefined },
 		{ HERDR_TAB_ID: "" },
 		{ HERDR_WORKSPACE_ID: "" },
-		{ AGENCY_SESSION_ID: "session" },
-		{ AGENCY_SESSION_ID: "" },
-		{ AGENCY_TARGET: "task" },
-		{ AGENCY_TARGET: "" },
 		{ OPENCODE_CONFIG_CONTENT: "not JSON" },
 		{ OPENCODE_CONFIG_CONTENT: "[]" },
 	])(
@@ -738,6 +737,23 @@ describe("agency-herdr-dispatch", () => {
 			const f = fake()
 			expect(await main(args, f.io, { ...env, ...override }, cwd)).toBe(1)
 			expect(f.calls).toHaveLength(0)
+		},
+	)
+
+	test.each([
+		{ AGENCY_SESSION_ID: "session" },
+		{ AGENCY_SESSION_ID: "" },
+		{ AGENCY_TARGET: "execution-unit:task/source" },
+		{ AGENCY_TARGET: "" },
+	])(
+		"allows Agency workers to dispatch other targets: %j",
+		async (override) => {
+			const f = fake()
+			expect(await main(args, f.io, { ...env, ...override }, cwd)).toBe(0)
+			const tab = f.calls[1]!.argv
+			expect(tab).toContain(
+				`${originTargetEnv}=${override.AGENCY_TARGET ?? ""}`,
+			)
 		},
 	)
 
