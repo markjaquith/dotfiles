@@ -5,7 +5,7 @@
 	},
 	"LuaSnip": {
 		"branch": "master",
-		"commit": "c1851d5c519611dfc451b6582961b2602e0af89b"
+		"commit": "eda5be8f0ce9816278671f0b578cdbb8b762c701"
 	},
 	"async.nvim": {
 		"branch": "main",
