@@ -3,4 +3,5 @@
 hk = "latest"
 node = "latest"
 "npm:oxfmt" = "latest"
+pipx = "latest"
 pkl = "latest"

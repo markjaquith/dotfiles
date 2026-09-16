@@ -1,6 +1,6 @@
 {
 	"$schema": "https://opencode.ai/config.json",
-	// opencode-queue has no compatible beta19228 entrypoint (including 0.13.2).
+	// opencode-queue has no compatible beta19271 entrypoint (including 0.13.2).
 	"plugin": ["@plannotator/opencode@0.27.12"],
 	"snapshot": false,
 	"mcp": {

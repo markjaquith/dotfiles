@@ -62,27 +62,42 @@ for rust_tool in rust-analyzer rustfmt cargo-fmt; do
 done
 
 if command -v rustup &>/dev/null; then
-	rustup update stable
+	repair_stable_rust() {
+		echo "Repairing incomplete stable Rust toolchain..."
+		rustup toolchain uninstall stable
+		rustup toolchain install stable --profile default
+	}
+
+	typeset rustup_update_status=0
+	rustup update stable || rustup_update_status=$?
 	rustup default stable > /dev/null 2>&1
+	if ! rustup which cargo &>/dev/null || ! rustup which rustc &>/dev/null; then
+		repair_stable_rust
+		rustup default stable > /dev/null 2>&1
+	elif (( rustup_update_status )); then
+		print -u2 "Rust stable toolchain update failed"
+		return "$rustup_update_status"
+	fi
 	rustup component add rust-analyzer clippy rustfmt
 	[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 fi
 
-if command -v cargo &>/dev/null; then
-  # cmdy
-  if ! command -v cmdy &>/dev/null; then
-    cargo install cmdy
-  fi
+if command -v cargo &>/dev/null && cargo --version &>/dev/null; then
+	# cmdy
+	if ! command -v cmdy &>/dev/null; then
+		cargo install cmdy
+	fi
 
-  # wrappy
-  if ! command -v wrappy &>/dev/null; then
-    cargo install wrappy
-  fi
+	# wrappy
+	if ! command -v wrappy &>/dev/null; then
+		cargo install wrappy
+	fi
 
-  # worktrunk
-  cargo install --locked worktrunk
+	# worktrunk
+	cargo install --locked worktrunk
 else
-  echo "Warning: cargo not found, skipping Rust package installs"
+	print -u2 "Rust installation failed: cargo is unavailable"
+	return 1
 fi
 
 # framecap

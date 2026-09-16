@@ -19,6 +19,7 @@ brew install --quiet \
 		yamlfix \
 		pkl-lsp \
 		fswatch \
+		git-filter-repo \
 		watchman \
     buildkite/buildkite/bk@3 \
     stow \
@@ -34,6 +35,7 @@ brew install --quiet \
 		aerc \
 		w3m \
 		markjaquith/tap/cowtree \
+		tokei \
 		trash
 
 brew install --quiet --cask espanso
