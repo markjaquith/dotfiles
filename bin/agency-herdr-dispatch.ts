@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { accessSync, constants, statSync, writeSync } from "node:fs"
-import { basename, isAbsolute, resolve } from "node:path"
+import { isAbsolute, resolve } from "node:path"
 import {
 	parse as parseJsonc,
 	printParseErrorCode,
@@ -16,6 +16,7 @@ export type Runtime = Pick<SetupRuntime, "run" | "emit"> & {
 export const setupProfile = "agency-herdr-dispatch-setup"
 export const workerConfigEnv = "AGENCY_HERDR_WORKER_OPENCODE_CONFIG_CONTENT"
 export const originTargetEnv = "AGENCY_HERDR_ORIGIN_TARGET"
+export const launchingLabel = "Launching..."
 
 // The full TUI selects agents through default_agent. Worker panes restore the
 // inherited config via workerConfigEnv before Agency starts their OpenCode agent.
@@ -130,7 +131,7 @@ export async function main(
 			"Complete --request is required",
 		)
 		const cwd = resolve(processCwd, text(options.get("--cwd") ?? processCwd))
-		const label = text(options.get("--label") ?? (basename(cwd) || "agency"))
+		const label = text(options.get("--label") ?? launchingLabel)
 		requireValue(env.HERDR_ENV === "1", "HERDR_ENV=1 is required")
 		const originTarget =
 			env.AGENCY_TARGET === undefined || env.AGENCY_TARGET === ""

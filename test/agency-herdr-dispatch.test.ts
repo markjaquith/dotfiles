@@ -3,6 +3,7 @@ import { accessSync, constants } from "node:fs"
 import { resolve } from "node:path"
 import {
 	main,
+	launchingLabel,
 	originTargetEnv,
 	setupConfig,
 	setupProfile,
@@ -71,7 +72,7 @@ const created = {
 		tab: {
 			agent_status: "unknown",
 			focused: false,
-			label: "Example round 5 setup",
+			label: launchingLabel,
 			number: 65,
 			pane_count: 1,
 			tab_id: "w3S:t21",
@@ -279,7 +280,7 @@ describe("agency-herdr-dispatch", () => {
 				"--cwd",
 				cwd,
 				"--label",
-				"example-task",
+				launchingLabel,
 				"--no-focus",
 			])
 			const name = f.calls[2]!.argv[3]!
@@ -602,7 +603,7 @@ describe("agency-herdr-dispatch", () => {
 			),
 		).toBe(0)
 		expect(f.calls[1]!.cwd).toBe(resolve(cwd, "../other"))
-		expect(f.calls[1]!.argv[8]).toBe("other")
+		expect(f.calls[1]!.argv[8]).toBe(launchingLabel)
 	})
 
 	test.each([undefined, "/managed/agency"])(

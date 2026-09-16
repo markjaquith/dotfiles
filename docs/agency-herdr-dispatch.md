@@ -12,9 +12,12 @@ agency-herdr-dispatch --intent open --request 'Open the existing task' --cwd '/p
 
 Pass the complete user prompt, not a summary. `--cwd` defaults to `process.cwd()`;
 relative paths resolve against that directory, not `$PWD` or the focused UI.
-`--label` defaults to the requested cwd's basename. Values are separate subprocess
-arguments, never shell source. Requests retain whitespace, newlines, quotes, and
-Unicode exactly; NUL is rejected because subprocess arguments cannot contain it.
+`--label` defaults to `Launching...`, so the new tab identifies its transient
+state immediately. The setup helper later renames it to the authoritative Agency
+ID (`taskId/phaseId` for a phase) once context is available. Values are separate
+subprocess arguments, never shell source. Requests retain whitespace, newlines,
+quotes, and Unicode exactly; NUL is rejected because subprocess arguments cannot
+contain it.
 
 Only invoke this command for an authorized user open/launch flow. Create-only
 and materialize-only requests must not use it. An active Agency worker may
@@ -60,8 +63,9 @@ explicit user authorization described below.
 1. Validate arguments and any explicit executable, and require `HERDR_ENV=1` and inherited workspace/tab/pane
    IDs. Verify their exact location with `herdr pane get "$HERDR_PANE_ID"`.
    IDs are opaque strings; `w3S:t21` and `w3S:p48` are valid real handles.
-2. Create one tab with explicit inherited `--workspace`, requested `--cwd`,
-   `--label`, `--no-focus`, and the environment assignments below.
+2. Create one tab with explicit inherited `--workspace`, requested `--cwd`, the
+   `Launching...` default `--label`, `--no-focus`, and the environment assignments
+   below. An explicit `--label` overrides the placeholder.
 3. Start a uniquely named agent in the returned root pane with
    `herdr agent start <name> --kind opencode --pane <id> --timeout 30000`.
 4. Submit the protocol and complete original request with `herdr agent prompt`.

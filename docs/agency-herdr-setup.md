@@ -18,7 +18,9 @@ range 1000 through 300000. There is no public or automatic `--force` option.
 An optional `--prepare-timeout-ms` sets only the applying preparation subprocess
 limit, default 300000, range 1000 through 600000. Context and preparation dry-run
 retain their fixed 120000ms limits. Timeout values must be decimal integers.
-Tab labels come from the inspected Agency ID, or `taskId/phaseId` for a phase.
+The dispatcher initially labels a new setup tab `Launching...`. This helper
+replaces that placeholder with the inspected Agency ID, or `taskId/phaseId` for a
+phase, as soon as authoritative context is available.
 
 Two opt-in options support a single recovery invocation:
 
