@@ -40,6 +40,7 @@ test("Pi cache deduplicates, retries failures, and refreshes on reload and TTL",
 				handlers.set(name, handler)
 			},
 		})
+		expect(handlers.has("session_start")).toBeTrue()
 		const discover = () =>
 			handlers.get("resources_discover")!({ cwd: root, reason: "startup" })
 		const prompt = () =>
