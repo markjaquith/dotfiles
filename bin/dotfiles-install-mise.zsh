@@ -15,6 +15,7 @@ mise use -g herdr@0.8.2 > /dev/null
 mise use hk@latest > /dev/null
 mise use -g pi@latest > /dev/null
 mise use -g pnpm@latest > /dev/null
+mise use -g fzf@latest > /dev/null
 mise use pkl@latest > /dev/null
 
 herdr_plugins=(
@@ -32,12 +33,11 @@ for plugin in "${herdr_plugins[@]}"; do
 done
 
 local_herdr_plugins=(
-	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/agent-chooser"
-	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/url-chooser"
-	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local/new-tab-cwd"
+	"${SCRIPT_DIR}/../home/.config/herdr/plugins/local"/*/herdr-plugin.toml(N)
 )
 
-for plugin in "${local_herdr_plugins[@]}"; do
+for plugin_manifest in "${local_herdr_plugins[@]}"; do
+	plugin="${plugin_manifest:h}"
 	if command -v herdr &> /dev/null; then
 		herdr plugin link "$plugin" > /dev/null
 	else
