@@ -73,11 +73,15 @@ test("keeps only the last four conversation messages", () => {
 })
 
 test("formats fractional percentage bars without control characters", () => {
-	expect(percentageBar(0.01)).toEndWith(" 1%")
+	expect(percentageBar(0.01)).toBe(" │▏         │  1%")
+	expect(percentageBar(0.149)).toStartWith(" ")
+	expect(percentageBar(0.15)).toStartWith(" ")
 	expect(percentageBar(0.7)).toContain("│███████   │ 70%")
 	expect(percentageBar(0.725)).toContain("│███████▎  │ 73%")
 	expect(percentageBar(0.75)).toContain("│███████▌  │ 75%")
 	expect(percentageBar(0.775)).toContain("│███████▊  │ 78%")
+	expect(percentageBar(0.849)).toStartWith(" ")
+	expect(percentageBar(0.85)).toStartWith(" ")
 	expect(percentageBar(0.7)).toEndWith("70%")
 	expect(percentageBar(0.7)).not.toContain("\u001b")
 })

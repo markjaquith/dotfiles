@@ -2,6 +2,7 @@ const WIDTH = 10
 const FRACTIONS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"]
 
 export function percentageBar(value: number) {
+	const icon = value >= 0.85 ? "" : value < 0.15 ? "" : ""
 	const scaled = value * WIDTH
 	let full = Math.floor(scaled)
 	let fraction = Math.round((scaled - full) * 8)
@@ -13,5 +14,5 @@ export function percentageBar(value: number) {
 	const empty = " ".repeat(WIDTH - full - (partial ? 1 : 0))
 	const percentage = Math.round(value * 100)
 	const paddedPercentage = percentage < 10 ? ` ${percentage}` : percentage
-	return `│${"█".repeat(full)}${partial}${empty}│ ${paddedPercentage}%`
+	return `${icon} │${"█".repeat(full)}${partial}${empty}│ ${paddedPercentage}%`
 }
