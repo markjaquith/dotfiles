@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test"
 import { percentageBar } from "../../jev/bar"
 import { evaluateNoul } from "../../jev/client"
 import { lastConversationMessages } from "../../jev/messages"
+import { jevMixins } from "../../jev/mixins"
 import jevPlugin from "../../jev/tui"
 
 const originalFetch = globalThis.fetch
@@ -72,6 +73,20 @@ test("keeps only the last four conversation messages", () => {
 	])
 })
 
+test("recognizes git status questions by whole words in any case", () => {
+	for (const question of [
+		"git diff",
+		"Commit this",
+		"STATUS?",
+		"Already committed",
+	]) {
+		expect(jevMixins[0]?.heuristic(question)).toBeTrue()
+	}
+	for (const question of ["digital", "commitment", "statuses", "uncommitted"]) {
+		expect(jevMixins[0]?.heuristic(question)).toBeFalse()
+	}
+})
+
 test("formats fractional percentage bars without control characters", () => {
 	expect(percentageBar(0.01)).toBe(" │▏         │  1%")
 	expect(percentageBar(0.149)).toStartWith(" ")
@@ -132,12 +147,28 @@ test("retains consecutive Jev results as context until the user sends a message"
 		| ((event: { data: { sessionID: string; item: { type: "user" } } }) => void)
 		| undefined
 	const cancelled: Array<{ sessionID: string; inboxID: string }> = []
+	const descriptions: string[] = []
 	let syntheticCount = 0
 	const context = {
 		client: {
+			vcs: {
+				status: async () => ({
+					data: [
+						{
+							file: "jev/tui.ts",
+							additions: 4,
+							deletions: 0,
+							status: "modified",
+						},
+					],
+				}),
+			},
 			session: {
 				context: async () => [],
-				synthetic: async () => ({ id: `msg_jev_${++syntheticCount}` }),
+				synthetic: async (input: { description?: string }) => {
+					descriptions.push(input.description ?? "")
+					return { id: `msg_jev_${++syntheticCount}` }
+				},
 				inbox: {
 					cancel: async (input: { sessionID: string; inboxID: string }) => {
 						cancelled.push(input)
@@ -172,17 +203,34 @@ test("retains consecutive Jev results as context until the user sends a message"
 
 	jevPlugin.setup(context)
 	render?.()
-	await run?.("Is it fixed?")
+	await run?.("Is git status clean?")
 	await run?.("Is it definitely fixed?")
 
 	expect(cancelled).toEqual([])
 	expect(states).toEqual([
-		{ messages: [], jev: [] },
 		{
 			messages: [],
-			jev: [{ question: "Is it fixed?", answer: 0.73 }],
+			jev: [],
+			mixins: {
+				git: {
+					status: [
+						{
+							file: "jev/tui.ts",
+							additions: 4,
+							deletions: 0,
+							status: "modified",
+						},
+					],
+				},
+			},
+		},
+		{
+			messages: [],
+			jev: [{ question: "Is git status clean?", answer: 0.73 }],
 		},
 	])
+	expect(descriptions[0]).toContain(" · Git · Is git status clean?")
+	expect(descriptions[1]).toEndWith(" · Is it definitely fixed?")
 
 	onEnqueued?.({
 		data: { sessionID: "ses_test", item: { type: "user" } },

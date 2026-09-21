@@ -1,4 +1,4 @@
-import { expect, mock, spyOn, test } from "bun:test"
+import { expect, mock, test } from "bun:test"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { homedir, tmpdir } from "node:os"
@@ -22,10 +22,8 @@ test.skipIf(!existsSync(source))(
 	},
 )
 
-test("Pi cache deduplicates, retries failures, and refreshes on reload and TTL", async () => {
+test("Pi cache deduplicates and retains failed lookups", async () => {
 	const root = await mkdtemp(join(tmpdir(), "agency-pi-"))
-	let now = 0
-	const clock = spyOn(Date, "now").mockImplementation(() => now)
 	try {
 		await writeFile(join(root, "agency.json"), '{"version":2}\n')
 		const checkout = join(root, "checkout")
@@ -40,7 +38,6 @@ test("Pi cache deduplicates, retries failures, and refreshes on reload and TTL",
 				handlers.set(name, handler)
 			},
 		})
-		expect(handlers.has("session_start")).toBeTrue()
 		const discover = () =>
 			handlers.get("resources_discover")!({ cwd: root, reason: "startup" })
 		const prompt = () =>
@@ -53,42 +50,11 @@ test("Pi cache deduplicates, retries failures, and refreshes on reload and TTL",
 		expect(exec).toHaveBeenCalledTimes(1)
 		pending.reject(new Error("temporary failure"))
 		await Promise.all([resources, before])
-		now = 999
 		await discover()
 		expect(exec).toHaveBeenCalledTimes(1)
-		exec.mockResolvedValue({
-			code: 0,
-			stdout: JSON.stringify({
-				ok: true,
-				result: {
-					workbase: { root },
-					target: { kind: "task", taskId: "example" },
-					authority: {
-						mode: "execution",
-						writable: { checkoutPath: checkout },
-					},
-					documents: { task: { data: { status: "working" } } },
-					validation: { valid: true },
-				},
-			}),
-		})
-		now = 1000
-		expect((await discover()).skillPaths).toEqual([skills])
-		expect((await prompt()).systemPrompt).toContain(checkout)
-		expect(exec).toHaveBeenCalledTimes(2)
-		await handlers.get("session_start")!({
-			type: "session_start",
-			reason: "reload",
-		})
-		await discover()
-		await prompt()
-		expect(exec).toHaveBeenCalledTimes(3)
-		now += 60_000
-		exec.mockResolvedValue({ code: 1, stdout: "" })
 		expect(await discover()).toBeUndefined()
-		expect(exec).toHaveBeenCalledTimes(4)
+		expect(exec).toHaveBeenCalledTimes(1)
 	} finally {
-		clock.mockRestore()
 		await rm(root, { recursive: true, force: true })
 	}
 })

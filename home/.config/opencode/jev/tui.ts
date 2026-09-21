@@ -2,6 +2,7 @@ import type { Context } from "@opencode-ai/plugin/tui/context"
 import { percentageBar } from "./bar"
 import { evaluateNoul } from "./client"
 import { lastConversationMessages } from "./messages"
+import { resolveMixins } from "./mixins"
 
 interface JevEvaluation {
 	inboxID: string
@@ -77,6 +78,7 @@ export default {
 										})
 										const previousEvaluations =
 											history.get(route.sessionID) ?? []
+										const mixins = await resolveMixins(context, question)
 										const noul = await evaluateNoul({
 											state: {
 												messages: lastConversationMessages(messages),
@@ -84,16 +86,23 @@ export default {
 													question,
 													answer: noul,
 												})),
+												...(mixins.labels.length === 0
+													? {}
+													: { mixins: mixins.state }),
 											},
 											question,
 										})
 										if ((generations.get(route.sessionID) ?? 0) !== generation)
 											return
 
+										const mixinDescription =
+											mixins.labels.length === 0
+												? ""
+												: ` · ${mixins.labels.join(", ")}`
 										const result = await context.client.session.synthetic({
 											sessionID: route.sessionID,
 											text: percentageBar(noul),
-											description: `Jev · ${percentageBar(noul)} · ${question}`,
+											description: `Jev · ${percentageBar(noul)}${mixinDescription} · ${question}`,
 											metadata: { source: "jev", noul },
 											delivery: "queue",
 											resume: false,
