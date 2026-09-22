@@ -1369,17 +1369,90 @@ describe("agency-herdr-setup", () => {
 			noClose(h)
 		}
 	})
-	test("changed evidence after apply prevents launch and builds recovery", async () => {
+	test("changed evidence after apply is retried once before launch", async () => {
 		const h = harness()
+		let applies = 0
 		h.override = (argv) => {
-			if (argv[2] !== "prepare" || argv.includes("--dry-run")) return
+			if (argv[2] !== "prepare") return
+			if (argv.includes("--dry-run")) {
+				if (applies === 0) return
+				const refreshed = prepare(h.context, true)
+				refreshed.validationEvidence.evidence.digest = "new-digest"
+				refreshed.validationEvidence.evidence.workbaseRevision =
+					"new-workbase-revision"
+				return output(ok(refreshed))
+			}
 			const applied = prepare(h.context, false)
-			applied.validationEvidence.status = "refreshed"
+			const supplied = JSON.parse(argv[argv.indexOf("--evidence") + 1]!)
+			applied.validationEvidence.evidence = supplied
+			if (applies++ === 0) {
+				applied.validationEvidence.evidence = {
+					...supplied,
+					digest: "new-digest",
+					workbaseRevision: "new-workbase-revision",
+				}
+			}
+			return output(ok(applied))
+		}
+		expect(await run(h)).toBe(0)
+		expect(h.calls.filter((c) => c.argv[2] === "prepare")).toHaveLength(4)
+		expect(
+			h.events.some(
+				(event) =>
+					event.event === "diagnostic" &&
+					String(event.message).includes("retrying once"),
+			),
+		).toBe(true)
+		expect(commands(h).some((c) => c.includes("agency work ."))).toBe(true)
+	})
+	test("repeated evidence changes prevent launch and build recovery", async () => {
+		const h = harness()
+		let revision = 0
+		h.override = (argv) => {
+			if (argv[2] !== "prepare") return
+			if (argv.includes("--dry-run")) {
+				if (revision === 0) return
+				const refreshed = prepare(h.context, true)
+				refreshed.validationEvidence.evidence.digest = `changed-digest-${revision - 1}`
+				refreshed.validationEvidence.evidence.workbaseRevision = `changed-workbase-revision-${revision - 1}`
+				return output(ok(refreshed))
+			}
+			const applied = prepare(h.context, false)
+			const supplied = JSON.parse(argv[argv.indexOf("--evidence") + 1]!)
+			applied.validationEvidence.evidence = {
+				...supplied,
+				digest: `changed-digest-${revision}`,
+				workbaseRevision: `changed-workbase-revision-${revision++}`,
+			}
 			return output(ok(applied))
 		}
 		expect(await run(h)).toBe(1)
+		expect(h.calls.filter((c) => c.argv[2] === "prepare")).toHaveLength(4)
 		expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
 		expect(commands(h).some((c) => c.includes("nvim --"))).toBe(true)
+		noClose(h)
+	})
+	test("invalid workbase after an evidence race prevents the retry", async () => {
+		const h = harness()
+		let changed = false
+		h.override = (argv) => {
+			if (argv[2] !== "prepare") return
+			if (argv.includes("--dry-run")) {
+				if (!changed) return
+				const refreshed = prepare(h.context, true)
+				refreshed.validation.valid = false
+				return output(ok(refreshed))
+			}
+			const applied = prepare(h.context, false)
+			applied.validationEvidence.evidence.digest = "changed-digest"
+			applied.validationEvidence.evidence.workbaseRevision =
+				"changed-workbase-revision"
+			changed = true
+			return output(ok(applied))
+		}
+		expect(await run(h)).toBe(1)
+		expect(h.calls.filter((c) => c.argv[2] === "prepare")).toHaveLength(3)
+		expect(commands(h).some((c) => c.includes("agency work ."))).toBe(false)
 		noClose(h)
 	})
 	test("open orchestration must be ready, never prepared or forced", async () => {

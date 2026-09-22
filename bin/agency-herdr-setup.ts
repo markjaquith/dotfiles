@@ -388,19 +388,22 @@ function prepared(
 			"Evidence recalled authority mismatch",
 		)
 	array(recalled.authoritativeSources).map(text)
-	if (previous)
-		requireValue(
-			disposition.status === "reused" &&
-				array(disposition.reasons).length === 0 &&
-				isDeepStrictEqual(previous, evidence),
-			"Validation evidence changed during preparation",
-		)
-	else
-		requireValue(
-			["reused", "refreshed"].includes(text(disposition.status)),
-			"Unknown evidence disposition",
-		)
-	return evidence
+	const status = text(disposition.status)
+	const reasons = array(disposition.reasons).map(text)
+	requireValue(
+		["reused", "refreshed"].includes(status),
+		"Unknown evidence disposition",
+	)
+	return {
+		evidence,
+		stable:
+			previous === undefined ||
+			(status === "reused" &&
+				reasons.length === 0 &&
+				isDeepStrictEqual(previous, evidence)),
+		status,
+		reasons,
+	}
 }
 
 async function notifyFailure(
@@ -762,23 +765,62 @@ export async function main(
 								`Preparation blocked: ${JSON.stringify(preview.output)}. ${readinessOverrideWarning}`,
 							)
 						}
-						const evidence = prepared(success(preview), initial, true)
-						const applied = success(
-							await call(
+						let evidence = prepared(success(preview), initial, true).evidence
+						const prepareDeadline = io.now() + prepareTimeout
+						for (let attempt = 0; attempt < 2; attempt++) {
+							const remaining = Math.floor(prepareDeadline - io.now())
+							requireValue(remaining > 0, "Preparation retry budget exhausted")
+							const applied = success(
+								await call(
+									[
+										agency,
+										"work",
+										"prepare",
+										initial.directory,
+										"--json",
+										...permission,
+										"--evidence",
+										JSON.stringify(evidence),
+									],
+									remaining,
+								),
+							)
+							const result = prepared(applied, initial, false, evidence)
+							if (result.stable) break
+							requireValue(
+								attempt === 0,
+								"Validation evidence changed repeatedly during preparation",
+							)
+							io.emit({
+								event: "diagnostic",
+								message:
+									"Validation evidence changed during preparation; retrying once within the existing preparation budget",
+								status: result.status,
+								reasons: result.reasons,
+								...ids,
+							})
+							const validationBudget = Math.min(
+								120_000,
+								Math.floor(prepareDeadline - io.now()),
+							)
+							requireValue(
+								validationBudget > 0,
+								"Preparation retry budget exhausted",
+							)
+							const refreshed = await call(
 								[
 									agency,
 									"work",
 									"prepare",
 									initial.directory,
+									"--dry-run",
 									"--json",
 									...permission,
-									"--evidence",
-									JSON.stringify(evidence),
 								],
-								prepareTimeout,
-							),
-						)
-						prepared(applied, initial, false, evidence)
+								validationBudget,
+							)
+							evidence = prepared(success(refreshed), initial, true).evidence
+						}
 					} else
 						requireValue(
 							initial.readiness.ready === true || initial.status === "working",

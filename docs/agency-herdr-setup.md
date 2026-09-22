@@ -73,7 +73,13 @@ variables to make another pane appear to be the caller.
    validated as one detached, read-only checkout; it is never treated as writable
    repository authority. Validate the execution contract and pass its exact
    `validationEvidence.evidence` object as inline JSON to applying preparation
-   with `--evidence`. Require unchanged, reused evidence in the applying result.
+   with `--evidence`. If a concurrent Agency mutation changes that evidence while
+   preparation is running, validate the returned contract, rerun the dry-run to
+   validate the new workbase state, and retry applying preparation once with that
+   fresh evidence. The retry is idempotent, happens before pane creation, and
+   shares the original applying-preparation timeout budget. Require unchanged,
+   reused evidence from that retry; a second change or failed refreshed validation
+   stops launch and retains recovery panes.
    Epic and multi-phase task orchestration skips preparation and accepts readiness
    or aggregate status `working` with no validation blockers, matching installed
    `ReadinessService.isResumableWork`. Other non-validation blockers do not prevent
@@ -238,9 +244,11 @@ the adjacent TypeScript implementation, with no added dependency.
   `src/workbase/execution-contract.ts`. Herdr sources are `src/cli/pane.rs`,
   `src/cli/agent.rs`, `src/api/wait.rs`, and `src/api/schema/`.
 - Evidence reuse and dynamic safety checks are upstream operations, not an atomic lock held by this
-  helper. A concurrent edit can invalidate evidence between preview and apply;
-  the helper rejects the changed applying result, but cannot undo materialization
-  that already happened. Similarly, authority can change between apply and the
+  helper. A concurrent edit can invalidate evidence between preview and apply.
+  The helper performs one bounded validation preview and idempotent applying-
+  preparation retry; repeated churn or invalid refreshed validation still fails
+  closed. The helper cannot undo materialization that happened before a
+  failure. Similarly, authority can change between apply and the
   pane-submitted launch; final verification detects this but cannot retroactively
   prevent the launch. Eliminating those races requires an upstream atomic guarded
   prepare/launch contract, not additional speculative shell commands.
