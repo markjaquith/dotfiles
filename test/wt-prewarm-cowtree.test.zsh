@@ -18,13 +18,25 @@ invocation="$test_root/cowtree-invocation"
 wt_invocations="$test_root/wt-invocations"
 prewarm_prefix="worktree-prewarm-cow-"
 
+origin="$test_root/origin.git"
+upstream_clone="$test_root/upstream"
+
 mkdir -p "$repository" "$worktrees" "$mock_bin"
 git -C "$repository" init --initial-branch=main >/dev/null
 git -C "$repository" config user.email "wt-prewarm@example.com"
 git -C "$repository" config user.name "wt-prewarm test"
 print -r -- "fixture" >"$repository/README.md"
-git -C "$repository" add README.md
+print -r -- "unchanged" >"$repository/stable.txt"
+print -r -- "doomed" >"$repository/doomed.txt"
+git -C "$repository" add README.md stable.txt doomed.txt
 git -C "$repository" commit -m "Initial fixture" >/dev/null
+git clone --quiet --bare "$repository" "$origin"
+git -C "$repository" remote add origin "$origin"
+git -C "$repository" fetch --quiet origin
+git -C "$repository" remote set-head origin main >/dev/null
+git clone --quiet "$origin" "$upstream_clone"
+git -C "$upstream_clone" config user.email "wt-prewarm@example.com"
+git -C "$upstream_clone" config user.name "wt-prewarm test"
 
 cat >"$config" <<EOF
 worktree-path = "$worktrees/{{ branch | sanitize }}"
@@ -79,22 +91,82 @@ if [[ ! -f "$invocation" ]] || [[ $(grep -c '^add ' "$invocation") -ne 3 ]]; the
 	exit 1
 fi
 
-# A lower minimum does not shrink or build, while refresh rebuilds every member
-# and preserves the larger existing pool size.
+typeset -A stable_inodes
+for prewarm_worktree in "${prewarm_worktrees[@]}"; do
+	stable_inodes[$prewarm_worktree]=$(stat -f %i "$prewarm_worktree/stable.txt")
+done
+
+# Advance origin/main without touching local main. Refresh must fetch it and
+# move every member in place: no rebuilds, only changed paths rewritten.
+print -r -- "updated" >"$upstream_clone/README.md"
+print -r -- "added" >"$upstream_clone/added.txt"
+git -C "$upstream_clone" rm --quiet doomed.txt
+git -C "$upstream_clone" add README.md added.txt
+git -C "$upstream_clone" commit --quiet -m "Advance main"
+git -C "$upstream_clone" push --quiet origin main
+upstream_head=$(git -C "$upstream_clone" rev-parse HEAD)
+
+# A lower minimum does not shrink or build, and refresh preserves the larger
+# existing pool size.
 (
 	cd "$repository"
 	wt-prewarm ensure --count 2 >/dev/null
 	wt-prewarm ensure --count 2 --refresh >/dev/null
 )
 
-if [[ $(grep -c '^add ' "$invocation") -ne 6 ]]; then
-	print -ru2 -- "FAIL: refresh did not rebuild all three existing prewarms"
+if [[ $(grep -c '^add ' "$invocation") -ne 3 ]]; then
+	print -ru2 -- "FAIL: refresh rebuilt prewarms instead of moving them in place"
 	exit 1
 fi
 
 prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
 if [[ ${#prewarm_worktrees} -ne 3 ]]; then
 	print -ru2 -- "FAIL: refresh unexpectedly changed the larger pool size"
+	exit 1
+fi
+
+if [[ "$(git -C "$repository" rev-parse main)" == "$upstream_head" ]]; then
+	print -ru2 -- "FAIL: refresh unexpectedly moved local main"
+	exit 1
+fi
+
+for prewarm_worktree in "${prewarm_worktrees[@]}"; do
+	if [[ "$(git -C "$prewarm_worktree" rev-parse HEAD)" != "$upstream_head" ]]; then
+		print -ru2 -- "FAIL: refresh did not move member to origin/main: $prewarm_worktree"
+		exit 1
+	fi
+	if [[ "$(<"$prewarm_worktree/README.md")" != "updated" \
+		|| ! -f "$prewarm_worktree/added.txt" \
+		|| -e "$prewarm_worktree/doomed.txt" ]]; then
+		print -ru2 -- "FAIL: refresh did not update member files: $prewarm_worktree"
+		exit 1
+	fi
+	if [[ "$(stat -f %i "$prewarm_worktree/stable.txt")" != "${stable_inodes[$prewarm_worktree]}" ]]; then
+		print -ru2 -- "FAIL: refresh rewrote an unchanged file: $prewarm_worktree"
+		exit 1
+	fi
+	if [[ ! -f "$prewarm_worktree/.wt-prewarm-ready" ]]; then
+		print -ru2 -- "FAIL: refresh left member unclaimable: $prewarm_worktree"
+		exit 1
+	fi
+	if [[ -n "$(git -C "$prewarm_worktree" status --porcelain --untracked-files=no)" ]]; then
+		print -ru2 -- "FAIL: refresh left member dirty: $prewarm_worktree"
+		exit 1
+	fi
+	branch=$(git -C "$prewarm_worktree" symbolic-ref --short HEAD)
+	if git -C "$repository" config "branch.${branch}.merge" >/dev/null; then
+		print -ru2 -- "FAIL: prewarm branch unexpectedly tracks a remote: $branch"
+		exit 1
+	fi
+done
+
+# The refresh alias is a no-op when every member is already current.
+refresh_output=$(
+	cd "$repository"
+	wt-prewarm refresh
+)
+if [[ "$refresh_output" != *"3 ready"* ]] || [[ $(grep -c '^add ' "$invocation") -ne 3 ]]; then
+	print -ru2 -- "FAIL: refresh alias did not keep the current pool"
 	exit 1
 fi
 
@@ -119,7 +191,7 @@ if [[ ! -d "$worktrees/claim-one" || ! -d "$worktrees/claim-two" ]]; then
 fi
 sleep 0.5
 prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
-if [[ ${#prewarm_worktrees} -ne 1 ]] || [[ $(grep -c '^add ' "$invocation") -ne 6 ]]; then
+if [[ ${#prewarm_worktrees} -ne 1 ]] || [[ $(grep -c '^add ' "$invocation") -ne 3 ]]; then
 	print -ru2 -- "FAIL: concurrent claims replenished a nonempty pool"
 	exit 1
 fi
@@ -135,6 +207,14 @@ if git -C "$repository" show-ref --verify --quiet refs/heads/worktrunk-prewarm; 
 	print -ru2 -- "FAIL: ensure did not remove the legacy prewarm"
 	exit 1
 fi
+
+# Top-ups build new members from origin/main, not the stale local main.
+for prewarm_worktree in "$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N); do
+	if [[ "$(git -C "$prewarm_worktree" rev-parse HEAD)" != "$upstream_head" ]]; then
+		print -ru2 -- "FAIL: top-up built a member from a base other than origin/main"
+		exit 1
+	fi
+done
 
 status_output=$(
 	cd "$repository"
@@ -160,7 +240,7 @@ fi
 )
 
 if [[ $(grep -c -- "^-y remove --foreground --force --force-delete --no-hooks ${prewarm_prefix}" \
-	"$wt_invocations") -lt 5 ]]; then
+	"$wt_invocations") -ne 2 ]]; then
 	print -ru2 -- "FAIL: pool removal did not use Worktrunk for each member"
 	exit 1
 fi

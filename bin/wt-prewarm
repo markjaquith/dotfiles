@@ -7,7 +7,9 @@ setopt pipefail
 # `wt try <branch>` can claim one instead of paying for a full checkout. The
 # pool's existence is the opt-in signal: callers only take the fast path — and
 # only ensure one remains afterward — when a ready member already exists. Arm
-# it by running `wt prewarm` (alias for this script).
+# it by running `wt prewarm` (alias for this script). Members track the remote
+# default branch (origin/main) and `wt prewarm refresh` moves them forward in
+# place, rewriting only the files that changed.
 
 PREWARM_PREFIX="${WT_PREWARM_PREFIX:-worktree-prewarm-}"
 LEGACY_PREWARM_BRANCH="worktrunk-prewarm"
@@ -20,7 +22,10 @@ function usage() {
 	print -r -- ""
 	print -r -- "Commands:"
 	print -r -- "  ensure [--count N] [--refresh]"
-	print -r -- "                    Ensure at least N ready prewarms (default: 1)"
+	print -r -- "                    Ensure at least N ready prewarms (default: 1);"
+	print -r -- "                    --refresh fetches and moves members to the base in place"
+	print -r -- "  refresh [--count N]"
+	print -r -- "                    Same as ensure --refresh"
 	print -r -- "  remove            Remove all prewarm worktrees and branches"
 	print -r -- "  status            Report prewarm state"
 	print -r -- "  prepare [--create] [--base <base>] [--start-point <commit>]"
@@ -102,6 +107,51 @@ function default_branch() {
 	done
 
 	git rev-parse --abbrev-ref HEAD
+}
+
+# The ref pool members are built from and refreshed to: the remote default
+# branch when it has been fetched, otherwise the local default branch.
+function pool_base_ref() {
+	local base
+
+	base=$(default_branch) || return 1
+	if git show-ref --verify --quiet "refs/remotes/origin/${base}"; then
+		print -r -- "origin/${base}"
+	else
+		print -r -- "$base"
+	fi
+}
+
+function fetch_pool_base() {
+	local base
+
+	git remote get-url origin >/dev/null 2>&1 || return 0
+	base=$(default_branch) || return 1
+	git fetch --quiet --no-tags origin "$base" \
+		|| print -u2 -- "wt-prewarm: could not fetch origin/${base}; using the last fetched commit"
+	return 0
+}
+
+# Move a pristine worktree and its branch to <commit>. A two-way read-tree
+# trusts the index for paths that are identical in both trees, so only the
+# files that differ are stat'd and written; `reset --hard` would stat every
+# tracked file. Neither runs post-checkout hooks. A stale index entry makes
+# read-tree refuse, in which case `reset --hard` is the correct fallback.
+function move_worktree_to() {
+	local wt_path="$1"
+	local branch="$2"
+	local commit="$3"
+	local old
+
+	old=$(git -C "$wt_path" rev-parse --verify --quiet HEAD) || return 1
+	[[ "$old" == "$commit" ]] && return 0
+
+	if git -C "$wt_path" read-tree -m -u "$old" "$commit" >/dev/null 2>&1; then
+		git -C "$wt_path" update-ref -m "wt-prewarm: move to ${commit}" \
+			"refs/heads/${branch}" "$commit" "$old" && return 0
+	fi
+
+	git -C "$wt_path" reset --hard --quiet "$commit" >/dev/null 2>&1
 }
 
 function lock_path() {
@@ -213,9 +263,10 @@ function remove_prewarm() {
 
 function build_prewarm() {
 	local prewarm_branch="$1"
-	local base pw
+	local base base_commit pw
 
-	base=$(default_branch) || return 1
+	base=$(pool_base_ref) || return 1
+	base_commit=$(git rev-parse --verify --quiet "${base}^{commit}") || return 1
 
 	command -v cowtree >/dev/null 2>&1 \
 		|| die "cowtree is required; run dotfiles-install"
@@ -225,8 +276,9 @@ function build_prewarm() {
 
 	# The prewarm is intentionally created without Worktrunk hooks. Hooks must
 	# run against the claiming branch at its final path, not against the prewarm
-	# branch at this temporary path.
-	cowtree add -b "$prewarm_branch" "$pw" "$base" || return 1
+	# branch at this temporary path. Building from the commit rather than the
+	# remote-tracking ref keeps Git from making the branch track origin/main.
+	cowtree add -b "$prewarm_branch" "$pw" "$base_commit" || return 1
 
 	pw=$(worktree_path_for_branch "$prewarm_branch" 2>/dev/null)
 	[[ -n "$pw" ]] || return 1
@@ -260,6 +312,42 @@ function remove_all_prewarms() {
 	done
 }
 
+# Move every ready member to the current pool base in place. Members already
+# at the base cost nothing, and members reserved by an in-flight claim are
+# skipped. The marker is dropped during the move so an interrupted refresh can
+# never leave a half-updated member claimable; a member that cannot be moved is
+# removed so the caller's top-up rebuilds it.
+function refresh_pool_members() {
+	local base target_commit branch pw member_lock rc=0
+
+	base=$(pool_base_ref) || return 1
+	target_commit=$(git rev-parse --verify --quiet "${base}^{commit}") || return 1
+
+	for branch in "${(@f)$(prewarm_branches)}"; do
+		[[ -n "$branch" ]] || continue
+		[[ "$(git rev-parse --verify --quiet "refs/heads/${branch}")" == "$target_commit" ]] \
+			&& continue
+		pw=$(worktree_path_for_branch "$branch" 2>/dev/null)
+		[[ -n "$pw" && -d "$pw" && -f "${pw}/${MARKER}" ]] || continue
+		member_lock=$(member_lock_path "$branch") || return 1
+		acquire_lock "$member_lock" || continue
+		if ! branch_exists "$branch" || [[ ! -f "${pw}/${MARKER}" ]]; then
+			release_lock "$member_lock"
+			continue
+		fi
+
+		rm -f "${pw}/${MARKER}"
+		if move_worktree_to "$pw" "$branch" "$target_commit"; then
+			touch "${pw}/${MARKER}"
+		else
+			print -u2 -- "wt-prewarm: could not refresh ${branch}; rebuilding it"
+			remove_prewarm "$branch" || rc=$?
+		fi
+		release_lock "$member_lock"
+		(( rc == 0 )) || return $rc
+	done
+}
+
 function ready_prewarm_count() {
 	local branch pw count=0
 
@@ -276,7 +364,7 @@ function ready_prewarm_count() {
 # on success (worktree now exists on "$branch_name"), non-zero to signal the
 # caller should fall back to the slow path. A start point lets callers such as
 # `wt try` reuse the checkout for an existing remote branch; without one, the
-# branch remains at the prewarm's default-branch commit for `wt new`. Any failure
+# branch remains at the prewarm's pool-base commit for `wt new`. Any failure
 # rolls back to a clean prewarm before returning non-zero.
 function claim_prewarm() {
 	local branch_name="$1"
@@ -343,11 +431,12 @@ function claim_prewarm() {
 	fi
 
 	# A fetched branch can reuse the prewarm checkout by updating only the files
-	# that differ from the default branch. Do this before the rename and hooks so
+	# that differ from the pool base. Do this before the rename and hooks so
 	# every lifecycle hook observes the requested commit at the final path.
 	if [[ -n "$start_point" ]]; then
 		target_commit=$(git rev-parse --verify "${start_point}^{commit}" 2>/dev/null)
-		if [[ -z "$target_commit" ]] || ! git -C "$pw_path" reset --hard "$target_commit" >/dev/null 2>&1; then
+		if [[ -z "$target_commit" ]] \
+			|| ! move_worktree_to "$pw_path" "$prewarm_branch" "$target_commit"; then
 			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
 			touch "${pw_path}/${MARKER}" 2>/dev/null
 			release_lock "$lock"
@@ -498,7 +587,7 @@ function prepare_worktree() {
 		claim_prewarm "$branch_name" && claimed=1
 	elif (( create_branch )); then
 		default_base=$(default_branch)
-		if [[ "$base_branch" == "$default_base" ]]; then
+		if [[ "$base_branch" == "$default_base" || "$base_branch" == "origin/${default_base}" ]]; then
 			claim_prewarm "$branch_name" "$base_branch" && claimed=1
 		fi
 	elif (( ! create_branch )) && [[ -n "$start_point" ]]; then
@@ -531,9 +620,9 @@ function prepare_worktree() {
 	fi
 }
 
-# Bring <branch>'s worktree up to speed with the LOCAL tip of the prewarm base
-# branch (the same default branch the prewarm was built from). There is no
-# fetch — the caller owns remote freshness. This is best-effort: a fast-forward
+# Bring <branch>'s worktree up to speed with the pool base (origin/main when
+# fetched, the same ref prewarms are built from). There is no fetch — the
+# caller owns remote freshness. This is best-effort: a fast-forward
 # keeps history clean and only succeeds when <branch> hasn't diverged from the
 # base (the expected case for a freshly created or just-claimed prewarm branch).
 # If it cannot fast-forward, report it and still return 0 so `wt new` continues;
@@ -544,10 +633,9 @@ function update_branch() {
 
 	[[ -n "$branch_name" ]] || die "update requires a branch name"
 
-	base=$(default_branch) || return 0
-
 	# Nothing to integrate if the branch is the base branch itself.
-	[[ "$base" == "$branch_name" ]] && return 0
+	[[ "$(default_branch)" == "$branch_name" ]] && return 0
+	base=$(pool_base_ref) || return 0
 
 	wt_path=$(worktree_path_for_branch "$branch_name" 2>/dev/null)
 	if [[ -z "$wt_path" || ! -d "$wt_path" ]]; then
@@ -595,6 +683,10 @@ function ensure_pool() {
 	[[ "$count" == <-> ]] && (( count >= 1 )) \
 		|| die "ensure --count must be a positive integer"
 
+	# Fetch before taking the pool lock so slow-path creates are not held up
+	# behind the network.
+	(( refresh )) && fetch_pool_base
+
 	lock=$(lock_path) || die "could not resolve lock path"
 	acquire_lock_wait "$lock" || return 1
 
@@ -612,9 +704,7 @@ function ensure_pool() {
 	target=$count
 	(( refresh && existing_count > target )) && target=$existing_count
 
-	if (( rc == 0 && refresh )); then
-		remove_all_prewarms || rc=$?
-	elif (( rc == 0 )); then
+	if (( rc == 0 )); then
 		# An unmarked member is incomplete and cannot be claimed. Remove it so the
 		# top-up below replaces it rather than accumulating broken pool members.
 		for branch in "${existing[@]}"; do
@@ -627,6 +717,10 @@ function ensure_pool() {
 				}
 			fi
 		done
+	fi
+
+	if (( rc == 0 && refresh )); then
+		refresh_pool_members || rc=$?
 	fi
 
 	while (( rc == 0 )); do
@@ -700,6 +794,10 @@ case "$command_name" in
 		;;
 	ensure)
 		ensure_pool "$@"
+		exit $?
+		;;
+	refresh)
+		ensure_pool --refresh "$@"
 		exit $?
 		;;
 	*)
