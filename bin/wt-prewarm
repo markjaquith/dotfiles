@@ -32,6 +32,9 @@ function usage() {
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
 	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
 	print -r -- "  update <branch>   Fast-forward <branch>'s worktree to the prewarm base"
+	print -r -- "  recycle [--force] [<branch>|<path>]"
+	print -r -- "                    Retire a worktree (default: current) into the pool,"
+	print -r -- "                    deleting its branch and keeping ignored files"
 	print -r -- "  help              Show this help"
 }
 
@@ -652,6 +655,192 @@ function update_branch() {
 	return 0
 }
 
+function main_worktree_path() {
+	git worktree list --porcelain | sed -n '1s/^worktree //p'
+}
+
+# Resolve a recycle target (branch, path, or the current directory) to the root
+# of a worktree belonging to this repository.
+function resolve_worktree() {
+	local target="$1"
+	local wt_path common_dir repo_common_dir
+
+	if [[ -z "$target" ]]; then
+		git rev-parse --show-toplevel 2>/dev/null
+		return
+	fi
+
+	if [[ -d "$target" ]]; then
+		wt_path=$(git -C "$target" rev-parse --show-toplevel 2>/dev/null) || return 1
+		common_dir=$(git -C "$wt_path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+			|| return 1
+		repo_common_dir=$(git rev-parse --path-format=absolute --git-common-dir) || return 1
+		[[ "${common_dir:A}" == "${repo_common_dir:A}" ]] || return 1
+		print -r -- "$wt_path"
+		return
+	fi
+
+	wt_path=$(worktree_path_for_branch "$target" 2>/dev/null)
+	[[ -n "$wt_path" ]] || return 1
+	print -r -- "$wt_path"
+}
+
+# A worktree's commits are safe to drop when they are already on the base, are
+# pushed to the branch's upstream, or were integrated some other way (squash or
+# rebase merge) so that merging the branch into the base changes nothing.
+function worktree_commits_are_safe() {
+	local wt_path="$1"
+	local base="$2"
+	local head merged_tree
+
+	head=$(git -C "$wt_path" rev-parse --verify --quiet HEAD) || return 1
+	git merge-base --is-ancestor "$head" "$base" && return 0
+
+	if git -C "$wt_path" rev-parse --verify --quiet '@{upstream}' >/dev/null 2>&1; then
+		git -C "$wt_path" merge-base --is-ancestor "$head" '@{upstream}' && return 0
+	fi
+
+	merged_tree=$(git merge-tree --write-tree "$base" "$head" 2>/dev/null | head -1) \
+		|| return 1
+	[[ "$merged_tree" == "$(git rev-parse --verify --quiet "${base}^{tree}")" ]]
+}
+
+# Retire a finished worktree into the pool instead of deleting it. Tracked files
+# move to the pool base with a two-way read-tree, so only paths that differ are
+# rewritten, and ignored files (dependencies, caches) are kept for the claim's
+# install hooks to reconcile. The worktree gets a fresh pool branch and moves
+# to its pool path; the old branch is deleted last, after everything else has
+# succeeded. Like `wt remove`, it refuses to discard uncommitted changes or
+# unintegrated commits unless forced, and runs the remove hooks.
+function recycle_worktree() {
+	local force=0
+	local target=""
+	local wt_path main_path branch label base target_commit old_commit
+	local status_output new_branch new_path lock caller_inside=0
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--force|-f)
+				force=1
+				shift
+				;;
+			--)
+				shift
+				break
+				;;
+			-*)
+				die "unknown recycle option: $1"
+				;;
+			*)
+				break
+				;;
+		esac
+	done
+	[[ $# -le 1 ]] || die "recycle accepts at most one branch or path"
+	target="${1:-}"
+
+	wt_path=$(resolve_worktree "$target") \
+		|| die "no worktree found for ${target:-the current directory}"
+	wt_path="${wt_path:A}"
+	main_path=$(main_worktree_path)
+	main_path="${main_path:A}"
+	[[ "$wt_path" != "$main_path" ]] || die "refusing to recycle the main worktree"
+
+	branch=$(git -C "$wt_path" symbolic-ref --quiet --short HEAD 2>/dev/null)
+	if [[ -n "$branch" ]]; then
+		is_prewarm_branch "$branch" && die "${branch} is already a prewarm"
+		[[ "$branch" != "$(default_branch)" ]] || die "refusing to delete the default branch"
+		label="$branch"
+	else
+		label="$wt_path"
+	fi
+
+	base=$(pool_base_ref) || die "could not resolve the pool base"
+	target_commit=$(git rev-parse --verify --quiet "${base}^{commit}") \
+		|| die "could not resolve ${base}"
+	old_commit=$(git -C "$wt_path" rev-parse --verify --quiet HEAD) \
+		|| die "could not resolve HEAD for ${label}"
+
+	status_output=$(git -C "$wt_path" status --porcelain) \
+		|| die "could not read status for ${label}"
+	if (( ! force )); then
+		[[ -z "$status_output" ]] \
+			|| die "${label} has uncommitted or untracked changes; commit them or pass --force"
+		worktree_commits_are_safe "$wt_path" "$base" \
+			|| die "${label} has commits not on ${base} or its upstream; push them or pass --force"
+	fi
+
+	[[ "${PWD:A}/" == "${wt_path}/"* ]] && caller_inside=1
+	cd "$main_path" || die "could not enter the main worktree"
+
+	wt_internal -C "$wt_path" -y hook pre-remove --foreground </dev/null >/dev/null 2>&1 \
+		|| die "pre-remove hooks failed; ${label} left as-is"
+
+	lock=$(lock_path) || die "could not resolve lock path"
+	acquire_lock_wait "$lock" || return 1
+
+	function recycle_fail() {
+		release_lock "$lock"
+		die "$1"
+	}
+
+	new_branch=$(new_prewarm_branch) || recycle_fail "could not choose a prewarm name"
+	new_path=$(prewarm_worktree_path "$new_branch") \
+		|| recycle_fail "could not resolve the configured Worktrunk prewarm path"
+	mkdir -p "${new_path:h}" || recycle_fail "could not create ${new_path:h}"
+
+	# Only reachable with --force: discard untracked (not ignored) files so they
+	# cannot block the tree update or leak into the next branch.
+	if [[ -n "$status_output" ]]; then
+		git -C "$wt_path" clean -fdq || recycle_fail "could not clean ${label}"
+	fi
+
+	# `read-tree --reset` is the fallback for a dirty (forced) or stale index. It
+	# updates files without moving the branch, which rollback depends on.
+	if ! git -C "$wt_path" read-tree -m -u "$old_commit" "$target_commit" >/dev/null 2>&1; then
+		git -C "$wt_path" read-tree --reset -u "$target_commit" \
+			|| recycle_fail "could not update ${label} to ${base}"
+	fi
+
+	if ! git branch --no-track "$new_branch" "$target_commit" \
+		|| ! git -C "$wt_path" symbolic-ref HEAD "refs/heads/${new_branch}" \
+		|| ! git worktree move "$wt_path" "$new_path"; then
+		if [[ -n "$branch" ]]; then
+			git -C "$wt_path" symbolic-ref HEAD "refs/heads/${branch}"
+		else
+			git -C "$wt_path" update-ref --no-deref HEAD "$old_commit"
+		fi
+		git -C "$wt_path" read-tree -m -u "$target_commit" "$old_commit" >/dev/null 2>&1 \
+			|| git -C "$wt_path" read-tree --reset -u "$old_commit"
+		git branch -D "$new_branch" >/dev/null 2>&1
+		recycle_fail "could not move ${label} into the pool; restored it"
+	fi
+
+	touch "${new_path}/${MARKER}"
+	release_lock "$lock"
+
+	if [[ -n "$branch" ]]; then
+		git branch -D "$branch" >/dev/null \
+			|| print -u2 -- "wt-prewarm: could not delete ${branch}"
+	fi
+
+	(
+		local -a hook_vars
+		hook_vars=(--worktree_path="$wt_path")
+		[[ -n "$branch" ]] && hook_vars+=(--branch="$branch")
+		wt_internal -C "$main_path" -y hook post-remove "${hook_vars[@]}" \
+			</dev/null >/dev/null 2>&1
+	) &
+	disown 2>/dev/null
+
+	if (( caller_inside )) && [[ -n "${WORKTRUNK_DIRECTIVE_CD_FILE:-}" ]]; then
+		print -r -- "$main_path" >"$WORKTRUNK_DIRECTIVE_CD_FILE"
+	fi
+
+	print -u2 -- "wt-prewarm: recycled ${label} → ${new_branch} at ${base}"
+	print -u2 -- "wt-prewarm: was ${old_commit[1,12]}; recover with: git branch ${branch:-<name>} ${old_commit[1,12]}"
+}
+
 function ensure_pool() {
 	local count=1
 	local refresh=0
@@ -798,6 +987,10 @@ case "$command_name" in
 		;;
 	refresh)
 		ensure_pool --refresh "$@"
+		exit $?
+		;;
+	recycle)
+		recycle_worktree "$@"
 		exit $?
 		;;
 	*)
