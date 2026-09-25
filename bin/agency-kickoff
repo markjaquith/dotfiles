@@ -1,4 +1,4 @@
 #!/usr/bin/env bun
-import { main } from "./agency-herdr-dispatch.ts"
+import { main } from "./agency-kickoff.ts"
 
 process.exitCode = await main(process.argv.slice(2))

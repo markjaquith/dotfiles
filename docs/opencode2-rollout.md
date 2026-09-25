@@ -23,21 +23,10 @@ server can accept requests before its agent registry is populated; the older
 build also returned a transient HTTP 503 during startup. Repeated reads against
 the same server load the built-ins and the inline Agency setup profile.
 
-The opt-in smoke test imports the dispatcher's actual `setupConfig` and verifies
-the setup profile's primary mode, absent model, and low variant, while the build
-agent retains its default model/settings. It uses temporary HOME and XDG directories,
-an isolated authenticated loopback server, and no inherited provider credentials.
-It sends no model prompts, and terminates the server and removes temporary state.
-
-```sh
-OPENCODE2_TEST_EXECUTABLE=/absolute/path/to/opencode2 \
-  bun test test/opencode2-profile.test.ts
-```
-
-Without that environment variable, the test is skipped. It does not install or
-select an OpenCode version. Readiness checks must wait for the requested profile
-within a bounded deadline, not assume a listening socket or first response means
-initialization has completed.
+The setup profile and its `test/opencode2-profile.test.ts` smoke test were later
+removed when `agency-kickoff` replaced the setup-agent kickoff flow. The lesson
+still applies to host smoke tests: wait for the requested registry entry within a
+bounded deadline, not merely a listening socket or first response.
 
 ## Remaining Gates
 
@@ -72,7 +61,7 @@ end-to-end enforcement during an actual model tool call.
 
 ```sh
 OPENCODE2_TEST_EXECUTABLE=/absolute/path/to/opencode2 \
-  bun test test/opencode2-profile.test.ts test/opencode2-plugins.test.ts
+  bun test test/opencode2-plugins.test.ts
 ```
 
 The host smoke test confirms all six server plugins are active and `/keep-going`

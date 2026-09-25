@@ -32,11 +32,11 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["agent-tests"] {
-		check = quietOnSuccess("bun test test/agency-herdr-setup.test.ts test/agency-herdr-dispatch.test.ts test/agency-pi.test.ts")
+		check = quietOnSuccess("bun test test/agency-kickoff.test.ts test/agency-pi.test.ts")
 	}
 
 	["opencode-tests"] {
-		check = quietOnSuccess("bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-profile.test.ts test/opencode2-plugins.test.ts")
+		check = quietOnSuccess("bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-plugins.test.ts")
 	}
 }
 

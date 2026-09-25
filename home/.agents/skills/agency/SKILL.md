@@ -179,20 +179,15 @@ prevent the orchestrator from creating an unlaunched worker shell and editor as
 a recovery layout. Resolve repository-reference failures before launch. Do not
 use the legacy `agency worktree prepare` path.
 
-For the dotfiles-managed initiating-agent flow, invoke
-`agency-herdr-dispatch --intent open|launch --request '<complete user request>'`
-after required bootstrap. Do not investigate branches, model settings, or pane
-layout before dispatch; the generated setup protocol owns narrow item lookup.
+For the dotfiles-managed Herdr flow, run `agency-kickoff <target>` (launch, with
+`--auto`) or `agency-kickoff <target> --open` instead of executing these steps
+individually. It resolves the target (task ID, `task/phase`, `epic:<id>`, path, or
+ticket key/URL), runs the dry-run preflight for execution units, and creates an
+unfocused tab with the worker left and the item document in `nvim` right. Create
+missing items first, then kick off the result. Do not investigate branches,
+model settings, or pane layout beforehand. See `~/dotfiles/docs/agency-kickoff.md`.
 Branch ancestry is not a completion dependency: never infer `--depends-on` solely
 from the requested base branch, and preserve existing explicit gates.
-
-Only the temporary setup agent invokes
-`agency-herdr-setup <absolute-document-path> --intent open|launch` once instead
-of executing the mechanical steps individually. It performs execution-only
-preparation, preserves an unfocused recovery layout, and bounds worker startup.
-Epics and multi-phase task orchestration do not use execution preparation.
-The helper closes the temporary setup pane itself on success; quiet successful
-Herdr pane run/close commands do not require JSON output.
 
 An explicitly authorized start despite working dependencies may use the dedicated
 `--allow-working-dependencies` flag when the selected CLI supports it. This is
