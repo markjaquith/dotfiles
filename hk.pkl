@@ -1,5 +1,9 @@
 amends "package://github.com/jdx/hk/releases/download/v1.56.1/hk@1.56.1#/Config.pkl"
 
+// Run a command silently, printing its combined output only on failure.
+local function quietOnSuccess(cmd: String): String =
+	"out=$( { \(cmd); } 2>&1) || { status=$?; printf '%s\\n' \"$out\" >&2; exit $status; }"
+
 local linters = new Mapping<String, Step> {
 	["oxfmt"] {
 		glob = List("*.js", "*.jsx", "*.mjs", "*.cjs", "*.ts", "*.tsx", "*.mts", "*.cts", "*.css", "*.scss", "*.less", "*.html", "*.json", "*.json5", "*.jsonc", "*.yaml", "*.yml", "*.md", "*.graphql", "*.svelte", "*.astro", "*.vue")
@@ -22,11 +26,11 @@ local linters = new Mapping<String, Step> {
 	}
 
 	["agent-tests"] {
-		check = "bun test test/agency-herdr-setup.test.ts test/agency-herdr-dispatch.test.ts test/agency-pi.test.ts"
+		check = quietOnSuccess("bun test test/agency-herdr-setup.test.ts test/agency-herdr-dispatch.test.ts test/agency-pi.test.ts")
 	}
 
 	["opencode-tests"] {
-		check = "bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-profile.test.ts test/opencode2-plugins.test.ts"
+		check = quietOnSuccess("bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-profile.test.ts test/opencode2-plugins.test.ts")
 	}
 }
 
