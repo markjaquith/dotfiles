@@ -1,6 +1,10 @@
 #!/usr/bin/env zsh
 set -eo pipefail
 
+# Git hooks export repository variables such as GIT_INDEX_FILE; clear them so
+# fixture repositories are not redirected to the calling repository.
+unset $(git rev-parse --local-env-vars)
+
 repo_root=${0:A:h:h}
 test_root=$(mktemp -d)
 trap 'rm -rf "$test_root"' EXIT

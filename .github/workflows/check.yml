@@ -17,7 +17,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - run: brew install fd fzf gum jj jq stow worktrunk
+      - run: brew install fd fzf gum jj jq stow worktrunk markjaquith/tap/cowtree
       - run: bun install
       - run: npm ci --ignore-scripts --prefix home/.config/opencode
       - run: PATH="$PWD/node_modules/.bin:$PATH" hk run check --all
@@ -28,8 +28,6 @@ jobs:
           name: hk-output
           path: ~/.local/state/hk/output.log
           if-no-files-found: ignore
+      # test/wt-*.test.zsh run inside `hk run check --all` via the wt-tests step.
       - name: Zsh integration tests
-        run: |
-          for test_file in test/dotfiles-overlay.test.zsh test/wt-*.test.zsh; do
-            zsh "$test_file"
-          done
+        run: zsh test/dotfiles-overlay.test.zsh

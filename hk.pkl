@@ -1,4 +1,4 @@
-amends "package://github.com/jdx/hk/releases/download/v1.56.1/hk@1.56.1#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.1.0/hk@2.1.0#/Config.pkl"
 
 // Run a command silently, printing its combined output only on failure.
 local function quietOnSuccess(cmd: String): String =
@@ -23,6 +23,12 @@ local linters = new Mapping<String, Step> {
 
 	["zsh-tests"] {
 		check = quietOnSuccess("zsh test/url-chooser.test.zsh && zsh test/keychain-secret.test.zsh && zsh test/herdr-rename-tabs.test.zsh && zsh test/dotfiles-install.test.zsh")
+	}
+
+	// Slower Worktrunk integration tests, so only run when their inputs change.
+	["wt-tests"] {
+		glob = List("bin/wt-*", "test/wt-*")
+		check = quietOnSuccess("for test_file in test/wt-*.test.zsh; do zsh \"$test_file\" || exit 1; done")
 	}
 
 	["agent-tests"] {
