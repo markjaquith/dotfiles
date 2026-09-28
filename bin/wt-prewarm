@@ -32,9 +32,10 @@ function usage() {
 	print -r -- "          [--upstream <ref>] [--update] <branch>"
 	print -r -- "                    Prepare a worktree, claiming a prewarm when possible"
 	print -r -- "  update <branch>   Fast-forward <branch>'s worktree to the prewarm base"
-	print -r -- "  recycle [--force] [<branch>|<path>]"
+	print -r -- "  recycle [--force] [--keep-branch] [<branch>|<path>]"
 	print -r -- "                    Retire a worktree (default: current) into the pool,"
-	print -r -- "                    deleting its branch and keeping ignored files"
+	print -r -- "                    deleting its branch (unless --keep-branch) and"
+	print -r -- "                    keeping ignored files"
 	print -r -- "  help              Show this help"
 }
 
@@ -711,9 +712,12 @@ function worktree_commits_are_safe() {
 # install hooks to reconcile. The worktree gets a fresh pool branch and moves
 # to its pool path; the old branch is deleted last, after everything else has
 # succeeded. Like `wt remove`, it refuses to discard uncommitted changes or
-# unintegrated commits unless forced, and runs the remove hooks.
+# unintegrated commits unless forced, and runs the remove hooks. With
+# --keep-branch the branch survives, so its commits are never at risk and only
+# uncommitted changes are checked.
 function recycle_worktree() {
 	local force=0
+	local keep_branch=0
 	local target=""
 	local wt_path main_path branch label base target_commit old_commit
 	local status_output new_branch new_path lock caller_inside=0
@@ -722,6 +726,10 @@ function recycle_worktree() {
 		case "$1" in
 			--force|-f)
 				force=1
+				shift
+				;;
+			--keep-branch)
+				keep_branch=1
 				shift
 				;;
 			--)
@@ -766,7 +774,7 @@ function recycle_worktree() {
 	if (( ! force )); then
 		[[ -z "$status_output" ]] \
 			|| die "${label} has uncommitted or untracked changes; commit them or pass --force"
-		worktree_commits_are_safe "$wt_path" "$base" \
+		(( keep_branch )) || worktree_commits_are_safe "$wt_path" "$base" \
 			|| die "${label} has commits not on ${base} or its upstream; push them or pass --force"
 	fi
 
@@ -819,7 +827,7 @@ function recycle_worktree() {
 	touch "${new_path}/${MARKER}"
 	release_lock "$lock"
 
-	if [[ -n "$branch" ]]; then
+	if [[ -n "$branch" ]] && (( ! keep_branch )); then
 		git branch -D "$branch" >/dev/null \
 			|| print -u2 -- "wt-prewarm: could not delete ${branch}"
 	fi
@@ -838,6 +846,7 @@ function recycle_worktree() {
 	fi
 
 	print -u2 -- "wt-prewarm: recycled ${label} → ${new_branch} at ${base}"
+	[[ -n "$branch" ]] && (( keep_branch )) && return 0
 	print -u2 -- "wt-prewarm: was ${old_commit[1,12]}; recover with: git branch ${branch:-<name>} ${old_commit[1,12]}"
 }
 

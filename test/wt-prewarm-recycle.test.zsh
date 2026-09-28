@@ -182,6 +182,22 @@ recycle --force locked 2>/dev/null && fail "recycle succeeded on a locked worktr
 	|| fail "rollback left a pool branch behind"
 git -C "$repository" worktree unlock "$worktrees/locked"
 
+# --keep-branch recycles a worktree with unpushed commits and leaves its branch
+# intact, as Agency's worktree removal contract requires.
+git -C "$repository" worktree add --quiet -b kept "$worktrees/kept" main
+commit_file "$worktrees/kept" kept.txt "kept work"
+kept_head=$(git -C "$worktrees/kept" rev-parse HEAD)
+member_count=$(pool_members | wc -l)
+recycle --keep-branch "$worktrees/kept" 2>/dev/null \
+	|| fail "recycle --keep-branch refused unpushed commits"
+[[ ! -e "$worktrees/kept" ]] || fail "recycle --keep-branch left the old worktree path"
+[[ "$(git -C "$repository" rev-parse --verify --quiet refs/heads/kept)" == "$kept_head" ]] \
+	|| fail "recycle --keep-branch did not preserve the branch"
+git -C "$repository" worktree list --porcelain | grep -qx "branch refs/heads/kept" \
+	&& fail "recycle --keep-branch left the branch checked out"
+[[ $(pool_members | wc -l) -eq $(( member_count + 1 )) ]] \
+	|| fail "recycle --keep-branch did not add a pool member"
+
 # Guard rails.
 recycle "$repository" 2>/dev/null && fail "recycle accepted the main worktree"
 recycle "$member_branch" 2>/dev/null && fail "recycle accepted a prewarm"
