@@ -160,6 +160,7 @@ if [[ -n "$worktree_path" ]]; then
 fi
 
 if [[ "$reuse_existing" -eq 1 ]] && branch_exists "$branch_name"; then
+	wt-prewarm prepare "$branch_name" || exit $?
 	wt switch "$branch_name" || exit $?
 	rename_terminal_tab_for_ticket "$branch_name"
 	exit 0

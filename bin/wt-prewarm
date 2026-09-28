@@ -368,9 +368,16 @@ function ready_prewarm_count() {
 # on success (worktree now exists on "$branch_name"), non-zero to signal the
 # caller should fall back to the slow path. A start point lets callers such as
 # `wt try` reuse the checkout for an existing remote branch; without one, the
-# branch remains at the prewarm's pool-base commit for `wt new`. Any failure
+# branch remains at the prewarm's pool-base commit for `wt new`. With
+# --existing, the branch must already exist without a worktree; the prewarm is
+# moved to its commit and checks it out instead of being renamed. Any failure
 # rolls back to a clean prewarm before returning non-zero.
 function claim_prewarm() {
+	local existing=0
+	if [[ "$1" == "--existing" ]]; then
+		existing=1
+		shift
+	fi
 	local branch_name="$1"
 	local start_point="$2"
 	local upstream="$3"
@@ -380,9 +387,18 @@ function claim_prewarm() {
 
 	[[ -n "$branch_name" ]] || die "claim requires a branch name"
 
-	# The destination branch must not already exist. Cheap single git show-ref
-	# gate, kept before the lock so an obviously-doomed claim never contends.
-	branch_exists "$branch_name" && return 1
+	# Cheap single git show-ref gates, kept before the lock so an obviously-doomed
+	# claim never contends. A new branch must not exist yet; an existing one must
+	# exist and not be checked out anywhere.
+	if (( existing )); then
+		[[ -z "$start_point" && -z "$upstream" ]] \
+			|| die "claim --existing cannot use a start point or upstream"
+		branch_exists "$branch_name" || return 1
+		[[ -z "$(worktree_path_for_branch "$branch_name" 2>/dev/null)" ]] || return 1
+		start_point="refs/heads/${branch_name}"
+	else
+		branch_exists "$branch_name" && return 1
+	fi
 
 	# Scan ready pool members and atomically reserve the first available one.
 	# Locks are per member, so independent claims can proceed concurrently.
@@ -448,23 +464,39 @@ function claim_prewarm() {
 		fi
 	fi
 
-	# Rename the branch in place (instant).
-	if ! git branch -m "$prewarm_branch" "$branch_name" 2>/dev/null; then
-		git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
-		touch "${pw_path}/${MARKER}" 2>/dev/null
-		release_lock "$lock"
-		return 1
-	fi
-
-	# Move the worktree directory to its template path (same-filesystem rename).
-	if ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
-		# Roll back the rename; the worktree is still at pw_path on branch_name.
-		if git branch -m "$branch_name" "$prewarm_branch" 2>/dev/null; then
+	if (( existing )); then
+		# The files and index already match the branch's commit, so pointing HEAD
+		# at the branch leaves a clean checkout. The prewarm branch is deleted
+		# only after the move succeeds so rollback can return to it.
+		if ! git -C "$pw_path" symbolic-ref HEAD "refs/heads/${branch_name}" \
+			|| ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
+			git -C "$pw_path" symbolic-ref HEAD "refs/heads/${prewarm_branch}"
 			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
 			touch "${pw_path}/${MARKER}" 2>/dev/null
+			release_lock "$lock"
+			return 1
 		fi
-		release_lock "$lock"
-		return 1
+		git branch -D "$prewarm_branch" >/dev/null 2>&1 \
+			|| print -u2 -- "wt-prewarm: could not delete ${prewarm_branch} (continuing)"
+	else
+		# Rename the branch in place (instant).
+		if ! git branch -m "$prewarm_branch" "$branch_name" 2>/dev/null; then
+			git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
+			touch "${pw_path}/${MARKER}" 2>/dev/null
+			release_lock "$lock"
+			return 1
+		fi
+
+		# Move the worktree directory to its template path (same-filesystem rename).
+		if ! git worktree move "$pw_path" "$target_path" 2>/dev/null; then
+			# Roll back the rename; the worktree is still at pw_path on branch_name.
+			if git branch -m "$branch_name" "$prewarm_branch" 2>/dev/null; then
+				git -C "$pw_path" reset --hard "$prewarm_head" >/dev/null 2>&1
+				touch "${pw_path}/${MARKER}" 2>/dev/null
+			fi
+			release_lock "$lock"
+			return 1
+		fi
 	fi
 
 	if [[ -n "$upstream" ]]; then
@@ -520,7 +552,9 @@ function claim_prewarm() {
 
 # Prepare a worktree, using a ready prewarm when its inputs make that safe.
 # --create prepares a new branch for `wt new`; without it, an existing fetched
-# branch is prepared for `wt try`. The slow path delegates to `wt switch` so
+# branch is prepared for `wt try`, or an existing local branch without a
+# worktree (such as one kept by `recycle --keep-branch`) for `wt new
+# --reuse-existing`. The slow path delegates to `wt switch` so
 # normal Worktrunk creation behavior remains the source of truth.
 function prepare_worktree() {
 	local create_branch=0
@@ -594,8 +628,13 @@ function prepare_worktree() {
 		if [[ "$base_branch" == "$default_base" || "$base_branch" == "origin/${default_base}" ]]; then
 			claim_prewarm "$branch_name" "$base_branch" && claimed=1
 		fi
-	elif (( ! create_branch )) && [[ -n "$start_point" ]]; then
+	elif [[ -n "$start_point" ]]; then
 		claim_prewarm "$branch_name" "$start_point" "$upstream" && claimed=1
+	elif branch_exists "$branch_name"; then
+		# A branch that is already checked out has nothing to prepare, and must not
+		# wait behind the pool lock just to be switched to.
+		[[ -n "$(worktree_path_for_branch "$branch_name" 2>/dev/null)" ]] && return 0
+		claim_prewarm --existing "$branch_name" && claimed=1
 	fi
 
 	if (( ! claimed )); then

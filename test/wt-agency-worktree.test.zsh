@@ -104,4 +104,81 @@ if [[ ${#prewarm_worktrees} -ne 1 || ! -f "${prewarm_worktrees[1]}/.wt-prewarm-r
 	exit 1
 fi
 
+# Agency removes a checkout with `recycle --keep-branch` and later prepares it
+# again at the same path. The existing branch must claim a pool member.
+print -r -- "task work" >"$agency_worktree/task.txt"
+git -C "$agency_worktree" add task.txt
+git -C "$agency_worktree" -c user.email=wt@example.com -c user.name=wt \
+	commit --quiet -m "Task work"
+task_head=$(git -C "$agency_worktree" rev-parse HEAD)
+(
+	cd "$repository"
+	wt-prewarm recycle --keep-branch --force "$agency_worktree" 2>/dev/null
+)
+[[ ! -e "$agency_worktree" ]] || {
+	print -ru2 -- "FAIL: recycle did not remove the Agency checkout"
+	exit 1
+}
+
+prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
+pool_before=${#prewarm_worktrees}
+reuse_log="$test_root/reuse.log"
+(
+	cd "$repository"
+	wt-new \
+		--reuse-existing \
+		--worktree-path "$agency_worktree" \
+		--from main \
+		agency-test >/dev/null 2>"$reuse_log"
+)
+
+if ! grep -q "claimed prewarm → agency-test" "$reuse_log"; then
+	print -ru2 -- "FAIL: reusing an existing branch did not claim a prewarm"
+	cat "$reuse_log" >&2
+	exit 1
+fi
+if [[ "$(git -C "$agency_worktree" symbolic-ref --short HEAD 2>/dev/null)" != "agency-test" \
+	|| "$(git -C "$agency_worktree" rev-parse HEAD)" != "$task_head" ]]; then
+	print -ru2 -- "FAIL: claimed checkout is not on the existing branch's commit"
+	exit 1
+fi
+if [[ "$(<"$agency_worktree/task.txt")" != "task work" \
+	|| -n "$(git -C "$agency_worktree" status --porcelain)" \
+	|| -e "$agency_worktree/.wt-prewarm-ready" ]]; then
+	print -ru2 -- "FAIL: claimed checkout does not match the existing branch cleanly"
+	exit 1
+fi
+if git -C "$repository" for-each-ref --format='%(refname:short)' "refs/heads/${prewarm_prefix}*" \
+	| grep -qvx -f <(git -C "$repository" worktree list --porcelain \
+		| sed -n "s|^branch refs/heads/||p"); then
+	print -ru2 -- "FAIL: claiming an existing branch left an orphaned prewarm branch"
+	exit 1
+fi
+prewarm_worktrees=("$worktrees"/${prewarm_prefix}[0-9a-f][0-9a-f][0-9a-f][0-9a-f](N))
+if [[ ${#prewarm_worktrees} -ne $(( pool_before - 1 )) ]]; then
+	print -ru2 -- "FAIL: claiming an existing branch did not consume one pool member"
+	exit 1
+fi
+
+# An existing branch that is already checked out is switched to, not claimed.
+(
+	cd "$repository"
+	wt-new --reuse-existing --worktree-path "$second_worktree" agency-test-second \
+		>/dev/null 2>"$reuse_log"
+) || {
+	print -ru2 -- "FAIL: reusing a checked-out branch failed"
+	exit 1
+}
+if grep -q "claimed prewarm" "$reuse_log"; then
+	print -ru2 -- "FAIL: reusing a checked-out branch claimed a prewarm"
+	exit 1
+fi
+
+# `prepare --create` still refuses a branch that already exists.
+git -C "$repository" branch agency-existing-unchecked main
+if (cd "$repository" && wt-prewarm prepare --create agency-existing-unchecked >/dev/null 2>&1); then
+	print -ru2 -- "FAIL: prepare --create accepted an existing branch"
+	exit 1
+fi
+
 print -r -- "wt Agency worktree test passed"
