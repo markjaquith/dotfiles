@@ -64,7 +64,7 @@ If you need to verify the repo's project ID, you can often infer it from session
 Export a full session as JSON:
 
 ```bash
-opencode export <session-id>
+opencode session export <session-id>
 ```
 
 The export includes:

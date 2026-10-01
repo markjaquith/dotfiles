@@ -14,7 +14,7 @@ Required workflow:
 
 1. Use `opencode session list --format json` to enumerate sessions.
 2. Filter to sessions for the current repo by matching `directory` and/or `projectId`.
-3. Export the relevant sessions with `opencode export <session-id>`.
+3. Export the relevant sessions with `opencode session export <session-id>`.
 4. Inspect those conversations for durable patterns.
 
 Focus on:

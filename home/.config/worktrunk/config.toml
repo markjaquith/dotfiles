@@ -70,7 +70,7 @@ zoxide_remove = "zoxide remove {{ worktree_path }}"
 # command = "opencode run -m openai/gpt-5.6-luna --variant fast"
 
 [commit.generation]
-command = "opencode run -m openai/gpt-5.6-luna --variant fast"
+command = "opencode run -m openai/gpt-5.6-luna-fast"
 #
 # See LLM commits docs (https://worktrunk.dev/llm-commits/) for setup and Custom prompt templates (#custom-prompt-templates) for template customization.
 #

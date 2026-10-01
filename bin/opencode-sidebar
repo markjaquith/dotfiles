@@ -15,10 +15,23 @@ if ! command -v jq >/dev/null 2>&1; then
 	exec zsh -i
 fi
 
-session_id=$(opencode session list --format json | jq -r --arg dir "$dir" 'map(select(.directory == $dir)) | sort_by(.updated) | last | .id // empty')
+sessions=$(opencode session list --format json 2>/dev/null)
+session_id=$(print -r -- "$sessions" | jq -r --arg dir "$dir" 'map(select(.directory == $dir)) | sort_by(.updated) | last | .id // empty')
 
-if [[ -n "$session_id" ]]; then
-	exec opencode --session "$session_id" --fork
+if [[ -z "$session_id" ]]; then
+	session_id=$(print -r -- "$sessions" | jq -r 'sort_by(.updated) | last | .id // empty')
 fi
 
-exec opencode --continue --fork
+if [[ -z "$session_id" ]]; then
+	exec opencode
+fi
+
+# OpenCode v2 only supports --fork on `run`, so fork via the API for the TUI.
+fork_id=$(opencode api session.fork --param "sessionID=${session_id}" -d '{}' 2>/dev/null | jq -r '.data.id // empty')
+
+if [[ -z "$fork_id" ]]; then
+	print -u2 "Failed to fork OpenCode session ${session_id}; starting a new session"
+	exec opencode
+fi
+
+exec opencode --session "$fork_id"
