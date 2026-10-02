@@ -1,6 +1,6 @@
 {
 	"$schema": "https://opencode.ai/v2/cli.json",
-	"plugins": ["./herdr-opencode", "./jev"],
+	"plugins": ["./herdr-opencode", "./jev", "./mcp-relogin"],
 	"theme": {
 		"name": "catppuccin"
 	},
