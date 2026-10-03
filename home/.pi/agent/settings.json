@@ -5,6 +5,9 @@
 	"defaultModel": "gpt-5.6-sol",
 	"steeringMode": "all",
 	"defaultThinkingLevel": "high",
+	"modelThinkingLevels": {
+		"openai-codex/gpt-6-astra": "medium"
+	},
 	"enabledModels": ["openai-codex/gpt-6.1-sol", "openai-codex/gpt-6-luna"],
 	"hideThinkingBlock": true,
 	"packages": [
