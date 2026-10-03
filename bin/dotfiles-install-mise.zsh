@@ -14,6 +14,13 @@ fi
 mise use -g herdr@0.8.2 > /dev/null
 mise use hk@latest > /dev/null
 mise use -g pi@latest > /dev/null
+
+# Install Pi's structured question dialog for personal sessions.
+if command -v pi &> /dev/null; then
+	pi install npm:@juicesharp/rpiv-ask-user-question
+else
+	mise exec -- pi install npm:@juicesharp/rpiv-ask-user-question
+fi
 mise use -g pnpm@latest > /dev/null
 mise use -g fzf@latest > /dev/null
 mise use pkl@latest > /dev/null

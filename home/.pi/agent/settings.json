@@ -10,7 +10,8 @@
 	"packages": [
 		"npm:@plannotator/pi-extension",
 		"npm:pi-web-access",
-		"npm:pi-claude-marketplace@0.18.3"
+		"npm:pi-claude-marketplace@0.18.3",
+		"npm:@juicesharp/rpiv-ask-user-question"
 	],
 	"defaultProjectTrust": "never"
 }
