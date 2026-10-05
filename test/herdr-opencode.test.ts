@@ -99,12 +99,12 @@ test("OpenCode installer accepts native Herdr and rejects legacy reporters", asy
 			mode: 0o755,
 		})
 		await writeFile(
-			join(bin, "bun"),
-			'#!/bin/sh\nif [ "$1" = "pm" ]; then printf "%s\\n" "$STUB_GLOBAL_BIN"; fi\n',
+			join(bin, "curl"),
+			'#!/bin/sh\nprintf \'mkdir -p "$HOME/.opencode/bin"\\ncp "$STUB_GLOBAL_BIN/opencode" "$HOME/.opencode/bin/opencode"\\n\'\n',
 			{ mode: 0o755 },
 		)
 		await writeFile(
-			join(bin, "opencode2"),
+			join(bin, "opencode"),
 			'#!/bin/sh\nprintf "stub OpenCode2\\n"\n',
 			{ mode: 0o755 },
 		)

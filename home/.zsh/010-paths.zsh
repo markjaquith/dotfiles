@@ -11,6 +11,7 @@ export PATH=/usr/bin:$PATH
 export PATH=/usr/sbin:$PATH
 export PATH=/usr/local/bin:$PATH
 export PATH=$HOME/.bun/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 
 # If the go directory exists, add its bin directory to the PATH.
 if [ -d $HOME/go ]; then
