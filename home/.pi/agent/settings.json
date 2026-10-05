@@ -1,20 +1,28 @@
 {
-	"lastChangelogVersion": "1.0.0",
-	"theme": "catppuccin-macchiato",
-	"defaultProvider": "openai-codex",
-	"defaultModel": "gpt-5.6-sol",
-	"steeringMode": "all",
-	"defaultThinkingLevel": "high",
-	"modelThinkingLevels": {
-		"openai-codex/gpt-6-astra": "medium"
-	},
-	"enabledModels": ["openai-codex/gpt-6.1-sol", "openai-codex/gpt-6-luna"],
-	"hideThinkingBlock": true,
-	"packages": [
-		"npm:@plannotator/pi-extension",
-		"npm:pi-web-access",
-		"npm:pi-claude-marketplace@0.18.3",
-		"npm:@juicesharp/rpiv-ask-user-question"
-	],
-	"defaultProjectTrust": "never"
+  "lastChangelogVersion": "1.0.2",
+  "theme": "catppuccin-macchiato",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "steeringMode": "all",
+  "defaultThinkingLevel": "high",
+  "modelThinkingLevels": {
+    "openai-codex/gpt-6.1-sol": "medium",
+    "openai-codex/gpt-6-astra": "medium"
+  },
+  "enabledModels": [
+    "openai-codex/gpt-6.1-sol",
+    "openai-codex/gpt-6-luna",
+    "openai-codex/gpt-6-astra"
+  ],
+  "hideThinkingBlock": true,
+  "packages": [
+    "npm:@plannotator/pi-extension",
+    "npm:pi-web-access",
+    "npm:pi-claude-marketplace@0.18.3",
+    "npm:@juicesharp/rpiv-ask-user-question"
+  ],
+  "externalEditor": "nvim",
+  "quietStartup": true,
+  "fullscreenExitOutput": "resume-hint",
+  "defaultProjectTrust": "ask"
 }
