@@ -5,5 +5,6 @@
 pip install --quiet \
 	faker 2>&1 | sed '/DEPRECATION/d'
 
-# uv tool installs
-uv tool install jrnl > /dev/null 2>&1
+# Replace an existing jrnl executable, including one installed by pipx.
+# Keep stderr visible so installation failures include the underlying error.
+uv tool install --quiet --force jrnl

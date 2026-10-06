@@ -298,12 +298,14 @@ for mode in empty filtered visible mixed pip-failure filter-failure uv-failure; 
 		assert_contains "$output" 'pip failed (exit 23)'
 		assert_absent "$events" start:mise
 		assert_absent "$output" 'Done!'
-		if [[ "$mode" != uv-failure ]]; then
+		if [[ "$mode" == uv-failure ]]; then
+			assert_contains "$output" 'stub uv failed'
+		else
 			assert_absent "$events" command:uv:
 		fi
 	else
 		assert_status 0
-		assert_contains "$events" 'command:uv:tool install jrnl'
+		assert_contains "$events" 'command:uv:tool install --quiet --force jrnl'
 		assert_absent "$output" DEPRECATION
 		if [[ "$mode" == visible || "$mode" == mixed ]]; then
 			assert_contains "$output" installed
