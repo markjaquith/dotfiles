@@ -9,7 +9,7 @@
 
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
-import { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode/plugin"
 
 const exec = promisify(execFile)
 
@@ -24,7 +24,9 @@ export const WorktrunkPlugin = Plugin.define({
 				if (
 					item.location &&
 					(item.location.directory !== location.directory ||
-						item.location.workspaceID !== location.workspaceID)
+						("workspaceID" in item.location
+							? item.location.workspaceID
+							: undefined) !== location.workspaceID)
 				)
 					continue
 				const args =

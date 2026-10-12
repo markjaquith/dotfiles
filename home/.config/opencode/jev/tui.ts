@@ -1,4 +1,4 @@
-import type { Context } from "@opencode-ai/plugin/tui/context"
+import type { Context } from "@opencode/plugin/tui/context"
 import { percentageBar } from "./bar"
 import { evaluateNoul } from "./client"
 import { lastConversationMessages } from "./messages"

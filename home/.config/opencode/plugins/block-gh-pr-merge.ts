@@ -1,4 +1,4 @@
-import { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode/plugin"
 import { execFileSync } from "child_process"
 
 const GH_PR_MERGE_ALLOWLIST = new Set([

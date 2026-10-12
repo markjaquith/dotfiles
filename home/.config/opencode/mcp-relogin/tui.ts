@@ -11,8 +11,8 @@ import { execFile } from "node:child_process"
 import { open, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { McpServer } from "@opencode-ai/client"
-import type { Context } from "@opencode-ai/plugin/tui/context"
+import type { McpServer } from "@opencode/client"
+import type { Context } from "@opencode/plugin/tui/context"
 
 const SERVERS = new Set(["runlayer-plugin"])
 const FORBIDDEN_RE = /\b403\b/
@@ -174,7 +174,6 @@ export default {
 			for (const credential of await credentialsFor(integrationID))
 				await client.credential.remove({
 					credentialID: credential.id,
-					location,
 				})
 
 			if (!(await login(server, integrationID))) return

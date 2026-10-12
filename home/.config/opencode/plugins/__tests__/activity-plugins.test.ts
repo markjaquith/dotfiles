@@ -18,9 +18,9 @@ import {
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { Plugin } from "@opencode-ai/plugin"
-import type { CommandDefinition } from "@opencode-ai/plugin/promise/command"
-import type { SessionPrompt } from "@opencode-ai/plugin/promise/session"
+import type { Plugin } from "@opencode/plugin"
+import type { CommandDefinition } from "@opencode/plugin/promise/command"
+import type { SessionPrompt } from "@opencode/plugin/promise/session"
 import KeepGoing from "../keep-going"
 import Worktrunk from "../worktrunk"
 

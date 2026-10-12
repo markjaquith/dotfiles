@@ -1,4 +1,4 @@
-import { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode/plugin"
 
 export const BlockNpm = Plugin.define({
 	id: "block-npm",

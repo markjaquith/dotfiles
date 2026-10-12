@@ -1,4 +1,4 @@
-import type { Context } from "@opencode-ai/plugin/tui/context"
+import type { Context } from "@opencode/plugin/tui/context"
 
 export interface JevMixin {
 	id: string

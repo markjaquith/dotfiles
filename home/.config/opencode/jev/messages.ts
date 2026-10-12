@@ -1,4 +1,4 @@
-import type { SessionMessageInfo } from "@opencode-ai/client"
+import type { SessionMessageInfo } from "@opencode/client"
 
 export interface JevMessage {
 	role: "user" | "assistant"

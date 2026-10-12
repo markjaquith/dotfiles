@@ -1,4 +1,4 @@
-import { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode/plugin"
 
 const COMMAND_NAME = "keep-going"
 const KEEP_GOING_PROMPT =
@@ -49,7 +49,9 @@ export const KeepGoingPlugin = Plugin.define({
 				if (
 					item.location &&
 					(item.location.directory !== location.directory ||
-						item.location.workspaceID !== location.workspaceID)
+						("workspaceID" in item.location
+							? item.location.workspaceID
+							: undefined) !== location.workspaceID)
 				)
 					continue
 				if (item.type === "session.deleted") {
