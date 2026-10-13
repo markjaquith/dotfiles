@@ -107,6 +107,15 @@ assert_label "existing Jira indicator moved after PR" \
 assert_label "Agency Jira replaces old leading Jira" \
 	" OLD-999 Payroll work" draft NEW-234 \
 	"  NEW-234 Payroll work"
+assert_label "Agency task ID title" \
+	"CAN-2019-fix-merge-conflicts" open CAN-2019 \
+	"$pr_glyph $jira_glyph CAN-2019 fix-merge-conflicts"
+assert_label "duplicated Agency task ID title" \
+	"$pr_glyph $jira_glyph CAN-2019 CAN-2019-fix-merge-conflicts" open CAN-2019 \
+	"$pr_glyph $jira_glyph CAN-2019 fix-merge-conflicts"
+assert_label "longer ticket number is not stripped" \
+	"CAN-20190-other" none CAN-2019 \
+	"$jira_glyph CAN-2019 CAN-20190-other"
 assert_label "ticket-only title" \
 	"CAN-1979" open CAN-1979 \
 	"  CAN-1979"

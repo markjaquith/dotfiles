@@ -82,6 +82,8 @@ format_tab_label() {
 				new_label=''
 			elif [[ $new_label == "$old_jira_indicator "* ]]; then
 				new_label=${new_label#"$old_jira_indicator "}
+			elif [[ $new_label == "$old_jira_indicator-"* ]]; then
+				new_label=${new_label#"$old_jira_indicator-"}
 			elif [[ $new_label == *" $old_jira_indicator "* ]]; then
 				new_label=${new_label/" $old_jira_indicator "/ }
 			elif [[ $new_label == *" $old_jira_indicator" ]]; then
