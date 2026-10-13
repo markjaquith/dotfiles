@@ -15,5 +15,9 @@
 	"animations": true,
 	"tabs": {
 		"enabled": false
+	},
+	"keybinds": {
+		"session.background": "<leader>b",
+		"session.sidebar.toggle": "none"
 	}
 }
