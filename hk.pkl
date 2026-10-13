@@ -21,6 +21,17 @@ local linters = new Mapping<String, Step> {
 		check = "if [ -n \"{{files}}\" ]; then bunx secretlint {{files}}; fi"
 	}
 
+	["agent-tests"] {
+		check = quietOnSuccess("bun test test/agency-kickoff.test.ts test/agency-pi.test.ts")
+	}
+
+	["opencode-tests"] {
+		check = quietOnSuccess("bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-plugins.test.ts")
+	}
+}
+
+// Slow zsh test suites run on push and full checks, not on every commit.
+local pushLinters = new Mapping<String, Step> {
 	["zsh-tests"] {
 		check = quietOnSuccess("zsh test/url-chooser.test.zsh && zsh test/keychain-secret.test.zsh && zsh test/herdr-rename-tabs.test.zsh && zsh test/dotfiles-install.test.zsh")
 	}
@@ -30,14 +41,10 @@ local linters = new Mapping<String, Step> {
 		glob = List("bin/wt-*", "test/wt-*")
 		check = quietOnSuccess("for test_file in test/wt-*.test.zsh; do zsh \"$test_file\" || exit 1; done")
 	}
+}
 
-	["agent-tests"] {
-		check = quietOnSuccess("bun test test/agency-kickoff.test.ts test/agency-pi.test.ts")
-	}
-
-	["opencode-tests"] {
-		check = quietOnSuccess("bunx tsc --noEmit -p home/.config/opencode/tsconfig.json && bun test ./home/.config/opencode/plugins/__tests__/*.test.ts test/herdr-opencode.test.ts test/opencode2-plugins.test.ts")
-	}
+local allLinters = (linters) {
+	...pushLinters
 }
 
 hooks {
@@ -49,7 +56,7 @@ hooks {
 
 	["pre-push"] {
 		fix = false
-		steps = linters
+		steps = allLinters
 	}
 
 	["fix"] {
@@ -58,6 +65,6 @@ hooks {
 	}
 
 	["check"] {
-		steps = linters
+		steps = allLinters
 	}
 }
