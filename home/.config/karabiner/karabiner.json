@@ -366,6 +366,15 @@
 							"to": [{ "key_code": "vk_none" }]
 						}
 					]
+				},
+				{
+					"identifiers": {
+						"is_keyboard": true,
+						"is_pointing_device": true,
+						"product_id": 61166,
+						"vendor_id": 6421
+					},
+					"ignore": false
 				}
 			],
 			"name": "Default profile",
