@@ -47,7 +47,8 @@ ln -s /usr/bin/dirname "$fixture/commands/dirname"
 print -r -- '#!/bin/zsh -f
 name=${0:t}
 print -r -- "command:$name:$*" >> "$EVENTS"
-if [[ "$name" == "$FAIL_COMMAND" ]]; then
+if [[ "$name" == "$FAIL_COMMAND" ||
+	( "$name" == mise && -n "$FAIL_MISE_ARGS" && "$*" == "$FAIL_MISE_ARGS" ) ]]; then
 	print -u2 -- "stub $name failed"
 	return 23
 fi
@@ -164,7 +165,7 @@ bun() {
 }
 print -r -- tail:local >> "$EVENTS"
 ' > "$fixture/home/.local-dotfiles/bin/dotfiles-install-local"
-	export FAIL_STAGE="" FAIL_STAGE_2="" FAIL_COMMAND="" PARALLEL_PROBE=no
+	export FAIL_STAGE="" FAIL_STAGE_2="" FAIL_COMMAND="" FAIL_MISE_ARGS="" PARALLEL_PROBE=no
 	export CONFIG_UNSET_STATUS=5 CONFIG_UNSET_KEY="" PIP_OUTPUT="" LOCAL_CONTEXT=""
 }
 
@@ -395,6 +396,44 @@ for name in none git mise hk; do
 		git) assert_absent "$events" command:mise: ;;
 		mise) assert_absent "$events" command:hk: ;;
 	esac
+done
+
+# Pi package updates must use the refreshed mise runtime even when an older Pi
+# is already on PATH. No package commands may run after an upgrade failure.
+for name in brew herdr pi; do
+	ln -s stub "$fixture/commands/$name"
+done
+for mode in success upgrade-failure install-failure update-failure; do
+	reset_fixture
+	cp "$repo_root/bin/dotfiles-install-mise.zsh" "$fixture/home/dotfiles/bin/"
+	print -r -- 'print -r -- done > "$FIXTURE/mise.done"' >> "$fixture/home/dotfiles/bin/dotfiles-install-mise.zsh"
+	# Calling the inherited Pi directly would fail this fixture.
+	export FAIL_COMMAND=pi
+	case "$mode" in
+		upgrade-failure) export FAIL_MISE_ARGS='upgrade node pi' ;;
+		install-failure) export FAIL_MISE_ARGS='exec -- pi install npm:@juicesharp/rpiv-ask-user-question' ;;
+		update-failure) export FAIL_MISE_ARGS='exec -- pi update --extensions' ;;
+	esac
+	pushd "$fixture/home/dotfiles" > /dev/null
+	run_driver
+	popd > /dev/null
+	assert_contains "$events" 'command:mise:upgrade node pi'
+	assert_absent "$events" 'command:pi:'
+	if [[ "$mode" == success ]]; then
+		assert_status 0
+		assert_contains "$events" $'command:mise:upgrade node pi\ncommand:mise:exec -- pi install npm:@juicesharp/rpiv-ask-user-question\ncommand:mise:exec -- pi update --extensions'
+	else
+		assert_status 1
+		assert_contains "$output" 'mise failed (exit 23)'
+		assert_absent "$output" 'Done!'
+		assert_absent "$events" 'command:mise:use -g pnpm@latest'
+	fi
+	if [[ "$mode" == upgrade-failure ]]; then
+		assert_absent "$events" 'command:mise:exec -- pi install'
+	fi
+	if [[ "$mode" == upgrade-failure || "$mode" == install-failure ]]; then
+		assert_absent "$events" 'command:mise:exec -- pi update --extensions'
+	fi
 done
 
 print -r -- "$test_count dotfiles-install assertions passed (stub-only fixtures)"

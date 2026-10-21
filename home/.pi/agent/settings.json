@@ -18,7 +18,7 @@
   "packages": [
     "npm:@plannotator/pi-extension",
     "npm:pi-web-access",
-    "npm:pi-claude-marketplace@0.18.3",
+    "npm:pi-claude-marketplace@0.20.1",
     "npm:@juicesharp/rpiv-ask-user-question"
   ],
   "externalEditor": "nvim",
