@@ -1,0 +1,86 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt errexit pipefail
+
+typeset command_name=${1:-}
+typeset config_file="${HOME}/.config/rex/preferences.json"
+typeset domain=com.superlogical.rex
+typeset -a string_keys=(
+	Workspace.darkThemeID
+	Workspace.lightThemeID
+	Workspace.inactivePaneFadeMode
+	Workspace.tabIconTintMode
+	Workspace.terminalFontName
+)
+typeset bool_key=Workspace.usesStandardInactiveWindowPaneStyles
+
+if (( $# != 1 )) || [[ "$command_name" != (apply|capture|check) ]]; then
+	print -u2 -- 'Usage: rex-settings <apply|capture|check>'
+	print -u2 -- 'Quit Rex before apply. Capture saves only allowlisted appearance settings.'
+	exit 2
+fi
+
+if [[ "$command_name" != check && "$(uname -s)" != Darwin ]]; then
+	print -u2 -- 'rex-settings: requires macOS'
+	exit 1
+fi
+
+if [[ "$command_name" == capture ]]; then
+	# Check that the domain exists before attempting individual reads.
+	defaults read "$domain" >/dev/null
+	typeset settings='{}' key value
+	for key in "${string_keys[@]}" "$bool_key"; do
+		# Unset preferences stay unset, rather than recording guessed defaults.
+		if ! value=$(defaults read "$domain" "$key" 2>/dev/null); then
+			continue
+		fi
+		if [[ "$key" == "$bool_key" ]]; then
+			case "$value" in
+				1) value=true ;;
+				0) value=false ;;
+				*) print -u2 -- "rex-settings: invalid boolean for $key"; exit 1 ;;
+			esac
+			settings=$(jq --arg key "$key" --argjson value "$value" '. + {($key): $value}' <<< "$settings")
+		else
+			settings=$(jq --arg key "$key" --arg value "$value" '. + {($key): $value}' <<< "$settings")
+		fi
+	done
+	mkdir -p "${config_file:h}"
+	typeset temporary_file=$(mktemp "${config_file}.XXXXXX")
+	trap 'rm -f -- "$temporary_file"' EXIT
+	print -r -- "$settings" >| "$temporary_file"
+	# Write through the stowed symlink; replacing it would disconnect the repo.
+	cat "$temporary_file" >| "$config_file"
+	print -- "Captured portable Rex preferences in $config_file"
+	exit 0
+fi
+
+# Validate the complete file before writing anything. Unknown keys fail closed.
+jq -e --argjson strings "$(printf '%s\n' "${string_keys[@]}" | jq -R . | jq -s .)" \
+	--arg boolean "$bool_key" '
+	type == "object" and all(to_entries[];
+		if .key == $boolean then (.value | type == "boolean")
+		elif (.key as $key | $strings | index($key)) != null
+		then (.value | type == "string")
+		else false end
+	)' "$config_file" >/dev/null
+
+[[ "$command_name" == check ]] && exit 0
+
+if pgrep -x Rex >/dev/null; then
+	print -u2 -- 'rex-settings: quit Rex before applying preferences, then retry'
+	exit 1
+fi
+
+typeset key value
+for key in "${string_keys[@]}" "$bool_key"; do
+	jq -e --arg key "$key" 'has($key)' "$config_file" >/dev/null || continue
+	value=$(jq -r --arg key "$key" '.[$key]' "$config_file")
+	if [[ "$key" == "$bool_key" ]]; then
+		defaults write "$domain" "$key" -bool "$value"
+	else
+		defaults write "$domain" "$key" -string "$value"
+	fi
+done
+print -- 'Applied portable Rex preferences.'

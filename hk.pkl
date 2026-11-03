@@ -33,7 +33,7 @@ local linters = new Mapping<String, Step> {
 // Slow zsh test suites run on push and full checks, not on every commit.
 local pushLinters = new Mapping<String, Step> {
 	["zsh-tests"] {
-		check = quietOnSuccess("zsh test/url-chooser.test.zsh && zsh test/keychain-secret.test.zsh && zsh test/herdr-rename-tabs.test.zsh && zsh test/dotfiles-install.test.zsh")
+		check = quietOnSuccess("zsh test/url-chooser.test.zsh && zsh test/keychain-secret.test.zsh && zsh test/herdr-rename-tabs.test.zsh && zsh test/dotfiles-install.test.zsh && zsh test/rex-settings.test.zsh")
 	}
 
 	// Slower Worktrunk integration tests, so only run when their inputs change.

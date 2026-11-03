@@ -5,6 +5,11 @@ mkdir -p "$HOME/Library/Application Support/lazygit"
 rm -f "$HOME/Library/Application Support/lazygit/config.yml"
 ln -s "$HOME/.config/lazygit/config.yml" "$HOME/Library/Application Support/lazygit/config.yml"
 
+# Rex appearance preferences only; never replace the complete preferences domain.
+if [[ "$(uname -s)" == Darwin ]]; then
+	"${${(%):-%x}:A:h}/rex-settings" apply
+fi
+
 # Plannotator identity
 if command -v jq &>/dev/null; then
 	mkdir -p "$HOME/.plannotator"
