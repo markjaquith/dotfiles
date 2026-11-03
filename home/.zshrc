@@ -107,3 +107,6 @@ fi
 (( $+functions[_zsh_perf_end] )) && _zsh_perf_end worktrunk-init
 
 (( $+functions[_zsh_perf_install_hooks] )) && _zsh_perf_install_hooks
+
+# Hermes Agent command
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
