@@ -1,8 +1,1869 @@
 {
-	"Workspace.darkThemeID": "whitby-bay",
+	"Workspace.darkThemeID": "custom-1D0C607E-D61C-4FA8-BE5D-17274E98FEF0",
 	"Workspace.lightThemeID": "merino-light",
 	"Workspace.inactivePaneFadeMode": "both",
 	"Workspace.tabIconTintMode": "off",
-	"Workspace.terminalFontName": "MonoLisa Nerd Font Mono",
-	"Workspace.usesStandardInactiveWindowPaneStyles": true
+	"Workspace.terminalFontName": "MonoLisa",
+	"Workspace.terminalFontStyle": "Medium",
+	"Workspace.terminalFontPointSize": 14,
+	"Workspace.terminalCellHeightPercent": 40,
+	"Workspace.terminalPaddingX": 8,
+	"Workspace.terminalPaddingY": 8,
+	"Workspace.usesStandardInactiveWindowPaneStyles": true,
+	"Workspace.customThemes": [
+		{
+			"name": "Catppuccin Macchiato",
+			"palette": {
+				"background": {
+					"red": 0.1411764705882353,
+					"green": 0.15294117647058825,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.22745098039215686
+				},
+				"selectionBackground": {
+					"red": 0.3568627450980392,
+					"green": 0.3764705882352941,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.47058823529411764
+				},
+				"paletteHarmonious": false,
+				"paletteBase": {
+					"111": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"98": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"234": {
+						"colorSpace": "srgb",
+						"red": 0.10980392156862745,
+						"green": 0.10980392156862745,
+						"blue": 0.10980392156862745,
+						"alpha": 1
+					},
+					"32": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"59": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"103": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"30": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"136": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"187": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"34": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"23": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"147": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"177": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"233": {
+						"colorSpace": "srgb",
+						"red": 0.07058823529411765,
+						"green": 0.07058823529411765,
+						"blue": 0.07058823529411765,
+						"alpha": 1
+					},
+					"210": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"188": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"74": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"37": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"97": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"160": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"127": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"38": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"50": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"71": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"239": {
+						"colorSpace": "srgb",
+						"red": 0.3058823529411765,
+						"green": 0.3058823529411765,
+						"blue": 0.3058823529411765,
+						"alpha": 1
+					},
+					"202": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 0,
+						"alpha": 1
+					},
+					"172": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"51": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"88": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"57": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"54": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"35": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"211": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"82": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"173": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"66": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"158": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"131": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"213": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"221": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"39": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"47": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"81": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 1,
+						"alpha": 1
+					},
+					"165": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"27": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"135": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"43": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.8431372549019608,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"144": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"21": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"252": {
+						"colorSpace": "srgb",
+						"red": 0.8156862745098039,
+						"green": 0.8156862745098039,
+						"blue": 0.8156862745098039,
+						"alpha": 1
+					},
+					"134": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"20": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"207": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"164": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"70": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"112": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"245": {
+						"colorSpace": "srgb",
+						"red": 0.5411764705882353,
+						"green": 0.5411764705882353,
+						"blue": 0.5411764705882353,
+						"alpha": 1
+					},
+					"132": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"199": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"229": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"24": {
+						"red": 0,
+						"green": 0.37254901960784315,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.5294117647058824
+					},
+					"253": {
+						"colorSpace": "srgb",
+						"red": 0.8549019607843137,
+						"green": 0.8549019607843137,
+						"blue": 0.8549019607843137,
+						"alpha": 1
+					},
+					"76": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"46": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"108": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"96": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"197": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"17": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"118": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"212": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"216": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"228": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"113": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"138": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"64": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"154": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"40": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"49": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"61": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"171": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"80": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"58": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 0,
+						"alpha": 1
+					},
+					"52": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"249": {
+						"colorSpace": "srgb",
+						"red": 0.6980392156862745,
+						"green": 0.6980392156862745,
+						"blue": 0.6980392156862745,
+						"alpha": 1
+					},
+					"122": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"237": {
+						"colorSpace": "srgb",
+						"red": 0.22745098039215686,
+						"green": 0.22745098039215686,
+						"blue": 0.22745098039215686,
+						"alpha": 1
+					},
+					"244": {
+						"colorSpace": "srgb",
+						"red": 0.5019607843137255,
+						"green": 0.5019607843137255,
+						"blue": 0.5019607843137255,
+						"alpha": 1
+					},
+					"242": {
+						"colorSpace": "srgb",
+						"red": 0.4235294117647059,
+						"green": 0.4235294117647059,
+						"blue": 0.4235294117647059,
+						"alpha": 1
+					},
+					"180": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"106": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"182": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"153": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 1,
+						"alpha": 1
+					},
+					"72": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"163": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"91": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"18": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"149": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"201": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"26": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"68": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"101": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"196": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"169": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"200": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"219": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"130": {
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0
+					},
+					"159": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"29": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"141": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"209": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"78": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"102": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"190": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"217": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"41": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"65": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"191": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"206": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"16": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"94": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 0,
+						"alpha": 1
+					},
+					"67": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"36": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.6862745098039216,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"89": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"116": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"109": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"56": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"25": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"99": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"115": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"250": {
+						"colorSpace": "srgb",
+						"red": 0.7372549019607844,
+						"green": 0.7372549019607844,
+						"blue": 0.7372549019607844,
+						"alpha": 1
+					},
+					"226": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 0,
+						"alpha": 1
+					},
+					"28": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"235": {
+						"colorSpace": "srgb",
+						"red": 0.14901960784313725,
+						"green": 0.14901960784313725,
+						"blue": 0.14901960784313725,
+						"alpha": 1
+					},
+					"63": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 1,
+						"alpha": 1
+					},
+					"179": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"19": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"193": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"220": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"230": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"231": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"243": {
+						"colorSpace": "srgb",
+						"red": 0.4627450980392157,
+						"green": 0.4627450980392157,
+						"blue": 0.4627450980392157,
+						"alpha": 1
+					},
+					"95": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"236": {
+						"colorSpace": "srgb",
+						"red": 0.18823529411764706,
+						"green": 0.18823529411764706,
+						"blue": 0.18823529411764706,
+						"alpha": 1
+					},
+					"251": {
+						"colorSpace": "srgb",
+						"red": 0.7764705882352941,
+						"green": 0.7764705882352941,
+						"blue": 0.7764705882352941,
+						"alpha": 1
+					},
+					"166": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 0,
+						"alpha": 1
+					},
+					"104": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"203": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"42": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"90": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"105": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"123": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"178": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"124": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 0,
+						"alpha": 1
+					},
+					"107": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"139": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"150": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"167": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"214": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"152": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"31": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"133": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"22": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.37254901960784315,
+						"blue": 0,
+						"alpha": 1
+					},
+					"241": {
+						"colorSpace": "srgb",
+						"red": 0.3843137254901961,
+						"green": 0.3843137254901961,
+						"blue": 0.3843137254901961,
+						"alpha": 1
+					},
+					"247": {
+						"colorSpace": "srgb",
+						"red": 0.6196078431372549,
+						"green": 0.6196078431372549,
+						"blue": 0.6196078431372549,
+						"alpha": 1
+					},
+					"218": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"232": {
+						"colorSpace": "srgb",
+						"red": 0.03137254901960784,
+						"green": 0.03137254901960784,
+						"blue": 0.03137254901960784,
+						"alpha": 1
+					},
+					"142": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"blue": 0,
+						"alpha": 1
+					},
+					"143": {
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.37254901960784315
+					},
+					"157": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"110": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"255": {
+						"colorSpace": "srgb",
+						"red": 0.9333333333333333,
+						"green": 0.9333333333333333,
+						"blue": 0.9333333333333333,
+						"alpha": 1
+					},
+					"53": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"125": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"48": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"146": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"86": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"185": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"55": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"248": {
+						"colorSpace": "srgb",
+						"red": 0.6588235294117647,
+						"green": 0.6588235294117647,
+						"blue": 0.6588235294117647,
+						"alpha": 1
+					},
+					"161": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"137": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"155": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"87": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"181": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"129": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"114": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"238": {
+						"colorSpace": "srgb",
+						"red": 0.26666666666666666,
+						"green": 0.26666666666666666,
+						"blue": 0.26666666666666666,
+						"alpha": 1
+					},
+					"128": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"222": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"162": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"156": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"83": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"62": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"254": {
+						"colorSpace": "srgb",
+						"red": 0.8941176470588236,
+						"green": 0.8941176470588236,
+						"blue": 0.8941176470588236,
+						"alpha": 1
+					},
+					"184": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"126": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"33": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"140": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"186": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"189": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.8431372549019608,
+						"blue": 1,
+						"alpha": 1
+					},
+					"145": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"204": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"120": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"195": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 1,
+						"alpha": 1
+					},
+					"85": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"168": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"45": {
+						"red": 0,
+						"green": 0.8431372549019608,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 1
+					},
+					"224": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"84": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"93": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 1,
+						"alpha": 1
+					},
+					"215": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.6862745098039216,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"174": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"223": {
+						"red": 1,
+						"green": 0.8431372549019608,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.6862745098039216
+					},
+					"240": {
+						"colorSpace": "srgb",
+						"red": 0.34509803921568627,
+						"green": 0.34509803921568627,
+						"blue": 0.34509803921568627,
+						"alpha": 1
+					},
+					"227": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"117": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.8431372549019608,
+						"blue": 1,
+						"alpha": 1
+					},
+					"60": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.37254901960784315,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"176": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"170": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.37254901960784315,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"121": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"44": {
+						"colorSpace": "srgb",
+						"red": 0,
+						"green": 0.8431372549019608,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"192": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"148": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 0,
+						"alpha": 1
+					},
+					"175": {
+						"red": 0.8431372549019608,
+						"green": 0.5294117647058824,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.6862745098039216
+					},
+					"151": {
+						"colorSpace": "srgb",
+						"red": 0.6862745098039216,
+						"green": 0.8431372549019608,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"208": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"79": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"198": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0,
+						"blue": 0.5294117647058824,
+						"alpha": 1
+					},
+					"194": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 1,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"119": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 1,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"100": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0.5294117647058824,
+						"blue": 0,
+						"alpha": 1
+					},
+					"225": {
+						"red": 1,
+						"green": 0.8431372549019608,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 1
+					},
+					"77": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.8431372549019608,
+						"blue": 0.37254901960784315,
+						"alpha": 1
+					},
+					"183": {
+						"colorSpace": "srgb",
+						"red": 0.8431372549019608,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"73": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"205": {
+						"colorSpace": "srgb",
+						"red": 1,
+						"green": 0.37254901960784315,
+						"blue": 0.6862745098039216,
+						"alpha": 1
+					},
+					"69": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.5294117647058824,
+						"blue": 1,
+						"alpha": 1
+					},
+					"92": {
+						"colorSpace": "srgb",
+						"red": 0.5294117647058824,
+						"green": 0,
+						"blue": 0.8431372549019608,
+						"alpha": 1
+					},
+					"75": {
+						"colorSpace": "srgb",
+						"red": 0.37254901960784315,
+						"green": 0.6862745098039216,
+						"blue": 1,
+						"alpha": 1
+					},
+					"246": {
+						"colorSpace": "srgb",
+						"red": 0.5803921568627451,
+						"green": 0.5803921568627451,
+						"blue": 0.5803921568627451,
+						"alpha": 1
+					}
+				},
+				"cursorText": {
+					"red": 0.09411764705882353,
+					"green": 0.09803921568627451,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.14901960784313725
+				},
+				"selectionForeground": {
+					"red": 0.792156862745098,
+					"green": 0.8274509803921568,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.9607843137254902
+				},
+				"ansi": [
+					{
+						"red": 0.28627450980392155,
+						"green": 0.30196078431372547,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.39215686274509803
+					},
+					{
+						"red": 0.9294117647058824,
+						"green": 0.5294117647058824,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.5882352941176471
+					},
+					{
+						"red": 0.6509803921568628,
+						"green": 0.8549019607843137,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.5843137254901961
+					},
+					{
+						"red": 0.9333333333333333,
+						"green": 0.8313725490196079,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.6235294117647059
+					},
+					{
+						"red": 0.5411764705882353,
+						"green": 0.6784313725490196,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.9568627450980393
+					},
+					{
+						"red": 0.9607843137254902,
+						"green": 0.7411764705882353,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.9019607843137255
+					},
+					{
+						"red": 0.5450980392156862,
+						"green": 0.8352941176470589,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.792156862745098
+					},
+					{
+						"red": 0.6470588235294118,
+						"green": 0.6784313725490196,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.796078431372549
+					},
+					{
+						"red": 0.3568627450980392,
+						"green": 0.3764705882352941,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.47058823529411764
+					},
+					{
+						"red": 0.9254901960784314,
+						"green": 0.4549019607843137,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.5254901960784314
+					},
+					{
+						"red": 0.5490196078431373,
+						"green": 0.8117647058823529,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.4980392156862745
+					},
+					{
+						"red": 0.8823529411764706,
+						"green": 0.7764705882352941,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.5098039215686274
+					},
+					{
+						"red": 0.47058823529411764,
+						"green": 0.6313725490196078,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.9647058823529412
+					},
+					{
+						"red": 0.9490196078431372,
+						"green": 0.6627450980392157,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.8666666666666667
+					},
+					{
+						"red": 0.38823529411764707,
+						"green": 0.796078431372549,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.7529411764705882
+					},
+					{
+						"red": 0.7215686274509804,
+						"green": 0.7529411764705882,
+						"alpha": 1,
+						"colorSpace": "srgb",
+						"blue": 0.8784313725490196
+					}
+				],
+				"cursor": {
+					"red": 0.9568627450980393,
+					"green": 0.8588235294117647,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.8392156862745098
+				},
+				"paletteOverrides": {},
+				"paletteGenerate": false,
+				"foreground": {
+					"red": 0.792156862745098,
+					"green": 0.8274509803921568,
+					"alpha": 1,
+					"colorSpace": "srgb",
+					"blue": 0.9607843137254902
+				}
+			},
+			"source": {
+				"ghosttyFile": {
+					"fileName": "Catppuccin Macchiato"
+				}
+			},
+			"createdAt": 815639678.722598,
+			"id": "custom-1D0C607E-D61C-4FA8-BE5D-17274E98FEF0",
+			"appearance": "dark"
+		}
+	]
 }
