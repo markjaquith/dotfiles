@@ -7,6 +7,7 @@ typeset command_name=${1:-}
 typeset config_file="${HOME}/.config/rex/preferences.json"
 typeset domain=com.superlogical.rex
 typeset -a string_keys=(
+	Workspace.appearance
 	Workspace.darkThemeID
 	Workspace.lightThemeID
 	Workspace.inactivePaneFadeMode

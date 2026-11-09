@@ -11,6 +11,9 @@ or changed by this setup.
 - Restart Rex after applying. Install the selected font on each machine; theme
   availability may depend on the installed Rex version.
 
+`Workspace.appearance` is `dark`, so Rex always uses the dark theme regardless
+of the macOS appearance. Rex rejects dark themes as `lightThemeID`.
+
 Imported theme data is saved under `Workspace.customThemes` alongside the selected
 theme IDs. Applying preferences restores that data before selecting the theme;
 no manual import or Remote Control permission is needed to restore it.

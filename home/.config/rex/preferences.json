@@ -1,6 +1,7 @@
 {
+	"Workspace.appearance": "dark",
 	"Workspace.darkThemeID": "custom-1D0C607E-D61C-4FA8-BE5D-17274E98FEF0",
-	"Workspace.lightThemeID": "custom-1D0C607E-D61C-4FA8-BE5D-17274E98FEF0",
+	"Workspace.lightThemeID": "merino-light",
 	"Workspace.inactivePaneFadeMode": "both",
 	"Workspace.tabIconTintMode": "off",
 	"Workspace.terminalFontName": "MonoLisa",

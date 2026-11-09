@@ -44,11 +44,12 @@ export REX_TEST_WRITES="$test_root/writes"
 
 zsh "$repo_root/bin/rex-settings" check
 zsh "$repo_root/bin/rex-settings" apply
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 12 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
 [[ $(head -n 1 "$REX_TEST_WRITES") == 'write com.superlogical.rex Workspace.customThemes -data '* ]]
 typeset restored_themes=$(head -n 1 "$REX_TEST_WRITES" | awk '{print $5}' | xxd -r -p)
 jq -e --argjson restored "$restored_themes" '."Workspace.customThemes" == $restored' "$test_root/preferences.json" >/dev/null
 grep -q -- 'Workspace.usesStandardInactiveWindowPaneStyles -bool true' "$REX_TEST_WRITES"
+grep -q -- 'Workspace.appearance -string dark' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalFontStyle -string Medium' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalFontPointSize -float 14' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalCellHeightPercent -float 40' "$REX_TEST_WRITES"
@@ -60,7 +61,7 @@ if zsh "$repo_root/bin/rex-settings" apply >/dev/null 2>&1; then
 	print -u2 -- 'FAIL: apply allowed while Rex was running'
 	exit 1
 fi
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 12 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
 unset REX_TEST_RUNNING
 
 jq '. + {"rex.client.label": "device-specific"}' "$test_root/preferences.json" > "$test_root/bad.json"
@@ -69,7 +70,7 @@ if zsh "$repo_root/bin/rex-settings" apply >/dev/null 2>&1; then
 	print -u2 -- 'FAIL: accepted a device-specific key'
 	exit 1
 fi
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 12 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
 
 print '{"Workspace.usesStandardInactiveWindowPaneStyles":"true"}' > "$test_root/preferences.json"
 if zsh "$repo_root/bin/rex-settings" check >/dev/null 2>&1; then
@@ -94,7 +95,7 @@ zsh "$repo_root/bin/rex-settings" capture
 jq -e '. == {"Workspace.terminalFontName": "Test Font", "Workspace.terminalFontPointSize": 14.5, "Workspace.terminalCellHeightPercent": 40, "Workspace.usesStandardInactiveWindowPaneStyles": false, "Workspace.customThemes": [{"id":"custom-test","name":"Test Theme","palette":{}}]}' "$test_root/preferences.json" >/dev/null
 zsh "$repo_root/bin/rex-settings" check
 zsh "$repo_root/bin/rex-settings" apply
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 17 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 18 ]]
 grep -q -- 'Workspace.terminalFontPointSize -float 14.5' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.usesStandardInactiveWindowPaneStyles -bool false' "$REX_TEST_WRITES"
 
