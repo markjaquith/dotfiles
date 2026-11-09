@@ -1,0 +1,13 @@
+{
+	"zoom": 0.9,
+	"sounds": {
+		"enabled": true
+	},
+	"font": "MonoLisa",
+	"font_size": 15.555556,
+	"font_ligatures": true,
+	"theme": "catppuccin-macchiato",
+	"minimum_contrast": 1,
+	"appearance": "dark",
+	"telemetry": false
+}
