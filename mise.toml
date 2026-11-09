@@ -1,6 +1,6 @@
 [tools]
 "github:agavra/tuicr" = "latest"
-hk = "latest"
+hk = { version = "latest", workflow = "release.yml" }
 node = "latest"
 "npm:oxfmt" = "latest"
 pipx = "latest"
