@@ -11,6 +11,10 @@ compinit -C
 
 [[ -r "$HOME/.openclaw/completions/openclaw.zsh" ]] && source "$HOME/.openclaw/completions/openclaw.zsh"
 
+if command -v rex >/dev/null 2>&1 && [[ -r "$HOME/.local/share/rex/completion.zsh" ]]; then
+  source "$HOME/.local/share/rex/completion.zsh"
+fi
+
 if command -v herdr >/dev/null 2>&1; then
   source <(herdr completion zsh)
 fi

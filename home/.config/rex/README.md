@@ -22,6 +22,11 @@ The installer applies saved preferences; it does not continuously sync changes
 made inside the app. Only the appearance keys listed in `bin/rex-settings`
 are eligible. Missing keys are left untouched, not deleted or reset.
 
+`dotfiles-install` links the `rex` CLI bundled inside Rex.app to
+`~/.local/bin/rex` and caches its zsh completion in
+`~/.local/share/rex/completion.zsh`. Both are skipped silently when Rex is not
+installed; rerun `dotfiles-install` after moving or renaming the app.
+
 `init.lua` binds Ctrl-H/J/K/L to focus the left/down/up/right pane. Run
 `rex config check` and `rex config reload` after editing it.
 

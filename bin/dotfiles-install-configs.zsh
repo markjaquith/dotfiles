@@ -10,6 +10,35 @@ if [[ "$(uname -s)" == Darwin ]]; then
 	"${${(%):-%x}:A:h}/rex-settings" apply
 fi
 
+# Rex CLI and zsh completion; silently skipped when Rex is not installed.
+install_rex_cli() {
+	emulate -L zsh
+	local app rex_bin="" completion_file="$HOME/.local/share/rex/completion.zsh"
+	# Prefer /Applications; Spotlight also finds renamed or relocated copies.
+	for app in /Applications/Rex*.app(N) \
+		${(f)"$(mdfind "kMDItemCFBundleIdentifier == 'com.superlogical.rex'" 2>/dev/null)"}; do
+		if [[ -x "$app/Contents/Helpers/Rex Server.rex/Contents/MacOS/rex" ]]; then
+			rex_bin="$app/Contents/Helpers/Rex Server.rex/Contents/MacOS/rex"
+			break
+		fi
+	done
+	[[ -n "$rex_bin" ]] || return 0
+
+	mkdir -p "$HOME/.local/bin" "${completion_file:h}"
+	ln -sfn "$rex_bin" "$HOME/.local/bin/rex"
+	local completion_tmp
+	completion_tmp="$(mktemp "${completion_file}.XXXXXX")" || return 0
+	if "$rex_bin" --autostart=false completion zsh >| "$completion_tmp" 2>/dev/null; then
+		mv "$completion_tmp" "$completion_file"
+	else
+		rm -f "$completion_tmp"
+	fi
+}
+
+if [[ "$(uname -s)" == Darwin ]]; then
+	install_rex_cli
+fi
+
 # Plannotator identity
 if command -v jq &>/dev/null; then
 	mkdir -p "$HOME/.plannotator"
