@@ -1,8 +1,10 @@
 # Pi runtime state and credentials
 /auth.json
+/mcp-auth.json
 /models-store.json
 /sessions
 /trust.json
+/pi-web-access/last-seen-version.json
 
 # Installed package state
 /git
