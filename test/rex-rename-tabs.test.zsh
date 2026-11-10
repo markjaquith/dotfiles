@@ -5,7 +5,7 @@ repo_root=${0:A:h:h}
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rex-rename-tabs-test.XXXXXX")
 trap 'rm -rf "$tmp_dir"' EXIT
 
-task_dir=$tmp_dir/tasks/can-123
+task_dir=$tmp_dir/tasks/abc-123
 mkdir -p "$task_dir/code" "$tmp_dir/other" "$tmp_dir/bin"
 : >"$task_dir/TASK.md"
 log=$tmp_dir/log
@@ -38,7 +38,7 @@ MOCK
 cat >"$tmp_dir/bin/agency" <<MOCK
 #!/usr/bin/env zsh
 print -r -- "agency \$*" >>"$log"
-print -r -- '{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://x.atlassian.net/browse/CAN-123"}}},"pr":{"url":"https://github.com/o/r/pull/1","draft":true}}}'
+print -r -- '{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://x.atlassian.net/browse/ABC-123"}}},"pr":{"url":"https://github.com/o/r/pull/1","draft":true}}}'
 MOCK
 chmod +x "$tmp_dir/bin/rex" "$tmp_dir/bin/agency"
 
@@ -54,10 +54,10 @@ actual_log=$(<"$log")
 [[ $(grep -c '^rename ' "$log") == 1 ]] || {
 	print -ru2 -- "FAIL: expected only the Agency tab to be renamed"; print -ru2 -- "$actual_log"; exit 1
 }
-[[ $actual_log == *"rename session:s1 window:w1 "*" CAN-123 Work" ]] || {
+[[ $actual_log == *"rename session:s1 window:w1 "*" ABC-123 Work" ]] || {
 	print -ru2 -- "FAIL: unexpected rename"; print -ru2 -- "$actual_log"; exit 1
 }
-[[ $output == "Work -> "*"CAN-123 Work" ]] || { print -ru2 -- "FAIL: output $output"; exit 1 }
+[[ $output == "Work -> "*"ABC-123 Work" ]] || { print -ru2 -- "FAIL: output $output"; exit 1 }
 
 # A missing Rex server is a silent no-op, not a server start.
 cat >"$tmp_dir/bin/rex" <<'MOCK'

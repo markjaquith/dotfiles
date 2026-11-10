@@ -59,15 +59,15 @@ rex_env=(REX_SESSION=session:s1 REX_BLOCK=block:b1)
 [[ $(run "$muxctl" which || true) == none ]]
 (( test_count += 5 ))
 
-run "${herdr_env[@]}" "$muxctl" tab rename-self ' CAN-1'
-expect_log 'herdr rename' 'herdr tab rename w1:t2  CAN-1'
+run "${herdr_env[@]}" "$muxctl" tab rename-self ' ABC-1'
+expect_log 'herdr rename' 'herdr tab rename w1:t2  ABC-1'
 run "${herdr_env[@]}" "$muxctl" tab close-self
 expect_log 'herdr close' 'herdr tab close w1:t2'
 run "${herdr_env[@]}" "$muxctl" workspace rename 'My work'
 expect_log 'herdr workspace' 'herdr workspace rename w1 My work'
 
-run "${rex_env[@]}" "$muxctl" tab rename-self ' CAN-1'
-expect_log 'rex rename' $'rex --autostart=false block inspect -s session:s1 block:b1 --json\nrex --autostart=false window rename -s session:s1 window:w7  CAN-1'
+run "${rex_env[@]}" "$muxctl" tab rename-self ' ABC-1'
+expect_log 'rex rename' $'rex --autostart=false block inspect -s session:s1 block:b1 --json\nrex --autostart=false window rename -s session:s1 window:w7  ABC-1'
 run "${rex_env[@]}" "$muxctl" tab close-self
 expect_log 'rex close' $'rex --autostart=false block inspect -s session:s1 block:b1 --json\nrex --autostart=false window close -s session:s1 window:w7'
 run "${rex_env[@]}" "$muxctl" workspace rename 'My work'
