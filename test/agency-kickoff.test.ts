@@ -52,14 +52,14 @@ const preview = { validation: { valid: true, issues: [] }, workspace: {} }
 const tasks = [
 	{ id: "task-1", path: `${root}/tasks/task-1/TASK.md`, data: {} },
 	{
-		id: "can-42-add-thing",
-		path: `${root}/tasks/can-42-add-thing/TASK.md`,
+		id: "abc-42-add-thing",
+		path: `${root}/tasks/abc-42-add-thing/TASK.md`,
 		data: { ticketUrl: null },
 	},
 	{
 		id: "renamed",
 		path: `${root}/tasks/renamed/TASK.md`,
-		data: { ticketUrl: "https://example.atlassian.net/browse/CAN-7" },
+		data: { ticketUrl: "https://example.atlassian.net/browse/ABC-7" },
 	},
 ]
 
@@ -102,7 +102,7 @@ function fake(
 			const sub = rest[0] === "--workbase" ? rest.slice(2) : rest
 			if (sub[0] === "task") return ok(tasks)
 			if (sub[0] === "context")
-				return /^(CAN-|https)/i.test(sub[1]!)
+				return /^(ABC-|https)/i.test(sub[1]!)
 					? fail("CONTEXT_ERROR", "Target document does not exist")
 					: ok(responses.context ?? context("task"))
 			if (sub[0] === "work") return responses.prepare ?? ok(preview)
@@ -239,9 +239,9 @@ describe("agency-kickoff", () => {
 	})
 
 	test.each([
-		["CAN-42", `${root}/tasks/can-42-add-thing/TASK.md`],
+		["ABC-42", `${root}/tasks/abc-42-add-thing/TASK.md`],
 		[
-			"https://example.atlassian.net/browse/can-7",
+			"https://example.atlassian.net/browse/abc-7",
 			`${root}/tasks/renamed/TASK.md`,
 		],
 	])("ticket %s matches by ID prefix or ticketUrl", async (target, path) => {
@@ -254,10 +254,10 @@ describe("agency-kickoff", () => {
 
 	test("unknown ticket fails before any tab exists", async () => {
 		const { io, calls, events } = fake()
-		expect(await main(["CAN-999"], io, env, root)).toBe(1)
+		expect(await main(["ABC-999"], io, env, root)).toBe(1)
 		expect(calls.some((call) => call[0] === "herdr")).toBe(false)
 		expect(events[0]!.message).toContain(
-			"No Agency task matches ticket CAN-999",
+			"No Agency task matches ticket ABC-999",
 		)
 		expect(events[0]!.recovery).toBeUndefined()
 	})

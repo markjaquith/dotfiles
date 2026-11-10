@@ -93,42 +93,42 @@ assert_label "stale PR status removed" \
 	"Work"
 
 assert_label "Agency Jira ticket" \
-	"Payroll work" none CAN-1979 \
-	" CAN-1979 Payroll work"
+	"Payroll work" none ABC-1979 \
+	" ABC-1979 Payroll work"
 assert_label "PR before Agency Jira ticket" \
-	"Payroll work" draft CAN-1979 \
-	"  CAN-1979 Payroll work"
+	"Payroll work" draft ABC-1979 \
+	"  ABC-1979 Payroll work"
 assert_label "existing raw Jira key moved to front" \
-	"Payroll CAN-1979 work" open CAN-1979 \
-	"  CAN-1979 Payroll work"
+	"Payroll ABC-1979 work" open ABC-1979 \
+	"  ABC-1979 Payroll work"
 assert_label "existing Jira indicator moved after PR" \
-	" CAN-1979 Payroll work" merged CAN-1979 \
-	"  CAN-1979 Payroll work"
+	" ABC-1979 Payroll work" merged ABC-1979 \
+	"  ABC-1979 Payroll work"
 assert_label "Agency Jira replaces old leading Jira" \
 	" OLD-999 Payroll work" draft NEW-234 \
 	"  NEW-234 Payroll work"
 assert_label "Agency task ID title" \
-	"CAN-2019-fix-merge-conflicts" open CAN-2019 \
-	"$pr_glyph $jira_glyph CAN-2019 fix-merge-conflicts"
+	"ABC-2019-fix-merge-conflicts" open ABC-2019 \
+	"$pr_glyph $jira_glyph ABC-2019 fix-merge-conflicts"
 assert_label "duplicated Agency task ID title" \
-	"$pr_glyph $jira_glyph CAN-2019 CAN-2019-fix-merge-conflicts" open CAN-2019 \
-	"$pr_glyph $jira_glyph CAN-2019 fix-merge-conflicts"
+	"$pr_glyph $jira_glyph ABC-2019 ABC-2019-fix-merge-conflicts" open ABC-2019 \
+	"$pr_glyph $jira_glyph ABC-2019 fix-merge-conflicts"
 assert_label "longer ticket number is not stripped" \
-	"CAN-20190-other" none CAN-2019 \
-	"$jira_glyph CAN-2019 CAN-20190-other"
+	"ABC-20190-other" none ABC-2019 \
+	"$jira_glyph ABC-2019 ABC-20190-other"
 assert_label "ticket-only title" \
-	"CAN-1979" open CAN-1979 \
-	"  CAN-1979"
+	"ABC-1979" open ABC-1979 \
+	"  ABC-1979"
 
 assert_label "duplicate draft and Jira prefixes" \
-	"    CAN-1979 termination Slack" draft CAN-1979 \
-	"  CAN-1979 termination Slack"
+	"    ABC-1979 termination Slack" draft ABC-1979 \
+	"  ABC-1979 termination Slack"
 assert_label "duplicate prefixes without Jira ticket" \
 	"   Secrets" draft "" \
 	" Secrets"
 assert_label "wrong PR and duplicate Jira prefixes" \
-	"    CAN-1975 EFT Integration" open CAN-1975 \
-	"  CAN-1975 EFT Integration"
+	"    ABC-1975 EFT Integration" open ABC-1975 \
+	"  ABC-1975 EFT Integration"
 
 assert_indicators "working task without PR" \
 	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"url":null,"state":"none"}}}' \
@@ -137,17 +137,17 @@ assert_indicators "draft PR without ticket URL" \
 	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"url":"https://github.com/example/repo/pull/1","state":"open","draft":true,"merged":false}}}' \
 	'{"prStatus":"draft","jiraTicket":""}'
 assert_indicators "open PR and Jira URL" \
-	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/CAN-1979"}}},"pr":{"url":"https://github.com/example/repo/pull/1","state":"open","draft":false,"merged":false}}}' \
-	'{"prStatus":"open","jiraTicket":"CAN-1979"}'
+	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/ABC-1979"}}},"pr":{"url":"https://github.com/example/repo/pull/1","state":"open","draft":false,"merged":false}}}' \
+	'{"prStatus":"open","jiraTicket":"ABC-1979"}'
 assert_indicators "merged takes precedence over draft" \
 	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"working","ticketUrl":null}}},"pr":{"draft":true,"merged":true}}}' \
 	'{"prStatus":"merged","jiraTicket":""}'
 assert_indicators "phase uses parent task Jira URL" \
-	'{"result":{"target":{"kind":"phase"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/CAN-2468"}},"phase":{"data":{"status":"working"}}},"pr":{"draft":true,"merged":false}}}' \
-	'{"prStatus":"draft","jiraTicket":"CAN-2468"}'
+	'{"result":{"target":{"kind":"phase"},"documents":{"task":{"data":{"status":"working","ticketUrl":"https://jira.example/browse/ABC-2468"}},"phase":{"data":{"status":"working"}}},"pr":{"draft":true,"merged":false}}}' \
+	'{"prStatus":"draft","jiraTicket":"ABC-2468"}'
 assert_indicators "non-working task has no PR status" \
-	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"done","ticketUrl":"https://jira.example/browse/CAN-1979"}}},"pr":{"draft":false,"merged":true}}}' \
-	'{"prStatus":"","jiraTicket":"CAN-1979"}'
+	'{"result":{"target":{"kind":"task"},"documents":{"task":{"data":{"status":"done","ticketUrl":"https://jira.example/browse/ABC-1979"}}},"pr":{"draft":false,"merged":true}}}' \
+	'{"prStatus":"","jiraTicket":"ABC-1979"}'
 assert_indicators "unrelated Agency target ignored" \
 	'{"result":{"target":{"kind":"epic"},"documents":{"task":null},"pr":null}}' \
 	''

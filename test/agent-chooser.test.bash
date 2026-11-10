@@ -53,7 +53,7 @@ snapshot() {
 					],
 					tabs: [
 						{tab_id: "w1:t1", label: "Polish README"},
-						{tab_id: "w2:t2", label: "CAN-1922"}
+						{tab_id: "w2:t2", label: "ABC-1922"}
 					]
 				}
 			}
