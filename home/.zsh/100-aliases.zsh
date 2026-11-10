@@ -295,12 +295,8 @@ function h-workspace-rename() {
 		return 2
 	fi
 
-	if [[ -z "${HERDR_WORKSPACE_ID:-}" ]]; then
-		print -u2 "h-workspace-rename: could not determine current workspace id"
-		return 1
-	fi
-
-	herdr workspace rename "$HERDR_WORKSPACE_ID" "$1"
+	# The current Herdr workspace, or the current Rex session.
+	muxctl workspace rename "$1"
 }
 
 # OpenCode aliases.

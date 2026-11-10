@@ -1,0 +1,112 @@
+#!/usr/bin/env zsh
+
+# Multiplexer-agnostic operations on the caller's own tab and workspace.
+# Herdr wins when both HERDR_ENV=1 and REX_SESSION are set (innermost mux).
+
+emulate -L zsh
+setopt pipefail no_unset
+
+usage() {
+	print -u2 -- 'Usage: muxctl [--mux herdr|rex] which'
+	print -u2 -- '       muxctl [--mux herdr|rex] tab rename-self <label>'
+	print -u2 -- '       muxctl [--mux herdr|rex] tab close-self'
+	print -u2 -- '       muxctl [--mux herdr|rex] workspace rename <name>'
+}
+
+die() {
+	print -ru2 -- "muxctl: $*"
+	exit 1
+}
+
+typeset herdr=${MUXCTL_HERDR_BIN:-herdr}
+typeset rex=${MUXCTL_REX_BIN:-rex}
+typeset mux=''
+
+detect_mux() {
+	if [[ ${HERDR_ENV:-} == 1 ]]; then
+		REPLY=herdr
+	elif [[ -n ${REX_SESSION:-} ]]; then
+		REPLY=rex
+	else
+		REPLY=none
+	fi
+}
+
+rex_call() {
+	"$rex" --autostart=false "$@"
+}
+
+rex_own_window() {
+	[[ -n ${REX_SESSION:-} && -n ${REX_BLOCK:-} ]] \
+		|| die 'REX_SESSION and REX_BLOCK are required'
+	local window
+	window=$(rex_call block inspect -s "$REX_SESSION" "$REX_BLOCK" --json \
+		| jq -er '.block.window_id') || die "cannot find the Rex tab of $REX_BLOCK"
+	REPLY=$window
+}
+
+herdr_require() {
+	local name=$1
+	[[ ${HERDR_ENV:-} == 1 ]] || die 'HERDR_ENV=1 is required'
+	[[ -n ${(P)name:-} ]] || die "$name is required"
+}
+
+if [[ ${1:-} == --mux ]]; then
+	[[ ${2:-} == (herdr|rex) ]] || { usage; exit 2 }
+	mux=$2
+	shift 2
+fi
+if [[ -z $mux ]]; then
+	detect_mux
+	mux=$REPLY
+fi
+
+case "${1:-}:${2:-}" in
+	which:)
+		print -r -- "$mux"
+		[[ $mux != none ]]
+		exit
+		;;
+	tab:rename-self)
+		[[ $# -eq 3 && -n $3 ]] || { usage; exit 2 }
+		;;
+	tab:close-self)
+		[[ $# -eq 2 ]] || { usage; exit 2 }
+		;;
+	workspace:rename)
+		[[ $# -eq 3 && -n $3 ]] || { usage; exit 2 }
+		;;
+	*)
+		usage
+		exit 2
+		;;
+esac
+
+[[ $mux != none ]] || die 'not running inside Herdr or Rex'
+
+case "$mux:$1:$2" in
+	herdr:tab:rename-self)
+		herdr_require HERDR_TAB_ID
+		"$herdr" tab rename "$HERDR_TAB_ID" "$3" >/dev/null
+		;;
+	herdr:tab:close-self)
+		herdr_require HERDR_TAB_ID
+		"$herdr" tab close "$HERDR_TAB_ID" >/dev/null
+		;;
+	herdr:workspace:rename)
+		herdr_require HERDR_WORKSPACE_ID
+		"$herdr" workspace rename "$HERDR_WORKSPACE_ID" "$3" >/dev/null
+		;;
+	rex:tab:rename-self)
+		rex_own_window || exit 1
+		rex_call window rename -s "$REX_SESSION" "$REPLY" "$3" >/dev/null
+		;;
+	rex:tab:close-self)
+		rex_own_window || exit 1
+		rex_call window close -s "$REX_SESSION" "$REPLY" >/dev/null
+		;;
+	rex:workspace:rename)
+		[[ -n ${REX_SESSION:-} ]] || die 'REX_SESSION is required'
+		rex_call session rename "$REX_SESSION" "$3" >/dev/null
+		;;
+esac

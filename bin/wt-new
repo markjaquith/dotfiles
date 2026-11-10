@@ -77,8 +77,8 @@ function rename_terminal_tab_for_ticket() {
 
 	ticket=$(ticket_from_branch_name "$branch_name") || return 0
 
-	if [[ -n "${HERDR_TAB_ID:-}" ]] && command -v herdr >/dev/null 2>&1; then
-		herdr tab rename "$HERDR_TAB_ID" " ${ticket}" >/dev/null 2>&1 || true
+	if "$muxctl" which >/dev/null 2>&1; then
+		"$muxctl" tab rename-self " ${ticket}" >/dev/null 2>&1 || true
 	fi
 
 	[[ -n "${TMUX:-}" ]] || return 0
@@ -88,6 +88,7 @@ function rename_terminal_tab_for_ticket() {
 	tmux rename-window -t "$target" "$ticket" >/dev/null 2>&1 || true
 }
 
+muxctl="${0:A:h}/muxctl"
 print_only=0
 update_after_create=0
 reuse_existing=0
