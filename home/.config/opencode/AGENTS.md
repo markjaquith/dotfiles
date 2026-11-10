@@ -25,9 +25,17 @@ If this surface is a deployed instance that requires a token, also set
 `SIDESHOW_TOKEN` in your environment before using the CLI. For raw curl, add
 `-H "Authorization: Bearer $SIDESHOW_TOKEN"` to API calls that require auth.
 
-# Herdr guidelines
+# Herdr and Rex guidelines
 
-If the user says "in a new tab" or "in a new workspace" then unless there is clear evidence showing they mean something else, assume that they mean "in a new Herdr tab (same workspace)" and "in a new Herdr workspace". Use the `herdr` skill. NEVER auto-focus a newly created Herdr tab or Herdr workspace.
+Work in whichever multiplexer this process runs in: Herdr when `HERDR_ENV=1`
+(it wins when both are set), otherwise Rex when `REX_SESSION` is set.
+`muxctl which` prints `herdr`, `rex`, or `none`. In Rex, a Herdr workspace is a
+session, a tab is a window, and a pane is a block.
+
+If the user says "in a new tab" or "in a new workspace" then unless there is clear evidence showing they mean something else, assume that they mean a new tab in the current Herdr workspace or Rex session, and a new Herdr workspace or Rex session. Use the `herdr` skill in Herdr and the `rex` skill in Rex. NEVER auto-focus a newly created tab, workspace, or session (in Rex, pass `--focus=false`).
+
+For your own tab or workspace, use `muxctl tab rename-self <label>`,
+`muxctl tab close-self`, and `muxctl workspace rename <name>`; they work in both.
 
 # Agency guidelines
 
@@ -37,7 +45,7 @@ is set, this process is the active worker. Treat generated prompts such as
 "Start the task", "Continue the task", "Work on the task", or "Work on the
 epic" as instructions to perform the assigned work: start with
 `agency context . --json`, and do not call `agency work` or open another Herdr
-tab unless the user explicitly asks to launch a separate nested or replacement
+or Rex tab unless the user explicitly asks to launch a separate nested or replacement
 agent. The launch rules below apply only when neither
 variable is set.
 
@@ -58,13 +66,13 @@ that later work belongs to the same item.
 Interpret Agency action verbs as separate intents:
 
 - **Create** (`create`, `make`, or `add`) mutates the durable Agency item only.
-  Do not prepare a checkout, open Herdr UI, or run `agency work` unless the same
+  Do not prepare a checkout, open Herdr or Rex UI, or run `agency work` unless the same
   request explicitly asks for one of those actions.
 - **Materialize** (`materialize` or `prepare`) runs
   `agency work prepare <item-directory> --dry-run --json` and, after a clean
   preflight, `agency work prepare <item-directory> --json`. It does not open
-  Herdr UI or run `agency work`.
-- **Open** (`open` or `view`) constructs the Herdr worker/editor layout and runs
+  Herdr or Rex UI or run `agency work`.
+- **Open** (`open` or `view`) constructs the Herdr or Rex worker/editor layout and runs
   `agency work .` without `--auto`.
 - **Launch** (`work`, `launch`, `start`, or `kick off`) constructs that layout
   and runs `agency work . --auto`.
@@ -88,7 +96,7 @@ item ID and document path, and perform exactly one
 `agency context <document-path> --json` verification. For materialize-only
 requests, resolve the item directory from Agency output, stop on validation
 failure or any `Unable to resolve reference` warning, and perform exactly one
-context verification after preparation. Neither flow creates a Herdr tab.
+context verification after preparation. Neither flow creates a Herdr or Rex tab.
 
 Requests with an **open** or **launch** intent use one deterministic command,
 run by the initiating agent itself. There is no setup agent:
@@ -107,7 +115,8 @@ execution units, then creates an unfocused tab labeled with the target ID: worke
 on the left running `agency work`, editor on the right with the item's
 `TASK.md`/`PHASE.md`/`EPIC.md`. It prints one JSON line (`launched` or `error`)
 and returns without waiting for the worker. If `agency work` later exits with an
-error, the worker pane shows it and Herdr shows an "Agency launch failed" toast.
+error, the worker pane shows it and an "Agency launch failed" notification appears
+(a Herdr toast, or a desktop notification in Rex).
 
 If creation is needed, including a ticket target with no Agency task, the
 initiating agent creates the item first (fetching the remote ticket when needed,
@@ -117,7 +126,7 @@ document path. For a named phase whose branch or path is unknown, use
 a branch from a slug.
 
 Do not resolve predecessor branches, list tabs, inspect model configuration, or
-rediscover Herdr/OpenCode syntax before kickoff. Do not call
+rediscover Herdr/Rex/OpenCode syntax before kickoff. Do not call
 `opencode.session_move`; the new worker starts in its own managed context.
 Return after `launched`; do not poll or babysit unless asked. On an `error`
 before a tab exists, fix the reported problem (or report it) and rerun. On an
@@ -153,12 +162,12 @@ task" means create the item and launch `agency work . --auto`.
 
 - Prompt: `make this task` Outcome: create the durable item only
 - Prompt: `materialize this task` Outcome: prepare its workspace only
-- Prompt: `open this task` Outcome: open it in Herdr without `--auto`
-- Prompt: `launch this task` Outcome: open it in Herdr with `--auto`
+- Prompt: `open this task` Outcome: open it in Herdr or Rex without `--auto`
+- Prompt: `launch this task` Outcome: open it in Herdr or Rex with `--auto`
 - Prompt: `kick off a new task` Outcome: create, open, and work with `--auto`
 - Prompt: `create and work this phase` Outcome: create, open, and work with `--auto`
 - Prompt: `the investigation is complete; create a follow-up coding task`
   Outcome: create a distinct durable item only
 - Prompt: `the investigation is complete; kick off a new coding task`
-  Outcome: create a distinct item, open it in a new Herdr tab in the current
+  Outcome: create a distinct item, open it in a new Herdr or Rex tab in the current
   workspace, and launch with `--auto`; do not focus or babysit it

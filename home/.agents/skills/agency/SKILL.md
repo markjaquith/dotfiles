@@ -179,7 +179,7 @@ prevent the orchestrator from creating an unlaunched worker shell and editor as
 a recovery layout. Resolve repository-reference failures before launch. Do not
 use the legacy `agency worktree prepare` path.
 
-For the dotfiles-managed Herdr flow, run `agency-kickoff <target>` (launch, with
+For the dotfiles-managed Herdr or Rex flow, run `agency-kickoff <target>` (launch, with
 `--auto`) or `agency-kickoff <target> --open` instead of executing these steps
 individually. It resolves the target (task ID, `task/phase`, `epic:<id>`, path, or
 ticket key/URL), runs the dry-run preflight for execution units, and creates an
