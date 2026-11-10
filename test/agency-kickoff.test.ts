@@ -5,6 +5,7 @@ import { main, type Runtime } from "../bin/agency-kickoff.ts"
 type JsonObject = Record<string, unknown>
 const root = "/work base/owner's project"
 const env = { HERDR_ENV: "1", HERDR_WORKSPACE_ID: "w2" }
+const rexEnv = { REX_SESSION: "session:s1", SHELL: "/bin/zsh" }
 
 function context(
 	kind: "task" | "phase" | "epic",
@@ -67,6 +68,7 @@ function fake(
 		context?: JsonObject
 		prepare?: ReturnType<typeof ok>
 		existing?: string[]
+		rex?: { status: number; stdout: string; stderr: string }
 	} = {},
 ) {
 	const calls: string[][] = []
@@ -75,6 +77,18 @@ function fake(
 		async run(argv) {
 			calls.push(argv)
 			const [command, ...rest] = argv
+			if (command === "rex")
+				return (
+					responses.rex ?? {
+						status: 0,
+						stdout: JSON.stringify({
+							window_id: "window:w9",
+							block_ids: ["block:b1", "block:b2"],
+							revision: 3,
+						}),
+						stderr: "",
+					}
+				)
 			if (command === "herdr") {
 				if (rest[0] === "tab")
 					return herdr("tab_created", {
@@ -165,6 +179,7 @@ describe("agency-kickoff", () => {
 			{
 				event: "launched",
 				intent: "launch",
+				mux: "herdr",
 				workspaceId: "w2",
 				target: "task-1",
 				kind: "task",
@@ -359,5 +374,152 @@ describe("agency-kickoff", () => {
 			workerPaneId: "w2:p1",
 		})
 		expect(events[0]!.recovery).toBeDefined()
+	})
+
+	describe("rex", () => {
+		const rexRequest = (call: string[]) => {
+			expect(call.slice(0, 7)).toEqual([
+				"rex",
+				"--autostart=false",
+				"api",
+				"call",
+				"-s",
+				"session:s1",
+				"session.new_window",
+			])
+			return JSON.parse(call[7]!) as {
+				window_label: string
+				focus: boolean
+				layout: {
+					split: {
+						direction: string
+						before: { block: { label: string; options: JsonObject } }
+						after: { block: { label: string; options: JsonObject } }
+					}
+				}
+			}
+		}
+
+		test("creates an unfocused worker/editor tab in one atomic call", async () => {
+			const { io, calls, events } = fake()
+			expect(await main(["task-1"], io, rexEnv, root)).toBe(0)
+			const dir = `${root}/tasks/task-1`
+			expect(calls.slice(0, 2)).toEqual([
+				["agency", "context", "task-1", "--json"],
+				["agency", "work", "prepare", dir, "--dry-run", "--json"],
+			])
+			expect(calls).toHaveLength(3)
+			const request = rexRequest(calls[2]!)
+			expect(request.window_label).toBe("task-1")
+			expect(request.focus).toBe(false)
+			const { split } = request.layout
+			expect(split.direction).toBe("horizontal")
+			expect(split.before.block.label).toBe("worker")
+			expect(split.before.block.options).toEqual({
+				cwd: dir,
+				initial_input:
+					"agency work . --auto || printf '\\033]777;notify;%s;%s\\033\\\\' 'Agency launch failed' 'task-1: agency work exited with an error. See its tab.'\n",
+			})
+			expect(split.after.block).toMatchObject({
+				label: "editor",
+				options: { cwd: dir, initial_input: "nvim -- TASK.md\n" },
+			})
+			expect(events).toEqual([
+				{
+					event: "launched",
+					intent: "launch",
+					mux: "rex",
+					sessionId: "session:s1",
+					target: "task-1",
+					kind: "task",
+					documentPath: `${dir}/TASK.md`,
+					tabId: "window:w9",
+					workerPaneId: "block:b1",
+					editorPaneId: "block:b2",
+				},
+			])
+		})
+
+		test("failure command emits an OSC 777 desktop notification", () => {
+			const { io, calls } = fake()
+			return main(["task-1"], io, rexEnv, root).then(() => {
+				const input = String(
+					rexRequest(calls[2]!).layout.split.before.block.options.initial_input,
+				)
+				const notify = input.slice(input.indexOf("|| ") + 3).trim()
+				const result = Bun.spawnSync(["/bin/zsh", "-fc", notify])
+				expect(result.stdout.toString()).toBe(
+					"\x1b]777;notify;Agency launch failed;task-1: agency work exited with an error. See its tab.\x1b\\",
+				)
+			})
+		})
+
+		test("passes OPENCODE_CONFIG_CONTENT by wrapping the login shell", async () => {
+			const { io, calls } = fake({ context: context("phase") })
+			expect(
+				await main(
+					["task-1/phase-2", "--open"],
+					io,
+					{ ...rexEnv, OPENCODE_CONFIG_CONTENT: '{"a":1}' },
+					root,
+				),
+			).toBe(0)
+			const { split } = rexRequest(calls.at(-1)!).layout
+			for (const side of [split.before, split.after])
+				expect(side.block.options).toMatchObject({
+					shell: "none",
+					command: [
+						"/usr/bin/env",
+						'OPENCODE_CONFIG_CONTENT={"a":1}',
+						"/bin/zsh",
+						"-l",
+					],
+				})
+			expect(String(split.before.block.options.initial_input)).toStartWith(
+				"agency work . || ",
+			)
+			expect(split.after.block.options.initial_input).toBe("nvim -- PHASE.md\n")
+		})
+
+		test("Herdr wins when both are present; --mux overrides", async () => {
+			const both = { ...env, ...rexEnv }
+			const herdrRun = fake()
+			expect(await main(["task-1"], herdrRun.io, both, root)).toBe(0)
+			expect(herdrRun.calls.some((call) => call[0] === "rex")).toBe(false)
+			expect(herdrRun.events[0]!.mux).toBe("herdr")
+			const rexRun = fake()
+			expect(
+				await main(["task-1", "--mux", "rex"], rexRun.io, both, root),
+			).toBe(0)
+			expect(rexRun.calls.some((call) => call[0] === "herdr")).toBe(false)
+			expect(rexRun.events[0]!.mux).toBe("rex")
+		})
+
+		test("rejects a bad --mux and --mux rex without REX_SESSION", async () => {
+			const bad = fake()
+			expect(
+				await main(["task-1", "--mux", "tmux"], bad.io, rexEnv, root),
+			).toBe(1)
+			expect(bad.calls).toEqual([])
+			const missing = fake()
+			expect(
+				await main(["task-1", "--mux", "rex"], missing.io, env, root),
+			).toBe(1)
+			expect(missing.calls).toEqual([])
+		})
+
+		test("a failed Rex call leaves no tab to recover", async () => {
+			const { io, events } = fake({
+				rex: { status: 1, stdout: "", stderr: "session_not_found" },
+			})
+			expect(await main(["task-1"], io, rexEnv, root)).toBe(1)
+			expect(events[0]).toMatchObject({
+				event: "error",
+				stage: "tab-create",
+				mux: "rex",
+			})
+			expect(events[0]!.message).toContain("session_not_found")
+			expect(events[0]!.recovery).toBeUndefined()
+		})
 	})
 })

@@ -39,9 +39,15 @@ const runtime: Runtime = {
 
 const usage = `Usage: agency-kickoff <target> [--open] [--allow-working-dependencies]
                       [--workbase <selector>] [--agency-executable <path>]
+                      [--mux herdr|rex]
 
 <target> is a task ID, task/phase, epic:<id>, an Agency document or directory
-path, or a ticket key/URL matched against existing Agency tasks.`
+path, or a ticket key/URL matched against existing Agency tasks.
+
+The tab opens in Herdr when HERDR_ENV=1, otherwise in Rex when REX_SESSION is
+set. --mux overrides the detection.`
+
+type Mux = "herdr" | "rex"
 
 function requireValue(condition: unknown, message: string): asserts condition {
 	if (!condition) throw new Error(message)
@@ -92,6 +98,7 @@ type Options = {
 	allowWorkingDependencies: boolean
 	workbase?: string
 	agency: string
+	mux?: Mux
 }
 
 function parse(args: string[]): Options {
@@ -100,6 +107,7 @@ function parse(args: string[]): Options {
 	let allowWorkingDependencies = false
 	let workbase: string | undefined
 	let agency = "agency"
+	let mux: Mux | undefined
 	const seen = new Set<string>()
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i]!
@@ -113,18 +121,38 @@ function parse(args: string[]): Options {
 		if (arg === "--open") intent = "open"
 		else if (arg === "--allow-working-dependencies")
 			allowWorkingDependencies = true
-		else if (arg === "--workbase" || arg === "--agency-executable") {
+		else if (
+			arg === "--workbase" ||
+			arg === "--agency-executable" ||
+			arg === "--mux"
+		) {
 			const value = args[++i]
 			requireValue(
 				value !== undefined && !value.startsWith("--"),
 				`Missing value for ${arg}`,
 			)
 			if (arg === "--workbase") workbase = text(value)
-			else agency = text(value)
+			else if (arg === "--mux") {
+				requireValue(
+					value === "herdr" || value === "rex",
+					`--mux must be herdr or rex, not ${JSON.stringify(value)}`,
+				)
+				mux = value
+			} else agency = text(value)
 		} else throw new Error(`Unknown option: ${arg}\n${usage}`)
 	}
 	requireValue(target !== undefined, `A target is required\n${usage}`)
-	return { target, intent, allowWorkingDependencies, workbase, agency }
+	return { target, intent, allowWorkingDependencies, workbase, agency, mux }
+}
+
+function detectMux(options: Options, env: NodeJS.ProcessEnv): Mux {
+	if (options.mux) return options.mux
+	// A Herdr pane inside a Rex terminal sees both; the innermost (Herdr) wins.
+	if (env.HERDR_ENV === "1") return "herdr"
+	if (env.REX_SESSION) return "rex"
+	throw new Error(
+		"Run inside Herdr (HERDR_ENV=1) or Rex (REX_SESSION), or pass --mux",
+	)
 }
 
 export async function main(
@@ -155,9 +183,15 @@ export async function main(
 				)
 			}
 		}
-		requireValue(env.HERDR_ENV === "1", "HERDR_ENV=1 is required")
-		const workspaceId = text(env.HERDR_WORKSPACE_ID)
-		ids.workspaceId = workspaceId
+		const mux = detectMux(options, env)
+		ids.mux = mux
+		if (mux === "herdr") {
+			requireValue(env.HERDR_ENV === "1", "HERDR_ENV=1 is required")
+			ids.workspaceId = text(env.HERDR_WORKSPACE_ID)
+		} else {
+			requireValue(env.REX_SESSION, "REX_SESSION is required")
+			ids.sessionId = text(env.REX_SESSION)
+		}
 
 		const agencyCall = async (argv: string[], timeout = 30_000) => {
 			const full = [
@@ -337,6 +371,93 @@ export async function main(
 			)
 		}
 
+		const work = [
+			shellQuote(agency),
+			"work",
+			".",
+			...(options.intent === "launch" ? ["--auto"] : []),
+			...permission,
+		].join(" ")
+		const editor = `nvim -- ${shellQuote(basename(documentPath))}`
+		const failureTitle = "Agency launch failed"
+		const failureBody = `${label}: agency work exited with an error. See its tab.`
+
+		if (mux === "rex") {
+			stage = "tab-create"
+			const session = text(ids.sessionId)
+			// Rex blocks take no environment option, so wrap the login shell.
+			const shellEnv =
+				env.OPENCODE_CONFIG_CONTENT === undefined
+					? {}
+					: {
+							shell: "none",
+							command: [
+								"/usr/bin/env",
+								`OPENCODE_CONFIG_CONTENT=${env.OPENCODE_CONFIG_CONTENT}`,
+								env.SHELL || "/bin/zsh",
+								"-l",
+							],
+						}
+			const block = (name: string, input: string) => ({
+				block: {
+					flavor: "com.superlogical.terminal.shell",
+					label: name,
+					options: { cwd: directory, ...shellEnv, initial_input: `${input}\n` },
+				},
+			})
+			// OSC 777 asks Rex for a desktop notification.
+			const notify = [
+				"printf",
+				shellQuote("\\033]777;notify;%s;%s\\033\\\\"),
+				shellQuote(failureTitle),
+				shellQuote(failureBody),
+			].join(" ")
+			const request = {
+				window_label: label,
+				focus: false,
+				layout: {
+					split: {
+						direction: "horizontal",
+						before: block("worker", `${work} || ${notify}`),
+						after: block("editor", editor),
+					},
+				},
+			}
+			const argv = [
+				"rex",
+				"--autostart=false",
+				"api",
+				"call",
+				"-s",
+				session,
+				"session.new_window",
+				JSON.stringify(request),
+			]
+			const output = await io.run(argv, cwd, 15_000)
+			requireValue(
+				output.status === 0,
+				`rex session.new_window failed: ${(output.stderr || output.stdout).trim()}`,
+			)
+			let created: ObjectValue
+			try {
+				created = object(JSON.parse(output.stdout.trim()))
+			} catch {
+				throw new Error(
+					`Invalid JSON from rex session.new_window: ${output.stdout.trim()}`,
+				)
+			}
+			const blocks = created.block_ids
+			requireValue(
+				Array.isArray(blocks) && blocks.length === 2,
+				`Unexpected rex session.new_window result: ${output.stdout.trim()}`,
+			)
+			ids.tabId = text(created.window_id)
+			ids.workerPaneId = text(blocks[0])
+			ids.editorPaneId = text(blocks[1])
+			io.emit({ event: "launched", intent: options.intent, ...ids })
+			return 0
+		}
+
 		const herdr = async (argv: string[], type?: string) => {
 			const output = await io.run(["herdr", ...argv], cwd, 15_000)
 			const name = `herdr ${argv.slice(0, 2).join(" ")}`
@@ -380,7 +501,7 @@ export async function main(
 				"tab",
 				"create",
 				"--workspace",
-				workspaceId,
+				text(ids.workspaceId),
 				"--cwd",
 				directory,
 				"--label",
@@ -414,32 +535,20 @@ export async function main(
 		ids.editorPaneId = editorId
 
 		stage = "worker-run"
-		const work = [
-			shellQuote(agency),
-			"work",
-			".",
-			...(options.intent === "launch" ? ["--auto"] : []),
-			...permission,
-		].join(" ")
 		const notify = [
 			"herdr",
 			"notification",
 			"show",
-			shellQuote("Agency launch failed"),
+			shellQuote(failureTitle),
 			"--body",
-			shellQuote(`${label}: agency work exited with an error. See its tab.`),
+			shellQuote(failureBody),
 			"--sound",
 			"request",
 		].join(" ")
 		await herdr(["pane", "run", workerId, `${work} || ${notify}`])
 
 		stage = "editor-run"
-		await herdr([
-			"pane",
-			"run",
-			editorId,
-			`nvim -- ${shellQuote(basename(documentPath))}`,
-		])
+		await herdr(["pane", "run", editorId, editor])
 
 		io.emit({ event: "launched", intent: options.intent, ...ids })
 		return 0
