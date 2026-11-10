@@ -9,7 +9,7 @@ interpret the request.
 agency-kickoff task-id                  # agency work . --auto
 agency-kickoff task-id/phase-id --open  # agency work .
 agency-kickoff epic:epic-id
-agency-kickoff CAN-1234                 # or a ticket URL
+agency-kickoff ABC-1234                 # or a ticket URL
 agency-kickoff tasks/task-id            # or a document path
 ```
 
