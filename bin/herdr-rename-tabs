@@ -116,6 +116,61 @@ agency_context_path() {
 	return 1
 }
 
+# Reads NUL-separated records of tab ID, label, cwd count, and cwds on stdin,
+# and renames each tab whose label changes with: $1 TAB_ID NEW_LABEL.
+refresh_tab_labels() {
+	local rename_tab=$1
+	local tab_id label cwd_count cwd_index cwd pr_status jira_ticket
+	local context_path context_json context_indicators context_pr_status
+	local context_jira_ticket cached_context new_label
+	local -A context_cache context_checked
+	while IFS= read -r -d $'\0' tab_id \
+		&& IFS= read -r -d $'\0' label \
+		&& IFS= read -r -d $'\0' cwd_count; do
+		pr_status=''
+		jira_ticket=''
+
+		for (( cwd_index = 0; cwd_index < cwd_count; ++cwd_index )); do
+			IFS= read -r -d $'\0' cwd || return 1
+			[[ -n $cwd && ! ( -n $pr_status && -n $jira_ticket ) ]] || continue
+
+			agency_context_path "$cwd" || continue
+			context_path=$REPLY
+
+			if [[ -z ${context_checked[$context_path]-} ]]; then
+				context_checked[$context_path]=1
+				context_pr_status=''
+				context_jira_ticket=''
+
+				if context_json=$(agency context "$context_path" --json 2>/dev/null) \
+					&& context_indicators=$(indicators_from_context <<< "$context_json") \
+					&& [[ -n $context_indicators ]]; then
+					context_pr_status=${context_indicators#*'"prStatus":"'}
+					context_pr_status=${context_pr_status%%'"'*}
+					context_jira_ticket=${context_indicators#*'"jiraTicket":"'}
+					context_jira_ticket=${context_jira_ticket%%'"'*}
+				fi
+
+				context_cache[$context_path]="$context_pr_status"$'\x1f'"$context_jira_ticket"
+			fi
+
+			cached_context=${context_cache[$context_path]}
+			context_pr_status=${cached_context%%$'\x1f'*}
+			context_jira_ticket=${cached_context#*$'\x1f'}
+			[[ -n $pr_status ]] || pr_status=$context_pr_status
+			[[ -n $jira_ticket ]] || jira_ticket=$context_jira_ticket
+		done
+
+		format_tab_label "$label" "$pr_status" "$jira_ticket" || return $?
+		new_label=$REPLY
+
+		if [[ $new_label != $label ]]; then
+			"$rename_tab" "$tab_id" "$new_label" || return $?
+			print -r -- "$label -> $new_label"
+		fi
+	done
+}
+
 if [[ ${HERDR_RENAME_TABS_FUNCTIONS_ONLY:-} == 1 ]]; then
 	return 0
 fi
@@ -134,52 +189,11 @@ done
 tabs_json=$(herdr tab list) || exit $?
 panes_json=$(herdr pane list) || exit $?
 
-typeset -A context_cache context_checked
-while IFS= read -r -d $'\0' tab_id \
-	&& IFS= read -r -d $'\0' label \
-	&& IFS= read -r -d $'\0' cwd_count; do
-	pr_status=''
-	jira_ticket=''
+herdr_rename_tab() {
+	herdr tab rename "$1" "$2"
+}
 
-	for (( cwd_index = 0; cwd_index < cwd_count; ++cwd_index )); do
-		IFS= read -r -d $'\0' cwd || exit 1
-		[[ -n $cwd && ! ( -n $pr_status && -n $jira_ticket ) ]] || continue
-
-		agency_context_path "$cwd" || continue
-		context_path=$REPLY
-
-		if [[ -z ${context_checked[$context_path]-} ]]; then
-			context_checked[$context_path]=1
-			context_pr_status=''
-			context_jira_ticket=''
-
-			if context_json=$(agency context "$context_path" --json 2>/dev/null) \
-				&& context_indicators=$(indicators_from_context <<< "$context_json") \
-				&& [[ -n $context_indicators ]]; then
-				context_pr_status=${context_indicators#*'"prStatus":"'}
-				context_pr_status=${context_pr_status%%'"'*}
-				context_jira_ticket=${context_indicators#*'"jiraTicket":"'}
-				context_jira_ticket=${context_jira_ticket%%'"'*}
-			fi
-
-			context_cache[$context_path]="$context_pr_status"$'\x1f'"$context_jira_ticket"
-		fi
-
-		cached_context=${context_cache[$context_path]}
-		context_pr_status=${cached_context%%$'\x1f'*}
-		context_jira_ticket=${cached_context#*$'\x1f'}
-		[[ -n $pr_status ]] || pr_status=$context_pr_status
-		[[ -n $jira_ticket ]] || jira_ticket=$context_jira_ticket
-	done
-
-	format_tab_label "$label" "$pr_status" "$jira_ticket" || exit $?
-	new_label=$REPLY
-
-	if [[ $new_label != $label ]]; then
-		herdr tab rename "$tab_id" "$new_label" || exit $?
-		print -r -- "$label -> $new_label"
-	fi
-done < <(jq -jn \
+refresh_tab_labels herdr_rename_tab < <(jq -jn \
 	--argjson tabs "$tabs_json" \
 	--argjson panes "$panes_json" '
 		$tabs.result.tabs[] as $tab

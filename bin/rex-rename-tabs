@@ -1,0 +1,72 @@
+#!/usr/bin/env zsh
+
+# Rex counterpart of herdr-rename-tabs: refreshes every Rex tab label in every
+# session from the Agency context of its panes' working directories.
+
+emulate -L zsh
+setopt pipefail no_unset
+
+HERDR_RENAME_TABS_FUNCTIONS_ONLY=1
+source "${0:A:h}/herdr-rename-tabs"
+unset HERDR_RENAME_TABS_FUNCTIONS_ONLY
+
+typeset rex=${REX_RENAME_TABS_REX_BIN:-rex}
+
+rex_call() {
+	"$rex" --autostart=false "$@"
+}
+
+# Tab IDs are "SESSION WINDOW"; Rex IDs contain no spaces.
+rex_rename_tab() {
+	rex_call window rename -s "${1%% *}" "${1#* }" "$2" >/dev/null
+}
+
+block_cwd() {
+	rex_call block call -s "$1" -b "$2" process 2>/dev/null \
+		| jq -r '.foreground.cwd // .child.cwd // empty'
+}
+
+rex_tab_records() {
+	local session view window label block cwd
+	local -a windows blocks cwds
+
+	for session in ${(f)"$(rex_call ls --json | jq -r '.sessions[].session_id')"}; do
+		view=$(rex_call api call -s "$session" session.view) || return $?
+		windows=(${(f)"$(jq -r '.windows[].window_id' <<<"$view")"})
+		for window in "${windows[@]}"; do
+			label=$(jq -r --arg w "$window" \
+				'.windows[] | select(.window_id == $w) | .label' <<<"$view")
+			blocks=(${(f)"$(jq -r --arg w "$window" \
+				'.windows[] | select(.window_id == $w) | .layers[]?.blocks[]?.block_id' <<<"$view")"})
+			cwds=()
+			for block in "${blocks[@]}"; do
+				cwd=$(block_cwd "$session" "$block")
+				[[ -n $cwd ]] && cwds+=("$cwd")
+			done
+			cwds=(${(u)cwds})
+			printf '%s\0%s\0%s\0' "$session $window" "$label" "${#cwds}"
+			if (( ${#cwds} )); then
+				printf '%s\0' "${cwds[@]}"
+			fi
+		done
+	done
+}
+
+if [[ ${REX_RENAME_TABS_FUNCTIONS_ONLY:-} == 1 ]]; then
+	return 0
+fi
+
+for dependency in agency jq "$rex"; do
+	command -v "$dependency" >/dev/null 2>&1 || {
+		print -ru2 -- "Error: $dependency is not available"
+		exit 1
+	}
+done
+
+# Nothing to do, and nothing to start, when Rex isn't running.
+rex_call whoami >/dev/null 2>&1 || exit 0
+
+records=$(mktemp "${TMPDIR:-/tmp}/rex-rename-tabs.XXXXXX") || exit 1
+trap 'rm -f "$records"' EXIT
+rex_tab_records >"$records" || exit $?
+refresh_tab_labels rex_rename_tab <"$records"
