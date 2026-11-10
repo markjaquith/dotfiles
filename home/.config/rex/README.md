@@ -30,6 +30,19 @@ installed; rerun `dotfiles-install` after moving or renaming the app.
 `init.lua` binds Ctrl-H/J/K/L to focus the left/down/up/right pane. Run
 `rex config check` and `rex config reload` after editing it.
 
+`mux.lua` ports the Herdr plugins:
+
+| Key          | Action                                                               | Herdr equivalent             |
+| ------------ | -------------------------------------------------------------------- | ---------------------------- |
+| Ctrl-H/J/K/L | `nav`: send the key to Vim (or a nested Herdr), else move pane focus | vim-herdr-navigation         |
+| Shift-Cmd-T  | `tab_new_here`: new tab in the focused pane's directory              | new-tab-cwd `prefix+c`       |
+| Ctrl-Cmd-T   | `tab_new_first`: new tab in the first pane's directory               | new-tab-cwd `prefix+shift+c` |
+| Ctrl-Cmd-U   | `url_choose`: float `bin/rex-url-chooser` over the pane              | url-chooser `prefix+shift+o` |
+
+Neovim's side of Ctrl-H/J/K/L is `nvim/lua/rex_navigation.lua`. The agent
+chooser is Agentodon's `agents_choose`. Test with `lua test/rex-mux.test.lua`
+and `zsh test/rex-url-chooser.test.zsh`.
+
 `themes/Catppuccin Macchiato` matches Ghostty's palette, including the cursor-text
 override in the Ghostty config. Import it through Rex's Import Theme File action
 or, with Remote Control enabled, `rex -C CLIENT do client.theme.import

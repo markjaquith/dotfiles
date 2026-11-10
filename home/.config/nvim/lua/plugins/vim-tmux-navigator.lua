@@ -1,4 +1,4 @@
--- PLUGIN: Unified Herdr/tmux pane navigation
+-- PLUGIN: Unified Herdr/Rex/tmux pane navigation
 return {
   {
     'christoomey/vim-tmux-navigator',
@@ -20,6 +20,7 @@ return {
     lazy = false,
     config = function(plugin)
       dofile(plugin.dir .. '/editor/nvim.lua')
+      require('rex_navigation').setup()
     end,
   },
 }

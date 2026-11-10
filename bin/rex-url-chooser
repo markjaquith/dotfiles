@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Choose and open a URL from a Rex pane: rex-url-chooser SESSION BLOCK
+# Rex counterpart of the Herdr url-chooser plugin, sharing its URL parsing.
+set -euo pipefail
+
+session="${1:?usage: rex-url-chooser SESSION BLOCK}"
+block="${2:?usage: rex-url-chooser SESSION BLOCK}"
+rex="${REX_URL_CHOOSER_REX_BIN:-rex}"
+opener="${REX_URL_CHOOSER_OPEN:-open}"
+copier="${REX_URL_CHOOSER_COPY:-pbcopy}"
+picker_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../home/.config/herdr/plugins/local/url-chooser" && pwd)"
+
+URL_CHOOSER_FUNCTIONS_ONLY=1 source "$picker_dir/picker.sh"
+ensure_tool jq
+ensure_tool fzf
+
+pause() {
+	[[ -t 0 ]] || return 0
+	printf '\nPress any key to close'
+	IFS= read -r -n 1 _ || sleep 10
+}
+
+size=$("$rex" --autostart=false block call -s "$session" -b "$block" size)
+columns=$(jq -r '.columns // 0' <<<"$size")
+rows=$(jq -r '.rows // 100' <<<"$size")
+
+# --unwrap joins soft wraps; join_wrapped_urls repairs programs' hard wraps.
+# Herdr passes its pane rectangle, about two columns wider than the terminal.
+urls=$("$rex" --autostart=false capture -s "$session" -b "$block" --trim --unwrap \
+	| tail -n "${REX_URL_CHOOSER_LINES:-$rows}" \
+	| join_wrapped_urls "$((columns + 2))" \
+	| extract_urls) || urls=""
+
+if [[ -z "$urls" ]]; then
+	printf 'No URLs detected in this pane\n'
+	pause
+	exit 0
+fi
+
+if [[ $(printf '%s\n' "$urls" | wc -l | tr -d ' ') -eq 1 ]]; then
+	"$opener" "$urls"
+	exit 0
+fi
+
+selected=$(printf '%s\n' "$urls" | fzf --ansi --expect=y --prompt='URL> ' \
+	--header='enter: open · y: copy') || exit 0
+action="${selected%%$'\n'*}"
+selected="${selected#*$'\n'}"
+[[ -n "$selected" ]] || exit 0
+if [[ "$action" == y ]]; then
+	printf '%s' "$selected" | "$copier"
+else
+	"$opener" "$selected"
+fi
