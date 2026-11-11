@@ -44,6 +44,34 @@ Neovim's side of Ctrl-H/J/K/L is `nvim/lua/rex_navigation.lua`. The agent
 chooser is Agentodon's `agents_choose`. Test with `lua test/rex-mux.test.lua`
 and `zsh test/rex-url-chooser.test.zsh`.
 
+`prefix.lua` ports Herdr's Ctrl-B prefix bindings as Rex key sequences (press
+Ctrl-B, release, then the key). Rex's own shortcuts are unchanged. Herdr
+workspaces map to Rex sessions.
+
+| Keys after Ctrl-B | Action                                                  |
+| ----------------- | ------------------------------------------------------- |
+| C / Shift-C       | new tab in focused / first pane's directory             |
+| N / P, 1–9        | next / previous tab, go to tab N                        |
+| Shift-T / Shift-X | rename / close tab                                      |
+| V / -             | split right / down                                      |
+| X / Z             | close / zoom pane                                       |
+| H/J/K/L           | focus pane in that direction                            |
+| Shift-H/J/K/L     | swap pane in that direction                             |
+| Tab / Shift-Tab   | next / previous pane                                    |
+| Shift-P           | rename pane                                             |
+| R                 | resize mode (H/J/K/L or arrows, Shift for bigger steps) |
+| Shift-N / W       | new session / switch session                            |
+| Shift-W / Shift-D | rename / close session                                  |
+| G                 | Go to Anything                                          |
+| B                 | toggle Agentodon sidebar                                |
+| Shift-O           | URL chooser                                             |
+| S / Shift-R       | settings / reload config                                |
+| Ctrl-B            | send Ctrl-B to the terminal                             |
+
+In resize mode, `=` balances splits and Enter or Escape leaves.
+Not ported: layout cycling, copy mode, edit scrollback, new worktree, detach.
+Test with `lua test/rex-prefix.test.lua`.
+
 `themes/Catppuccin Macchiato` matches Ghostty's palette, including the cursor-text
 override in the Ghostty config. Import it through Rex's Import Theme File action
 or, with Remote Control enabled, `rex -C CLIENT do client.theme.import
