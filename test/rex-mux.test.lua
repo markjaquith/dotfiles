@@ -25,7 +25,10 @@ rex = {
 		end,
 	},
 	session = {
-		new_window = record("new_window"),
+		new_window = function(args)
+			calls[#calls + 1] = { name = "new_window", args = args }
+			return { window_id = "window:new", block_ids = {}, revision = 1 }
+		end,
 		new_layer = record("new_layer"),
 		focus_direction = record("focus_direction"),
 		view = function()
@@ -33,6 +36,11 @@ rex = {
 		end,
 		describe_block = function(args)
 			return { block = { window_id = "window:of-" .. args.block_id } }
+		end,
+	},
+	client = {
+		queue = function(action, args)
+			calls[#calls + 1] = { name = "queue", action = action, args = args }
 		end,
 	},
 	block = {
@@ -89,6 +97,7 @@ check("bad direction errors", not pcall(actions.nav.run, ctx, { direction = "sid
 reset()
 actions.tab_new_here.run(ctx)
 check("new tab here uses focused cwd", calls[1].name == "new_window" and calls[1].args.focus == true and calls[1].args.layout.block.options.cwd == "/work")
+check("new tab here switches to the tab", calls[2].name == "queue" and calls[2].action == "session.select" and calls[2].args.session_id == "session:s" and calls[2].args.window_id == "window:new")
 
 view = {
 	windows = {

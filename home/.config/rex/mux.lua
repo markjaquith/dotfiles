@@ -27,11 +27,20 @@ local function new_tab(ctx, cwd)
 	if cwd and cwd ~= "" then
 		options.cwd = cwd
 	end
-	return rex.session.new_window({
+	local result = rex.session.new_window({
 		session_id = ctx.session_id,
 		focus = true,
 		layout = rex.layout.block({ flavor = shell, options = options }),
 	})
+	-- focus only makes it the session's active window; the client keeps showing
+	-- its current tab until asked to switch, as Cmd-T does.
+	if result and result.window_id then
+		rex.client.queue("session.select", {
+			session_id = ctx.session_id,
+			window_id = result.window_id,
+		})
+	end
+	return result
 end
 
 -- The first pane in the session's first tab that reports a directory, which
