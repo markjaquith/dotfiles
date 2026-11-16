@@ -41,6 +41,8 @@ MOCK
 chmod +x "$test_root/bin/"*
 export HOME="$test_root/home" PATH="$test_root/bin:$PATH"
 export REX_TEST_WRITES="$test_root/writes"
+# Keep mise shims from finding the real user's untrusted configs above the repo.
+cd "$test_root"
 
 zsh "$repo_root/bin/rex-settings" check
 zsh "$repo_root/bin/rex-settings" apply
