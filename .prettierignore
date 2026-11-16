@@ -4,6 +4,9 @@ home/.config/opencode/package.json
 home/.config/opencode/package-lock.json
 home/.config/opencode/legacy-integrations/herdr-agent-state.js
 home/.config/zed/settings.json
+# Hex generates and replaces these files; preserve its output.
+home/.config/hex/AGENTS.md
+home/.config/hex/hex.d.ts
 home/.pi/agent/mcp-cache.json
 home/.pi/agent/mcp-npx-cache.json
 home/.pi/agent/settings.json

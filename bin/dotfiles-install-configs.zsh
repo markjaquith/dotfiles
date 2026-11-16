@@ -5,9 +5,10 @@ mkdir -p "$HOME/Library/Application Support/lazygit"
 rm -f "$HOME/Library/Application Support/lazygit/config.yml"
 ln -s "$HOME/.config/lazygit/config.yml" "$HOME/Library/Application Support/lazygit/config.yml"
 
-# Rex appearance preferences only; never replace the complete preferences domain.
+# Portable app preferences only; preserve machine-local settings.
 if [[ "$(uname -s)" == Darwin ]]; then
 	"${${(%):-%x}:A:h}/rex-settings" apply
+	"${${(%):-%x}:A:h}/hex-settings" apply
 fi
 
 # Rex CLI and zsh completion; silently skipped when Rex is not installed.

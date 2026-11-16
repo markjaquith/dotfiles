@@ -1,0 +1,56 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt errexit pipefail
+
+typeset command_name=${1:-}
+typeset config_dir="$HOME/.config/hex"
+typeset config_file="$config_dir/preferences.json"
+typeset live_file="$HOME/Library/Application Support/hex/settings.json"
+
+if (( $# != 1 )) || [[ "$command_name" != (apply|capture|check) ]]; then
+	print -u2 -- 'Usage: hex-settings <apply|capture|check>'
+	print -u2 -- 'Quit Hex before apply. Capture saves only portable preferences.'
+	exit 2
+fi
+
+if [[ "$command_name" != check && "$(uname -s)" != Darwin ]]; then
+	print -u2 -- 'hex-settings: requires macOS'
+	exit 1
+fi
+
+typeset temporary_file=""
+trap '[[ -z "$temporary_file" ]] || rm -f -- "$temporary_file"' EXIT
+
+if [[ "$command_name" == capture ]]; then
+	temporary_file=$(mktemp "${config_file}.XXXXXX")
+	jq -L "$config_dir" 'include "portable"; portable' "$live_file" >| "$temporary_file"
+	jq -e -L "$config_dir" 'include "portable"; valid' "$temporary_file" >/dev/null
+	# Preserve the stowed symlink.
+	cat "$temporary_file" >| "$config_file"
+	print -- "Captured portable Hex preferences in $config_file"
+	exit 0
+fi
+
+jq -e -L "$config_dir" 'include "portable"; valid' "$config_file" >/dev/null
+[[ "$command_name" == check ]] && exit 0
+
+if pgrep -x Hex >/dev/null || pgrep -x hex >/dev/null; then
+	print -u2 -- 'hex-settings: quit Hex before applying preferences, then retry'
+	exit 1
+fi
+
+mkdir -p "${live_file:h}"
+temporary_file=$(mktemp "${live_file}.XXXXXX")
+if [[ -e "$live_file" ]]; then
+	# Recursive object merge preserves local settings; arrays are replaced.
+	jq -e --slurpfile saved "$config_file" '
+		if type == "object" then . * $saved[0]
+		else error("Hex settings must be an object") end
+	' "$live_file" >| "$temporary_file"
+else
+	cat "$config_file" >| "$temporary_file"
+fi
+# Write through any existing symlink; never replace the complete data directory.
+cat "$temporary_file" >| "$live_file"
+print -- 'Applied portable Hex preferences.'
