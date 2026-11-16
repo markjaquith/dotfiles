@@ -1,5 +1,5 @@
 {
-	"release_microphone_while_idle": false,
+	"release_microphone_while_idle": true,
 	"sound_effects": true,
 	"sound_effect_volume": 0.5,
 	"sound_theme": "analog",
@@ -13,20 +13,8 @@
 	"dictation_hotkey": {
 		"keys": [
 			{
-				"modifier": "control",
-				"side": "any"
-			},
-			{
 				"modifier": "option",
 				"side": "any"
-			},
-			{
-				"modifier": "command",
-				"side": "any"
-			},
-			{
-				"code": 17,
-				"label": "T"
 			}
 		]
 	},
@@ -56,7 +44,22 @@
 	},
 	"raw_dictation_hotkey": null,
 	"typed_text_hotkey": null,
-	"second_dictation_hotkey": null,
+	"second_dictation_hotkey": {
+		"keys": [
+			{
+				"modifier": "option",
+				"side": "any"
+			},
+			{
+				"modifier": "shift",
+				"side": "any"
+			},
+			{
+				"code": 2,
+				"label": "D"
+			}
+		]
+	},
 	"extra_dictation_hotkeys": [],
 	"terminal_paste_hotkey": null,
 	"show_dock_icon": false,
@@ -167,6 +170,10 @@
 		{
 			"term": "Ollama",
 			"sounds_like": ["a llama"]
+		},
+		{
+			"term": "BuildKite",
+			"sounds_like": ["build guide", "build cape"]
 		}
 	],
 	"vocabulary_boost": "normal",
@@ -186,7 +193,7 @@
 		"spoken_formatting": true,
 		"filler_words": true,
 		"subtitle_export": false,
-		"second_dictation_shortcut": false,
+		"second_dictation_shortcut": true,
 		"more_dictation_shortcuts": false,
 		"terminal_paste_shortcut": false,
 		"smart_spacing": true,

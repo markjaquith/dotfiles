@@ -20,6 +20,8 @@ print Darwin
 MOCK
 chmod +x "$test_root/bin/"*
 export HOME="$test_root/home" PATH="$test_root/bin:$PATH"
+# Keep mise shims from finding the real user's untrusted configs above the repo.
+cd "$test_root"
 live_file="$HOME/Library/Application Support/hex/settings.json"
 config_file="$HOME/.config/hex/preferences.json"
 
@@ -51,6 +53,10 @@ done
 
 zsh "$repo_root/bin/hex-settings" capture
 [[ -L "$config_file" ]]
+if grep -q '^  ' "$config_file" || ! grep -q $'^\t"' "$config_file"; then
+	print -u2 -- 'FAIL: capture did not use tab indentation'
+	exit 1
+fi
 jq -e 'has("microphone") == false and has("migrations") == false and
 	(.capture | has("routing") == false and has("folder") == false) and
 	(.meetings.calendar | has("connected") == false)' "$config_file" >/dev/null
