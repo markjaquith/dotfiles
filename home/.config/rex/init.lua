@@ -6,6 +6,8 @@ rex.bind("alt+h", "client.tab.previous")
 rex.bind("alt+l", "client.tab.next")
 -- Herdr's Ctrl-B prefix bindings, e.g. Ctrl-B then X closes the pane.
 dofile(os.getenv("HOME") .. "/.config/rex/prefix.lua").setup()
+
+-- Agentodon integration is managed by `agentodon setup`.
 -- BEGIN Agentodon (managed)
 do
 	local path = os.getenv("HOME") .. "/.config/rex/agentodon.lua"

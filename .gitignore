@@ -9,4 +9,4 @@
 /home/.config/jj/repos/
 /.jj/
 /home/.config/rex/agentodon.lua
-/home/.config/rex/init.lua.agentodon-backup-*
+/home/.config/rex/*.agentodon-backup-*

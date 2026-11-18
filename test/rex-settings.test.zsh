@@ -27,6 +27,10 @@ case "$3" in
 	Workspace.terminalFontPointSize) print 14.5 ;;
 	Workspace.terminalCellHeightPercent) print 40 ;;
 	Workspace.usesStandardInactiveWindowPaneStyles) print 0 ;;
+	rex.agents.names-sessions) print 1 ;;
+	rex.client.remoteControl) print 0 ;;
+	rex.server.run-mode) print bundled ;;
+	SUScheduledCheckInterval) print 86400 ;;
 	*) exit 1 ;;
 esac
 MOCK
@@ -46,7 +50,7 @@ cd "$test_root"
 
 zsh "$repo_root/bin/rex-settings" check
 zsh "$repo_root/bin/rex-settings" apply
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 22 ]]
 [[ $(head -n 1 "$REX_TEST_WRITES") == 'write com.superlogical.rex Workspace.customThemes -data '* ]]
 typeset restored_themes=$(head -n 1 "$REX_TEST_WRITES" | awk '{print $5}' | xxd -r -p)
 jq -e --argjson restored "$restored_themes" '."Workspace.customThemes" == $restored' "$test_root/preferences.json" >/dev/null
@@ -57,13 +61,22 @@ grep -q -- 'Workspace.terminalFontPointSize -float 14' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalCellHeightPercent -float 40' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalPaddingX -float 8' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.terminalPaddingY -float 8' "$REX_TEST_WRITES"
+grep -q -- 'rex.agents.names-sessions -bool true' "$REX_TEST_WRITES"
+grep -q -- 'rex.client.remoteControl -bool true' "$REX_TEST_WRITES"
+grep -q -- 'rex.developer-mode-enabled -bool true' "$REX_TEST_WRITES"
+grep -q -- 'rex.server.automatic-restart-enabled -bool true' "$REX_TEST_WRITES"
+grep -q -- 'rex.server.block-plugin-reload-enabled -bool false' "$REX_TEST_WRITES"
+grep -q -- 'rex.server.run-mode -string bundled' "$REX_TEST_WRITES"
+grep -q -- 'SUEnableAutomaticChecks -bool true' "$REX_TEST_WRITES"
+grep -q -- 'SUAutomaticallyUpdate -bool true' "$REX_TEST_WRITES"
+grep -q -- 'SUScheduledCheckInterval -float 86400' "$REX_TEST_WRITES"
 
 export REX_TEST_RUNNING=0
 if zsh "$repo_root/bin/rex-settings" apply >/dev/null 2>&1; then
 	print -u2 -- 'FAIL: apply allowed while Rex was running'
 	exit 1
 fi
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 22 ]]
 unset REX_TEST_RUNNING
 
 jq '. + {"rex.client.label": "device-specific"}' "$test_root/preferences.json" > "$test_root/bad.json"
@@ -72,7 +85,15 @@ if zsh "$repo_root/bin/rex-settings" apply >/dev/null 2>&1; then
 	print -u2 -- 'FAIL: accepted a device-specific key'
 	exit 1
 fi
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 13 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 22 ]]
+
+for local_key in rex.server.tailnet-enabled rex.server.web-client-origin-patterns; do
+	jq --arg key "$local_key" '{($key): true}' > "$test_root/preferences.json"
+	if zsh "$repo_root/bin/rex-settings" check >/dev/null 2>&1; then
+		print -u2 -- "FAIL: accepted device-local key $local_key"
+		exit 1
+	fi
+done
 
 print '{"Workspace.usesStandardInactiveWindowPaneStyles":"true"}' > "$test_root/preferences.json"
 if zsh "$repo_root/bin/rex-settings" check >/dev/null 2>&1; then
@@ -94,10 +115,10 @@ fi
 
 zsh "$repo_root/bin/rex-settings" capture
 [[ -L "$HOME/.config/rex/preferences.json" ]]
-jq -e '. == {"Workspace.terminalFontName": "Test Font", "Workspace.terminalFontPointSize": 14.5, "Workspace.terminalCellHeightPercent": 40, "Workspace.usesStandardInactiveWindowPaneStyles": false, "Workspace.customThemes": [{"id":"custom-test","name":"Test Theme","palette":{}}]}' "$test_root/preferences.json" >/dev/null
+jq -e '. == {"Workspace.terminalFontName": "Test Font", "Workspace.terminalFontPointSize": 14.5, "Workspace.terminalCellHeightPercent": 40, "Workspace.usesStandardInactiveWindowPaneStyles": false, "rex.agents.names-sessions": true, "rex.client.remoteControl": false, "rex.server.run-mode": "bundled", "SUScheduledCheckInterval": 86400, "Workspace.customThemes": [{"id":"custom-test","name":"Test Theme","palette":{}}]}' "$test_root/preferences.json" >/dev/null
 zsh "$repo_root/bin/rex-settings" check
 zsh "$repo_root/bin/rex-settings" apply
-[[ $(wc -l < "$REX_TEST_WRITES") -eq 18 ]]
+[[ $(wc -l < "$REX_TEST_WRITES") -eq 31 ]]
 grep -q -- 'Workspace.terminalFontPointSize -float 14.5' "$REX_TEST_WRITES"
 grep -q -- 'Workspace.usesStandardInactiveWindowPaneStyles -bool false' "$REX_TEST_WRITES"
 

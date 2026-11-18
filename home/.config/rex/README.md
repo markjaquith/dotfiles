@@ -1,8 +1,8 @@
 # Rex preferences
 
-`preferences.json` contains only allowlisted appearance preferences. Window
-geometry, sessions, servers, device identity, and update state are never captured
-or changed by this setup.
+`preferences.json` contains only allowlisted portable preferences. Window
+geometry, session data, server identities, device identity, and update history
+are never captured or changed by this setup.
 
 - Quit Rex before running `dotfiles-install` or `rex-settings apply`.
 - After changing Rex settings, run `rex-settings capture`, review the diff in
@@ -19,17 +19,22 @@ theme IDs. Applying preferences restores that data before selecting the theme;
 no manual import or Remote Control permission is needed to restore it.
 
 The installer applies saved preferences; it does not continuously sync changes
-made inside the app. Only the appearance keys listed in `bin/rex-settings`
+made inside the app. Only the portable keys listed in `bin/rex-settings`
 are eligible. Missing keys are left untouched, not deleted or reset.
+
+Saved behavior enables agent session naming, client remote control, developer
+mode, automatic server restart, and automatic update checks and updates (checked
+every 24 hours). The server uses bundled mode with block-plugin reload disabled.
+Tailnet access and web-client origin permissions remain device-local.
 
 `dotfiles-install` links the `rex` CLI bundled inside Rex.app to
 `~/.local/bin/rex` and caches its zsh completion in
 `~/.local/share/rex/completion.zsh`. Both are skipped silently when Rex is not
 installed; rerun `dotfiles-install` after moving or renaming the app.
 
-`init.lua` binds Ctrl-H/J/K/L to focus the left/down/up/right pane and
-Opt-H/L to show the previous/next tab. Run
-`rex config check` and `rex config reload` after editing it.
+`init.lua` loads Vim-aware Ctrl-H/J/K/L pane navigation and binds Option-H/L
+to the previous/next tab. Run `rex config check` and `rex config reload` after
+editing it.
 
 `mux.lua` ports the Herdr plugins:
 
@@ -76,3 +81,18 @@ Test with `lua test/rex-prefix.test.lua`.
 override in the Ghostty config. Import it through Rex's Import Theme File action
 or, with Remote Control enabled, `rex -C CLIENT do client.theme.import
 path="$HOME/.config/rex/themes/Catppuccin Macchiato"`.
+
+## Agentodon
+
+The Agents sidebar is now the standalone **Agentodon** project at
+`~/Dev/agentodon`. Its implementation, tests, install instructions, and build
+configuration live there, not in dotfiles.
+
+`bin/dotfiles-install-pip.zsh` installs the local checkout with uv and configures
+Rex. Set `AGENTODON_SOURCE` to use another checkout location. The generated
+machine-specific `agentodon.lua` loader and init backups are Git-ignored.
+
+- Cmd-B starts or toggles Agents in the current window/session.
+- Option-J/K navigate agents.
+- `agentodon start|stop|show|hide|toggle|inspect|shutdown` manages the service.
+- `agentodon setup` safely installs/refreshes Rex integration.

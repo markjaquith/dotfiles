@@ -14,19 +14,30 @@ typeset -a string_keys=(
 	Workspace.tabIconTintMode
 	Workspace.terminalFontName
 	Workspace.terminalFontStyle
+	rex.server.run-mode
 )
 typeset -a number_keys=(
 	Workspace.terminalFontPointSize
 	Workspace.terminalCellHeightPercent
 	Workspace.terminalPaddingX
 	Workspace.terminalPaddingY
+	SUScheduledCheckInterval
 )
-typeset bool_key=Workspace.usesStandardInactiveWindowPaneStyles
+typeset -a bool_keys=(
+	Workspace.usesStandardInactiveWindowPaneStyles
+	rex.agents.names-sessions
+	rex.client.remoteControl
+	rex.developer-mode-enabled
+	rex.server.automatic-restart-enabled
+	rex.server.block-plugin-reload-enabled
+	SUEnableAutomaticChecks
+	SUAutomaticallyUpdate
+)
 typeset themes_key=Workspace.customThemes
 
 if (( $# != 1 )) || [[ "$command_name" != (apply|capture|check) ]]; then
 	print -u2 -- 'Usage: rex-settings <apply|capture|check>'
-	print -u2 -- 'Quit Rex before apply. Capture saves only allowlisted appearance settings.'
+	print -u2 -- 'Quit Rex before apply. Capture saves only allowlisted portable settings.'
 	exit 2
 fi
 
@@ -39,12 +50,12 @@ if [[ "$command_name" == capture ]]; then
 	# Check that the domain exists before attempting individual reads.
 	defaults read "$domain" >/dev/null
 	typeset settings='{}' key value
-	for key in "${string_keys[@]}" "${number_keys[@]}" "$bool_key"; do
+	for key in "${string_keys[@]}" "${number_keys[@]}" "${bool_keys[@]}"; do
 		# Unset preferences stay unset, rather than recording guessed defaults.
 		if ! value=$(defaults read "$domain" "$key" 2>/dev/null); then
 			continue
 		fi
-		if [[ "$key" == "$bool_key" ]]; then
+		if (( ${bool_keys[(Ie)$key]} )); then
 			case "$value" in
 				1) value=true ;;
 				0) value=false ;;
@@ -79,9 +90,9 @@ fi
 # Validate the complete file before writing anything. Unknown keys fail closed.
 jq -e --argjson strings "$(printf '%s\n' "${string_keys[@]}" | jq -R . | jq -s .)" \
 	--argjson numbers "$(printf '%s\n' "${number_keys[@]}" | jq -R . | jq -s .)" \
-	--arg boolean "$bool_key" --arg themes "$themes_key" '
+	--argjson booleans "$(printf '%s\n' "${bool_keys[@]}" | jq -R . | jq -s .)" --arg themes "$themes_key" '
 	type == "object" and all(to_entries[];
-		if .key == $boolean then (.value | type == "boolean")
+		if (.key as $key | $booleans | index($key)) != null then (.value | type == "boolean")
 		elif .key == $themes then (.value | type == "array" and all(.[];
 			type == "object" and (.id | type == "string") and
 			(.name | type == "string") and (.palette | type == "object")))
@@ -105,10 +116,10 @@ if jq -e --arg key "$themes_key" 'has($key)' "$config_file" >/dev/null; then
 	value=$(jq -cj --arg key "$themes_key" '.[$key]' "$config_file" | od -An -v -tx1 | tr -d ' \n')
 	defaults write "$domain" "$themes_key" -data "$value"
 fi
-for key in "${string_keys[@]}" "${number_keys[@]}" "$bool_key"; do
+for key in "${string_keys[@]}" "${number_keys[@]}" "${bool_keys[@]}"; do
 	jq -e --arg key "$key" 'has($key)' "$config_file" >/dev/null || continue
 	value=$(jq -r --arg key "$key" '.[$key]' "$config_file")
-	if [[ "$key" == "$bool_key" ]]; then
+	if (( ${bool_keys[(Ie)$key]} )); then
 		defaults write "$domain" "$key" -bool "$value"
 	elif (( ${number_keys[(Ie)$key]} )); then
 		defaults write "$domain" "$key" -float "$value"
